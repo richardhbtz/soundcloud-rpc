@@ -4,6 +4,7 @@
   "description": "A desktop application that displays the user's currently playing SoundCloud track in their Discord status using the Electron framework and Discord Rich Presence API.",
   "main": "index.js",
   "scripts": {
+    "build": "electron-packager . Soundcloud --platform=win32 --arch=x64 --electron-version=13.1.7 --overwrite",
     "start": "electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "discord-rpc": "^4.0.1",
-    "electron": "^23.2.0"
+    "electron": "^23.2.0",
+    "electron-packager": "^17.1.1"
   }
 }

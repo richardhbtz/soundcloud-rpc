@@ -7,6 +7,16 @@ rpc.login({ clientId }).catch(console.error);
 
 let mainWindow;
 
+function shortenString(str) {
+  // Check if the string is longer than 128 characters
+  if (str.length > 128) {
+    // If so, truncate it to 128 characters and append '...' to the end
+    return str.substring(0, 128) + '...';
+  }
+  // Otherwise, return the original string
+  return str;
+}
+
 async function createWindow() {
   let displayWhenIdling = false; // Whether to display a status message when music is paused
 
@@ -26,6 +36,8 @@ async function createWindow() {
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 
+
+  
   // Wait for the page to fully load
   mainWindow.webContents.on('did-finish-load', async () => {
 
@@ -67,10 +79,10 @@ async function createWindow() {
 
         // Update rich presence with the currently playing song
         rpc.setActivity({
-          details: trackInfo.title.replace(/\n.*/s, '').replace("Current track:", ""),
-          state: `by ${trackInfo.author}`,
+          details: shortenString(trackInfo.title.replace(/\n.*/s, '').replace("Current track:", "")),
+          state: `by ${shortenString(trackInfo.author)}`,
           largeImageKey: artworkUrl.replace("50x50.", "500x500."),
-          largeImageText: 'github.com/richardhabitzreuter/soundcloud-rpc',
+          largeImageText: 'github.com/richardhbtz/soundcloud-rpc',
           smallImageKey: 'soundcloud-logo',
           smallImageText: 'Soundcloud',
           instance: false,
@@ -84,7 +96,7 @@ async function createWindow() {
             details: 'Listening to Soundcloud',
             state: 'Paused',
             largeImageKey: 'idling',
-            largeImageText: 'github.com/richardhabitzreuter/soundcloud-rpc',
+            largeImageText: 'github.com/richardhbtz/soundcloud-rpc',
             smallImageKey: 'soundcloud-logo',
             smallImageText: '',
             instance: false,
