@@ -2,6 +2,9 @@
 
 This application uses the Discord Rich Presence API to display the currently playing track on SoundCloud as your Discord status. 
 
+# Installation
+Before installing and running this app, you must have Node.js installed on your machine. If you don't have Node.js installed, you can download it from the official website: https://nodejs.org/
+
 ## Usage
 
 1. Clone this repository to your local machine.
@@ -9,8 +12,12 @@ This application uses the Discord Rich Presence API to display the currently pla
 3. Run `npm start` to launch the application.
 4. Log in to your Discord account to start displaying the currently playing SoundCloud track as your status.
 
+## Configuration
 By default, the rich presence will only be displayed when music is playing on SoundCloud. However, if you set the `displayWhenIdling` variable to `true` in the `createWindow` function, the rich presence will also be displayed when you are not currently playing any music on SoundCloud.
 
+```js
+let displayWhenIdling = true; // change to true to display a message when idling
+```
 
 ## Credits
 
