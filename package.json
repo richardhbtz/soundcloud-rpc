@@ -1,0 +1,16 @@
+{
+  "name": "soundcloud-rpc",
+  "version": "0.0.1",
+  "description": "A desktop application that displays the user's currently playing SoundCloud track in their Discord status using the Electron framework and Discord Rich Presence API.",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "richardhabitzreuter",
+  "license": "ISC",
+  "dependencies": {
+    "discord-rpc": "^4.0.1",
+    "electron": "^23.2.0"
+  }
+}
