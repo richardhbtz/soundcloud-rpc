@@ -1,30 +1,24 @@
-const { app, BrowserWindow } = require('electron'); // Electron to create the window
-const DiscordRPC = require('discord-rpc'); // Discord Rich Presence API
-const rpc = new DiscordRPC.Client({ transport: 'ipc' }); // Initialize new client
-const clientId = '1090770350251458592'; // Discord application client ID
+import { app, BrowserWindow } from 'electron'; 
+import { Client as DiscordRPCClient } from 'discord-rpc'; 
+
+const rpc = new DiscordRPCClient({ transport: 'ipc' }); 
+const clientId = '1090770350251458592'; 
 
 rpc.login({ clientId }).catch(console.error);
 
-let mainWindow;
+let mainWindow: BrowserWindow | null;
 
-function shortenString(str) {
-  // Check if the string is longer than 128 characters
-  if (str.length > 128) {
-    // If so, truncate it to 128 characters and append '...' to the end
-    return str.substring(0, 128) + '...';
-  }
-  // Otherwise, return the original string
-  return str;
+function shortenString(str: string): string {
+  return str.length > 128 ? str.substring(0, 128) + '...' : str;
 }
 
 async function createWindow() {
   let displayWhenIdling = false; // Whether to display a status message when music is paused
 
-  // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
-    icon: __dirname + '/assets/ico/soundcloud.ico',
+    icon: `${__dirname}/../assets/ico/soundcloud.ico`,
     webPreferences: {
       nodeIntegration: false
     }
@@ -33,11 +27,6 @@ async function createWindow() {
   // Load the SoundCloud website
   mainWindow.loadURL('https://soundcloud.com/');
 
-  // Open the DevTools.
-  //mainWindow.webContents.openDevTools();
-
-
-  
   // Wait for the page to fully load
   mainWindow.webContents.on('did-finish-load', async () => {
 
