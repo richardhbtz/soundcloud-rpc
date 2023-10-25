@@ -1,10 +1,12 @@
-import { app, BrowserWindow } from 'electron'; 
+import { app, BrowserWindow, Menu } from 'electron'; 
 import { Client as DiscordRPCClient } from 'discord-rpc'; 
 
 const rpc = new DiscordRPCClient({ transport: 'ipc' }); 
 const clientId = '1090770350251458592'; 
 
 rpc.login({ clientId }).catch(console.error);
+
+Menu.setApplicationMenu(null);
 
 let mainWindow: BrowserWindow | null;
 
@@ -25,7 +27,7 @@ async function createWindow() {
   });
 
   // Load the SoundCloud website
-  mainWindow.loadURL('https://soundcloud.com/');
+  mainWindow.loadURL('https://soundcloud.com/discover');
 
   // Wait for the page to fully load
   mainWindow.webContents.on('did-finish-load', async () => {
