@@ -1,27 +1,47 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A desktop application that displays the user's currently playing SoundCloud track in their Discord status using the Electron framework and Discord Rich Presence API.",
+  "author": "Richard Habitzreuter",
+  "license": "MIT",
 
   "scripts": {
-
-    "builddistwin": "electron-packager . Soundcloud --platform=win32 --arch=x64 --electron-version=13.1.7 --overwrite",
-    "builddistmac": "electron-packager . Soundcloud --platform=darwin --arch=x64 --electron-version=13.1.7 --overwrite",
-    "builddistlinux": "electron-packager . Soundcloud --platform=linux --arch=x64 --electron-version=13.1.7 --overwrite",
-
     "build": "tsc",
     "watch": "tsc -w",
     "lint": "eslint -c .eslintrc --ext .ts ./src",
-    "start": "npm run build && electron ./dist/main.js"
+    "start": "npm run build && electron ./tsc/main.js",
+    "pack": "npm run build && electron-builder --dir"
   },
 
-  "author": "Richard Habitzreuter",
-  "license": "MIT",
+  "main": "./tsc/main.js",
+
+  "build": {
+    "appId": "com.richardhbtz.soundcloud-rpc",
+    "productName": "Soundcloud",
+    "asar": true,
+    "files": [
+      "tsc/**/*"
+    ],
+
+    "directories": {
+      "output": "dist"
+    },
+
+    "mac": {
+      "icon": "assets/icons/soundcloud-mac.icns"
+    },
+
+    "win": {
+      "icon": "assets/icons/soundcloud-win.ico"
+    }
+  },
+
   "devDependencies": {
     "@types/discord-rpc": "^4.0.6",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "electron": "^24.3.0",
+    "electron-builder": "^24.9.1",
     "eslint": "^7.32.0",
     "typescript": "^4.8.3"
   },
