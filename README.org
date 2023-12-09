@@ -1,0 +1,58 @@
+* soundcloud-rpc - A Soundcloud client with Discord Rich Presence support
+
+** Preview
+[[./images/preview.png]]
+
+** Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+Before installing and running this app, you must have Node.js installed
+on your machine. If you don't have Node.js installed, you can download
+it from the official website: https://nodejs.org/
+
+** Usage
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+1. Clone this repository to your local machine.
+2. Run =npm install= to install the required dependencies.
+3. Run =npm start= to launch the application.
+4. Log in to your Discord account to start displaying the currently
+   playing SoundCloud track as your status.
+
+** Configuration
+:PROPERTIES:
+:CUSTOM_ID: configuration
+:END:
+By default, the rich presence will only be displayed when music is
+playing on SoundCloud. However, if you set the =displayWhenIdling=
+variable to =true= in the =createWindow= function, the rich presence
+will also be displayed when you are not currently playing any music on
+SoundCloud.
+
+#+begin_src js
+let displayWhenIdling = true; // change to true to display a message when idling
+#+end_src
+
+** Credits
+:PROPERTIES:
+:CUSTOM_ID: credits
+:END:
+- The Discord Rich Presence integration is implemented using the [[https://www.npmjs.com/package/discord-rpc][discord-rpc]] package.
+- The Electron window is created using the [[https://www.electronjs.org/][Electron]] framework.
+- The executable is packed using [[https://www.electron.build/][electron-builder]].
+
+** Contributing
+:PROPERTIES:
+:CUSTOM_ID: contributing
+:END:
+Contributions to this project are welcome. If you find a bug or would
+like to suggest a new feature, please open an issue on this repository.
+
+** License
+:PROPERTIES:
+:CUSTOM_ID: license
+:END:
+This project is licensed under the MIT License. See the [[file:LICENSE]]
+file for details.
