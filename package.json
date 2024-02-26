@@ -17,7 +17,7 @@
 
   "build": {
     "appId": "com.richardhbtz.soundcloud-rpc",
-    "productName": "Soundcloud",
+    "productName": "SoundCloud",
     "asar": true,
     "files": [
       "tsc/**/*"
