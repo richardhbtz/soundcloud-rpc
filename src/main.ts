@@ -97,13 +97,16 @@ async function createWindow() {
             instance: false,
           });
         }
+        else {
+          rpc.clearActivity();
+        }
       }
     }, 10000); // Check every 10 seconds
   });
 
   // Emitted when the window is closed.
   mainWindow.on("close", function () {
-    store.set('bounds', mainWindow.getBounds());
+    store.set("bounds", mainWindow.getBounds());
   });
 
   mainWindow.on("closed", function () {
