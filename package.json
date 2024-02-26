@@ -4,7 +4,6 @@
   "description": "A desktop application that displays the user's currently playing SoundCloud track in their Discord status using the Electron framework and Discord Rich Presence API.",
   "author": "Richard Habitzreuter",
   "license": "MIT",
-
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
@@ -12,9 +11,7 @@
     "start": "npm run build && electron ./tsc/main.js",
     "pack": "npm run build && electron-builder --dir"
   },
-
   "main": "./tsc/main.js",
-
   "build": {
     "appId": "com.richardhbtz.soundcloud-rpc",
     "productName": "SoundCloud",
@@ -22,22 +19,19 @@
     "files": [
       "tsc/**/*"
     ],
-
     "directories": {
       "output": "dist"
     },
-
     "mac": {
       "icon": "assets/icons/soundcloud-mac.icns"
     },
-
     "win": {
       "icon": "assets/icons/soundcloud-win.ico"
     }
   },
-
   "devDependencies": {
     "@types/discord-rpc": "^4.0.6",
+    "@types/node": "^20.11.20",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "electron": "^24.3.0",
@@ -45,8 +39,8 @@
     "eslint": "^7.32.0",
     "typescript": "^4.8.3"
   },
-
   "dependencies": {
-    "discord-rpc": "^4.0.1"
+    "discord-rpc": "^4.0.1",
+    "electron-store": "^8.1.0"
   }
 }

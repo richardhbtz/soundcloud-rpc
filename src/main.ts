@@ -1,6 +1,9 @@
 import { app, BrowserWindow, Menu } from "electron";
 import { Client as DiscordRPCClient } from "discord-rpc";
 
+const Store = require("electron-store");
+
+const store = new Store();
 const rpc = new DiscordRPCClient({ transport: "ipc" });
 const clientId = "1090770350251458592";
 
@@ -25,6 +28,8 @@ async function createWindow() {
       nodeIntegration: false,
     },
   });
+
+  mainWindow.setBounds(store.get("bounds"));
 
   // Load the SoundCloud website
   mainWindow.loadURL("https://soundcloud.com/discover");
@@ -97,6 +102,10 @@ async function createWindow() {
   });
 
   // Emitted when the window is closed.
+  mainWindow.on("close", function () {
+    store.set('bounds', mainWindow.getBounds());
+  });
+
   mainWindow.on("closed", function () {
     mainWindow = null;
   });
