@@ -1,15 +1,24 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "🎵 A Soundcloud client with Discord Rich Presence support",
-  "author": "Richard Habitzreuter",
+
+  "author": { 
+    "name":"Richard Habitzreuter", 
+    "email": "richardhabitzreuter@icloud.com"
+  },
+
   "license": "MIT",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
     "lint": "eslint -c .eslintrc --ext .ts ./src",
     "start": "npm run build && electron ./tsc/main.js",
-    "dist": "npm run build && electron-builder --dir"
+    "dist": "npm run build && electron-builder --dir",
+    "dist-win": "npm run build && electron-builder -w nsis",
+    "dist-mac": "npm run build && electron-builder -m dmg",
+    "dist-linux-deb": "npm run build && electron-builder -l deb",
+    "dist-linux-appimage": "npm run build && electron-builder -l appimage"
   },
   "main": "./tsc/main.js",
   "build": {
