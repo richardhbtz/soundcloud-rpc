@@ -1,9 +1,12 @@
 import { app, BrowserWindow, Menu } from "electron";
 import { Client as DiscordRPCClient } from "discord-rpc";
 
-const Store = require("electron-store");
+import { DarkModeCSS } from "./dark";
 
+const localShortcuts = require("electron-localshortcut");
+const Store = require("electron-store");
 const store = new Store();
+
 const rpc = new DiscordRPCClient({ transport: "ipc" });
 const clientId = "1090770350251458592";
 
@@ -23,7 +26,6 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
-    icon: `${__dirname}/../assets/ico/soundcloud.ico`,
     webPreferences: {
       nodeIntegration: false,
     },
@@ -36,6 +38,11 @@ async function createWindow() {
 
   // Wait for the page to fully load
   mainWindow.webContents.on("did-finish-load", async () => {
+    // Inject dark mode CSS if enablede
+    if (store.get("darkMode")) {
+      await mainWindow.webContents.insertCSS(DarkModeCSS);
+    }
+
     // Check if music is playing every 10 seconds
     setInterval(async () => {
       // Check if music is playing
@@ -96,8 +103,7 @@ async function createWindow() {
             smallImageText: "SoundCloud",
             instance: false,
           });
-        }
-        else {
+        } else {
           rpc.clearActivity();
         }
       }
@@ -112,6 +118,9 @@ async function createWindow() {
   mainWindow.on("closed", function () {
     mainWindow = null;
   });
+
+  // Register F1 shortcut for toggling dark mode
+  localShortcuts.register(mainWindow, "F1", () => toggleDarkMode());
 }
 
 // When Electron has finished initializing, create the main window
@@ -130,3 +139,12 @@ app.on("activate", function () {
     createWindow();
   }
 });
+
+//Function to toggle dark mode
+function toggleDarkMode() {
+  const isDarkMode = store.get("darkMode");
+  store.set("darkMode", !isDarkMode);
+  if (mainWindow) {
+    mainWindow.reload();
+  }
+}

@@ -18,8 +18,6 @@ it from the official website: https://nodejs.org/
 1. Clone this repository to your local machine.
 2. Run =npm install= to install the required dependencies.
 3. Run =npm start= to launch the application.
-4. Log in to your Discord account to start displaying the currently
-   playing SoundCloud track as your status.
 
 ** Configuration
 :PROPERTIES:
@@ -30,6 +28,8 @@ playing on SoundCloud. However, if you set the =displayWhenIdling=
 variable to =true= in the =createWindow= function, the rich presence
 will also be displayed when you are not currently playing any music on
 SoundCloud.
+
+Dark mode can be activated by pressing F1.
 
 #+begin_src js
 let displayWhenIdling = true; // change to true to display a message when idling
