@@ -1,5 +1,8 @@
 import { app, BrowserWindow, Menu } from "electron";
 import { Client as DiscordRPCClient } from "discord-rpc";
+import { ElectronBlocker, fullLists, Request } from '@cliqz/adblocker-electron';
+import { readFileSync, writeFileSync } from 'fs';
+import fetch from 'cross-fetch';
 
 import { DarkModeCSS } from "./dark";
 
@@ -29,6 +32,25 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
     },
+  });
+
+  const blocker = await ElectronBlocker.fromLists(
+    fetch,
+    fullLists,
+    {
+      enableCompression: true,
+    },
+    {
+      path: 'engine.bin',//needed adblock list from cliqz, created on start
+      read: async (...args) => readFileSync(...args),
+      write: async (...args) => writeFileSync(...args),
+    },
+  )
+
+  blocker.enableBlockingInSession(mainWindow.webContents.session); // blocking ads for the mainWindow content
+
+  blocker.on('request-blocked', (request: Request) => {
+    console.log('[AD BLOCKED]', request.url); // log adblock in url for debug
   });
 
   mainWindow.setBounds(store.get("bounds"));
