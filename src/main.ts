@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu } from "electron";
 import { Client as DiscordRPCClient } from "discord-rpc";
-import { ElectronBlocker, fullLists, Request } from '@cliqz/adblocker-electron';
+import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
 
@@ -8,8 +8,8 @@ import { DarkModeCSS } from "./dark";
 
 const localShortcuts = require("electron-localshortcut");
 const Store = require("electron-store");
-const store = new Store();
 
+const store = new Store();
 const rpc = new DiscordRPCClient({ transport: "ipc" });
 const clientId = "1090770350251458592";
 
@@ -18,51 +18,47 @@ rpc.login({ clientId }).catch(console.error);
 Menu.setApplicationMenu(null);
 
 let mainWindow: BrowserWindow | null;
-
-function shortenString(str: string): string {
-  return str.length > 128 ? str.substring(0, 128) + "..." : str;
-}
+let blocker: ElectronBlocker;
 
 async function createWindow() {
   let displayWhenIdling = false; // Whether to display a status message when music is paused
 
+  let bounds = store.get("bounds");
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 720,
+    width: bounds ? bounds.width : 1280,
+    height: bounds ? bounds.height : 720,
     webPreferences: {
       nodeIntegration: false,
     },
   });
-
-  const blocker = await ElectronBlocker.fromLists(
-    fetch,
-    fullLists,
-    {
-      enableCompression: true,
-    },
-    {
-      path: 'engine.bin',//needed adblock list from cliqz, created on start
-      read: async (...args) => readFileSync(...args),
-      write: async (...args) => writeFileSync(...args),
-    },
-  )
-
-  blocker.enableBlockingInSession(mainWindow.webContents.session); // blocking ads for the mainWindow content
-
-  blocker.on('request-blocked', (request: Request) => {
-    console.log('[AD BLOCKED]', request.url); // log adblock in url for debug
-  });
-
-  mainWindow.setBounds(store.get("bounds"));
 
   // Load the SoundCloud website
   mainWindow.loadURL("https://soundcloud.com/discover");
 
   // Wait for the page to fully load
   mainWindow.webContents.on("did-finish-load", async () => {
-    // Inject dark mode CSS if enablede
+
+    // Inject dark mode CSS if enabled
     if (store.get("darkMode")) {
       await mainWindow.webContents.insertCSS(DarkModeCSS);
+    }
+
+    // Inject adblocker if enabled
+    if (store.get("adBlocker")) {
+      blocker = await ElectronBlocker.fromLists(
+        fetch,
+        fullLists,
+        {
+          enableCompression: true,
+        },
+        {
+          path: 'engine.bin',
+          read: async (...args) => readFileSync(...args),
+          write: async (...args) => writeFileSync(...args),
+        },
+      )
+      blocker.enableBlockingInSession(mainWindow.webContents.session);
     }
 
     // Check if music is playing every 10 seconds
@@ -133,40 +129,95 @@ async function createWindow() {
   });
 
   // Emitted when the window is closed.
-  mainWindow.on("close", function () {
+  mainWindow.on("close", function() {
     store.set("bounds", mainWindow.getBounds());
   });
 
-  mainWindow.on("closed", function () {
+  mainWindow.on("closed", function() {
     mainWindow = null;
   });
 
   // Register F1 shortcut for toggling dark mode
   localShortcuts.register(mainWindow, "F1", () => toggleDarkMode());
+
+  // Register F2 shortcut for toggling the adblocker
+  localShortcuts.register(mainWindow, "F2", () => toggleAdBlocker());
 }
 
 // When Electron has finished initializing, create the main window
 app.on("ready", createWindow);
 
 // Quit the app when all windows are closed, unless running on macOS (where it's typical to leave apps running)
-app.on("window-all-closed", function () {
+app.on("window-all-closed", function() {
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
 // When the app is activated, create the main window if it doesn't already exist
-app.on("activate", function () {
+app.on("activate", function() {
   if (mainWindow === null) {
     createWindow();
   }
 });
 
-//Function to toggle dark mode
-function toggleDarkMode() {
-  const isDarkMode = store.get("darkMode");
-  store.set("darkMode", !isDarkMode);
+//Function to toggle the adblocker
+function toggleAdBlocker() {
+  const adBlockEnabled = store.get("adBlocker");
+  store.set("adBlocker", !adBlockEnabled);
+
+  if (adBlockEnabled) {
+    blocker.disableBlockingInSession(mainWindow.webContents.session);
+  }
+
   if (mainWindow) {
     mainWindow.reload();
+    injectToastNotification(adBlockEnabled ? "Adblocker disabled" : "Adblocker enabled");
+  }
+}
+
+//Function to toggle dark mode
+function toggleDarkMode() {
+  const darkModeEnabled = store.get("darkMode");
+  store.set("darkMode", !darkModeEnabled);
+
+  if (mainWindow) {
+    mainWindow.reload();
+    injectToastNotification(darkModeEnabled ? "Dark mode disabled" : "Dark mode enabled");
+  }
+}
+
+function shortenString(str: string): string {
+  return str.length > 128 ? str.substring(0, 128) + "..." : str;
+}
+
+// Function to inject toast notification into the main page
+function injectToastNotification(message: string) {
+  if (mainWindow) {
+    mainWindow.webContents.executeJavaScript(`
+      const notificationElement = document.createElement('div');
+      notificationElement.style.position = 'fixed';
+      notificationElement.style.bottom = '50px';
+      notificationElement.style.fontSize = '20px';
+      notificationElement.style.left = '50%';
+      notificationElement.style.transform = 'translateX(-50%)';
+      notificationElement.style.backgroundColor = '#333';
+      notificationElement.style.color = '#fff';
+      notificationElement.style.padding = '10px 20px';
+      notificationElement.style.borderRadius = '5px';
+      notificationElement.style.opacity = '0'; 
+      notificationElement.style.transition = 'opacity 0.5s';
+      setTimeout(() => {
+        notificationElement.style.opacity = '1';
+      }, 100); 
+      notificationElement.innerHTML = '${message}';
+      document.body.appendChild(notificationElement);
+      setTimeout(() => {
+        notificationElement.style.opacity = '0';
+        setTimeout(() => {
+          notificationElement.remove();
+        }, 500); 
+      }, 4500); // Duration of showing the notification
+    `);
   }
 }

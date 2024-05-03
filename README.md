@@ -1,4 +1,4 @@
-# soundcloud-rpc - A Soundcloud client with Discord Rich Presence support
+# soundcloud-rpc - a SoundCloud Client with Discord Rich Presence, Dark Mode, and Adblocking Support
 
 ## Preview
 
@@ -6,23 +6,28 @@
 
 ## Installation
 
-Before installing and running this app, you must have Node.js installed on your machine. If you don't have Node.js installed, you can download it from the official website: [Node.js Official Website](https://nodejs.org/)
+### Release
+For the latest version of soundcloud-rpc, download the installer or executable file from the [latest release](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
 
-1. Clone this repository to your local machine.
+### Manual
+
+Before installing and running this app, you must have [Node.js](https://nodejs.org/) installed on your machine. 
+
+1. Clone this repository to your local machine
 2. Run `npm install` to install the required dependencies.
 3. Run `npm start` to launch the application.
 
 ## Configuration
 
-By default, the rich presence will only be displayed when music is playing on SoundCloud. However, if you set the `displayWhenIdling` variable to `true` in the `createWindow` function, the rich presence will also be displayed when you are not currently playing any music on SoundCloud.
+- The application settings are stored locally using Electron's `electron-store` module.
+- Dark mode and adblocker settings can be toggled using keybinds.
 
-```javascript
-let displayWhenIdling = true; // change to true to display a message when idling
-```
+## Keybinds
 
-## Usage
-
-Dark mode can be activated by pressing F1.
+| Keybinding           | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| F1                   | Toggles dark mode                                                      |
+| F2                   | Toggles adblocker                                                      |
 
 ## Credits
 
