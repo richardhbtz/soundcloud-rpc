@@ -24,10 +24,12 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 
 ## Keybinds
 
-| Keybinding           | Description                                                            |
-| -------------------- | ---------------------------------------------------------------------- |
-| F1                   | Toggles dark mode                                                      |
-| F2                   | Toggles adblocker                                                      |
+| Keybinding              | Description                                                            |
+| ----------------------- | ---------------------------------------------------------------------- |
+| F1                      | Toggles dark mode                                                      |
+| F2                      | Toggles adblocker                                                      |
+| Ctrl + B or Command + B | Goes back to the previous web page                                     |
+| Ctrl + F or Command + F | Goes forward a web page                                                |
 
 ## Credits
 
