@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, dialog } from 'electron';
 import { Client as DiscordRPCClient } from 'discord-rpc';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
@@ -8,6 +8,7 @@ import { DarkModeCSS } from './dark';
 
 const localShortcuts = require('electron-localshortcut');
 const Store = require('electron-store');
+const prompt = require('electron-prompt');
 
 const store = new Store();
 const rpc = new DiscordRPCClient({ transport: 'ipc' });
@@ -32,6 +33,16 @@ async function createWindow() {
             nodeIntegration: false,
         },
     });
+
+    // Setup proxy
+    if (store.get('proxyEnabled')) {
+        const { protocol, host } = store.get("proxyData");
+
+        await mainWindow.webContents.session.setProxy({
+            proxyRules: `${protocol}//${host}`
+        });
+    }
+    
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
@@ -139,6 +150,9 @@ async function createWindow() {
     // Register F2 shortcut for toggling the adblocker
     localShortcuts.register(mainWindow, 'F2', () => toggleAdBlocker());
 
+    // Register F3 for proxy
+    localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
+
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
@@ -172,6 +186,57 @@ function toggleAdBlocker() {
     if (mainWindow) {
         mainWindow.reload();
         injectToastNotification(adBlockEnabled ? 'Adblocker disabled' : 'Adblocker enabled');
+    }
+}
+
+
+// Handle proxy authorization
+app.on("login", (event, webContents, request, authInfo, callback) => {
+    if (authInfo.isProxy) {
+        if (!store.get('proxyEnabled')) { return callback("", "") };
+        
+        const { user, password } = store.get('proxyData');
+
+        callback(user, password);
+    }
+})
+
+// Function to toggle proxy
+async function toggleProxy() {
+    const proxyUri = await prompt({
+        title: 'Setup proxy',
+        label: 'Enter off for disable proxy',
+        value: 'http://user:password@ip:port',
+        inputAttrs: {
+            type: 'uri'
+        },
+        type: 'input'
+    });
+
+    if (proxyUri == "off") {
+        store.set('proxyEnabled', false);
+
+        dialog.showMessageBoxSync(mainWindow, { message: "The application needs a restart to work properly"});
+        app.quit();
+    } else {
+        try {
+            const url = new URL(proxyUri);
+            store.set('proxyEnabled', true);
+            store.set('proxyData', {
+                "protocol": url.protocol,
+                "host": url.host,
+                "user": url.username,
+                "password": url.password
+            })
+
+            dialog.showMessageBoxSync(mainWindow, { message: "The application needs a restart to work properly"});
+            app.quit();
+        } catch (e) {
+            store.set('proxyEnabled', false);
+            mainWindow.reload();
+            injectToastNotification("Failed to setup proxy.");
+            console.log(e);
+        }
     }
 }
 
