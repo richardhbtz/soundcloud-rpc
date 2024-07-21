@@ -1,4 +1,4 @@
-# soundcloud-rpc - a SoundCloud Client with Discord Rich Presence, Dark Mode, and Adblocking Support
+# soundcloud-rpc - a SoundCloud Client with Discord Rich Presence, Dark Mode, and AdBlock support
 
 ## Preview
 
@@ -28,6 +28,7 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 | ----------------------- | ---------------------------------------------------------------------- |
 | F1                      | Toggles dark mode                                                      |
 | F2                      | Toggles adblocker                                                      |
+| F3                      | Shows the proxy config window                                          |
 | Ctrl + B or Command + B | Goes back to the previous web page                                     |
 | Ctrl + F or Command + F | Goes forward a web page                                                |
 
