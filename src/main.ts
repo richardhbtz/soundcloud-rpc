@@ -6,11 +6,12 @@ import fetch from 'cross-fetch';
 
 import { DarkModeCSS } from './dark';
 
-const localShortcuts = require('electron-localshortcut');
 const Store = require('electron-store');
+const store = new Store();
+
+const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 
-const store = new Store();
 const rpc = new DiscordRPCClient({ transport: 'ipc' });
 const clientId = '1090770350251458592';
 
@@ -36,18 +37,18 @@ async function createWindow() {
 
     // Setup proxy
     if (store.get('proxyEnabled')) {
-        const { protocol, host } = store.get("proxyData");
+        const { protocol, host } = store.get('proxyData');
 
         await mainWindow.webContents.session.setProxy({
-            proxyRules: `${protocol}//${host}`
+            proxyRules: `${protocol}//${host}`,
         });
     }
-    
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
+
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
         if (store.get('darkMode')) {
@@ -150,7 +151,7 @@ async function createWindow() {
     // Register F2 shortcut for toggling the adblocker
     localShortcuts.register(mainWindow, 'F2', () => toggleAdBlocker());
 
-    // Register F3 for proxy
+    // Register F3 shortcut to show the proxy window
     localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
 
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
@@ -189,53 +190,54 @@ function toggleAdBlocker() {
     }
 }
 
-
 // Handle proxy authorization
-app.on("login", (event, webContents, request, authInfo, callback) => {
+app.on('login', (_event, _webContents, _request, authInfo, callback) => {
     if (authInfo.isProxy) {
-        if (!store.get('proxyEnabled')) { return callback("", "") };
-        
+        if (!store.get('proxyEnabled')) {
+            return callback('', '');
+        }
+
         const { user, password } = store.get('proxyData');
 
         callback(user, password);
     }
-})
+});
 
 // Function to toggle proxy
 async function toggleProxy() {
     const proxyUri = await prompt({
-        title: 'Setup proxy',
-        label: 'Enter off for disable proxy',
+        title: 'Setup Proxy',
+        label: "Enter 'off' to disable the proxy",
         value: 'http://user:password@ip:port',
         inputAttrs: {
-            type: 'uri'
+            type: 'uri',
         },
-        type: 'input'
+        type: 'input',
     });
 
-    if (proxyUri == "off") {
+    if (proxyUri === null) return;
+
+    if (proxyUri == 'off') {
         store.set('proxyEnabled', false);
 
-        dialog.showMessageBoxSync(mainWindow, { message: "The application needs a restart to work properly"});
+        dialog.showMessageBoxSync(mainWindow, { message: 'The application needs to restart to work properly' });
         app.quit();
     } else {
         try {
             const url = new URL(proxyUri);
             store.set('proxyEnabled', true);
             store.set('proxyData', {
-                "protocol": url.protocol,
-                "host": url.host,
-                "user": url.username,
-                "password": url.password
-            })
-
-            dialog.showMessageBoxSync(mainWindow, { message: "The application needs a restart to work properly"});
+                protocol: url.protocol,
+                host: url.host,
+                user: url.username,
+                password: url.password,
+            });
+            dialog.showMessageBoxSync(mainWindow, { message: 'The application needs to restart to work properly' });
             app.quit();
         } catch (e) {
             store.set('proxyEnabled', false);
             mainWindow.reload();
-            injectToastNotification("Failed to setup proxy.");
-            console.log(e);
+            injectToastNotification('Failed to setup proxy.');
         }
     }
 }
