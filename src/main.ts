@@ -1,10 +1,14 @@
 import { app, BrowserWindow, Menu, dialog } from 'electron';
-import { Client as DiscordRPCClient } from 'discord-rpc';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
 
 import { DarkModeCSS } from './dark';
+
+import { ActivityType, GatewayActivityButton } from 'discord-api-types/v10';
+
+import { Client as DiscordClient } from '@xhayper/discord-rpc';
+import type { SetActivity } from '@xhayper/discord-rpc/dist/structures/ClientUser';
 
 const Store = require('electron-store');
 const store = new Store();
@@ -12,10 +16,23 @@ const store = new Store();
 const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 
-const rpc = new DiscordRPCClient({ transport: 'ipc' });
 const clientId = '1090770350251458592';
 
-rpc.login({ clientId }).catch(console.error);
+export interface Info {
+    rpc: DiscordClient;
+    ready: boolean;
+    autoReconnect: boolean;
+  }
+  
+  const info: Info = {
+    rpc: new DiscordClient({
+      clientId,
+    }),
+    ready: false,
+    autoReconnect: true,
+  };
+
+info.rpc.login().catch(console.error);
 
 Menu.setApplicationMenu(null);
 
@@ -109,7 +126,8 @@ async function createWindow() {
                 const totalMilliseconds = parseTime(totalTime);
                 const currentTrack = trackInfo.title.replace(/\n.*/s, '').replace('Current track:', '');
 
-                rpc.setActivity({
+                info.rpc.user?.setActivity({
+                    type: ActivityType.Listening,
                     details: shortenString(currentTrack),
                     state: `by ${shortenString(trackInfo.author)}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
@@ -121,7 +139,7 @@ async function createWindow() {
                     instance: false,
                 });
             } else if (displayWhenIdling) {
-                rpc.setActivity({
+                info.rpc.user?.setActivity({
                     details: 'Listening to SoundCloud',
                     state: 'Paused',
                     largeImageKey: 'idling',
@@ -131,7 +149,7 @@ async function createWindow() {
                     instance: false,
                 });
             } else {
-                rpc.clearActivity();
+                info.rpc.user?.clearActivity();
             }
         }, 10000);
     });
