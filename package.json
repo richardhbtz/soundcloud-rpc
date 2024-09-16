@@ -19,6 +19,11 @@
     "dist-linux-appimage": "npm run build && electron-builder -l appimage"
   },
   "main": "./tsc/main.js",
+  "repository": "https://github.com/richardhbtz/soundcloud-rpc",
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
   "build": {
     "appId": "com.richardhbtz.soundcloud-rpc",
     "productName": "SoundCloud",
@@ -33,12 +38,15 @@
       "icon": "assets/icons/soundcloud-mac.icns"
     },
     "win": {
-      "icon": "assets/icons/soundcloud-win.ico"
+      "target": "nsis",
+      "icon": "assets/icons/soundcloud-win.ico",
+      "artifactName": "soundcloud-${version}.installer-win.${ext}"
     }
   },
   "devDependencies": {
     "@types/discord-rpc": "^4.0.6",
     "@types/node": "^20.11.20",
+    "@types/semver": "^7.5.8",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "electron": "^24.3.0",
@@ -53,6 +61,7 @@
     "discord-rpc": "^4.0.1",
     "electron-localshortcut": "^3.2.1",
     "electron-prompt": "^1.7.0",
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.3.4"
   }
 }
