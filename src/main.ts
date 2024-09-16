@@ -29,7 +29,7 @@ autoUpdater.on("update-available", () => {
   injectToastNotification("Update Available");
 });
 
-autoUpdater.on("update-available", () => {
+autoUpdater.on("update-downloaded", () => {
   injectToastNotification("Update Completed");
 });
 
