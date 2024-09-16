@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.28.2",
+    "@xhayper/discord-rpc": "^1.2.0",
     "cross-fetch": "^4.0.0",
     "discord-rpc": "^4.0.1",
     "electron-localshortcut": "^3.2.1",

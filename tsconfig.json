@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
+    "target": "es6",
     "module": "commonjs",
     "noImplicitAny": true,
     "sourceMap": true,
     "outDir": "tsc",
     "baseUrl": ".",
     "paths": {
-      "*": ["node_modules/*"]
+      "*": [
+        "node_modules/*"
+      ]
     }
   },
   "include": [
