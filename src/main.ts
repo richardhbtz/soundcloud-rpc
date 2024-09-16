@@ -1,18 +1,16 @@
 import { app, BrowserWindow, Menu, dialog } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
-import fetch from 'cross-fetch';
 
 import { DarkModeCSS } from './dark';
-
-import { ActivityType, GatewayActivityButton } from 'discord-api-types/v10';
-
+import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
-import type { SetActivity } from '@xhayper/discord-rpc/dist/structures/ClientUser';
+
+import fetch from 'cross-fetch';
 
 const Store = require('electron-store');
-const store = new Store();
 
+const store = new Store();
 const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 
@@ -22,15 +20,15 @@ export interface Info {
     rpc: DiscordClient;
     ready: boolean;
     autoReconnect: boolean;
-  }
-  
-  const info: Info = {
+}
+
+const info: Info = {
     rpc: new DiscordClient({
-      clientId,
+        clientId,
     }),
     ready: false,
     autoReconnect: true,
-  };
+};
 
 info.rpc.login().catch(console.error);
 
@@ -43,6 +41,7 @@ async function createWindow() {
     let displayWhenIdling = false; // Whether to display a status message when music is paused
 
     let bounds = store.get('bounds');
+    let maximazed = store.get('maximazed');
 
     mainWindow = new BrowserWindow({
         width: bounds ? bounds.width : 1280,
@@ -51,6 +50,9 @@ async function createWindow() {
             nodeIntegration: false,
         },
     });
+
+    if (maximazed)
+        mainWindow.maximize();
 
     // Setup proxy
     if (store.get('proxyEnabled')) {
@@ -157,6 +159,7 @@ async function createWindow() {
     // Emitted when the window is closed.
     mainWindow.on('close', function () {
         store.set('bounds', mainWindow.getBounds());
+        store.set('maximazed', mainWindow.isMaximized())
     });
 
     mainWindow.on('closed', function () {
