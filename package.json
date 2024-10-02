@@ -35,7 +35,9 @@
       "output": "dist"
     },
     "mac": {
-      "icon": "assets/icons/soundcloud-mac.icns"
+      "target": "dmg",
+      "icon": "assets/icons/soundcloud-mac.icns",
+      "artifactName": "soundcloud-${version}.installer-mac.${ext}"
     },
     "win": {
       "target": "nsis",
