@@ -8,6 +8,8 @@ import { DarkModeCSS } from './dark';
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
 
+import { authenticateLastFm, getLastFmSession, scrobbleTrack, updateNowPlaying } from './lastfm'
+
 import fetch from 'cross-fetch';
 
 const { autoUpdater } = require("electron-updater")
@@ -15,6 +17,8 @@ const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 const clientId = '1090770350251458592';
 const store = new Store();
+
+let scrobblingTrack: any = null;
 
 export interface Info {
   rpc: DiscordClient;
@@ -131,7 +135,10 @@ async function createWindow() {
           ),
           executeJS(`document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`),
         ]);
-
+        
+        await updateNowPlaying(trackInfo, store);
+        
+        
         const parseTime = (time: string): number => {
           const parts = time.split(':').map(Number);
           return parts.reduce((acc, part) => 60 * acc + part, 0) * 1000;
@@ -140,7 +147,23 @@ async function createWindow() {
         const elapsedMilliseconds = parseTime(elapsedTime);
         const totalMilliseconds = parseTime(totalTime);
         const currentTrack = trackInfo.title.replace(/\n.*/s, '').replace('Current track:', '');
+        const currentTrackArtist = trackInfo.author;
 
+        if (
+          !scrobblingTrack ||
+          !scrobblingTrack.artist !== currentTrackArtist ||
+          !scrobblingTrack.title !== currentTrack
+        ) {
+          if (scrobblingTrack) {
+            await scrobbleTrack(scrobblingTrack, store);
+          }
+          scrobblingTrack = { artist: currentTrackArtist, title: currentTrack };
+        } else {
+          if (scrobblingTrack) {
+            await scrobbleTrack(scrobblingTrack, store);
+            scrobblingTrack = null;
+          }
+        }
         info.rpc.user?.setActivity({
           type: ActivityType.Listening,
           details: shortenString(currentTrack),
@@ -153,6 +176,7 @@ async function createWindow() {
           smallImageText: 'SoundCloud',
           instance: false,
         });
+
       } else if (displayWhenIdling) {
         info.rpc.user?.setActivity({
           details: 'Listening to SoundCloud',
@@ -179,6 +203,7 @@ async function createWindow() {
     mainWindow = null;
   });
 
+  
   // Register F1 shortcut for toggling dark mode
   localShortcuts.register(mainWindow, 'F1', () => toggleDarkMode());
 
@@ -188,6 +213,7 @@ async function createWindow() {
   // Register F3 shortcut to show the proxy window
   localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
 
+  localShortcuts.register(mainWindow, 'F4', async () => { authenticateLastFm(mainWindow, store) });
   localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
   localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
@@ -225,11 +251,20 @@ function toggleAdBlocker() {
 }
 
 // Handle proxy authorization
-app.on('login', (_event, _webContents, _request, authInfo, callback) => {
+app.on('login', async (_event, _webContents, _request, authInfo, callback) => {
   if (authInfo.isProxy) {
     if (!store.get('proxyEnabled')) {
       return callback('', '');
     }
+    const lastFmToken = await prompt({
+      title: 'Last.fm Token',
+      label: 'Enter the token you received after logging in to Last.fm',
+      inputAttrs: {
+        type: 'text',
+      },
+      type: 'input',
+    });
+    await getLastFmSession(lastFmToken, store);
 
     const { user, password } = store.get('proxyData');
 
