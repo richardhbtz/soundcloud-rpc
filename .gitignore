@@ -3,4 +3,3 @@ node_modules
 dist
 tsc
 **/.DS_Store
-.env
