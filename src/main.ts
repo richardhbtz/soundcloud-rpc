@@ -250,6 +250,7 @@ async function createWindow() {
     // Register F3 shortcut to show the proxy window
     localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
 
+    // Register F4 shortcut to connecting to last.fm api
     localShortcuts.register(mainWindow, 'F4', async () => {
         const apikey = store.get('lastFmApiKey');
         const secret = store.get('lastFmSecret');
@@ -260,9 +261,12 @@ async function createWindow() {
             injectToastNotification('Last.fm authenticated');
         }
     });
+
+    // Register Shift + F4 shortcut for force resetting the last.fm api keys
     localShortcuts.register(mainWindow, 'Shift+F4', async () => {
-        await setupLastFmConfig(mainWindow, store); //force api keys reset
+        await setupLastFmConfig(mainWindow, store);
     });
+    
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }

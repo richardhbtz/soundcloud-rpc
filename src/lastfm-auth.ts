@@ -2,7 +2,7 @@ import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { authenticateLastFm } from './lastfm';
 
-async function createAuthWindow(parentWindow: BrowserWindow): Promise<any> {
+async function createAuthWindow(parentWindow: BrowserWindow): Promise<{apiKey: string, apiSecret: string}> {
     const authWindow = new BrowserWindow({
         width: 400,
         height: 600,
