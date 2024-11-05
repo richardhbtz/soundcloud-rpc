@@ -1,4 +1,4 @@
-# soundcloud-rpc - a SoundCloud Client with Discord Rich Presence, Dark Mode, and AdBlock support
+# soundcloud-rpc - a SoundCloud Client with Discord Rich Presence, Dark Mode, Last.fm and AdBlock support
 
 ## Preview
 
@@ -21,6 +21,7 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 
 - The application settings are stored locally using Electron's `electron-store` module.
 - Dark mode and adblocker settings can be toggled using keybinds.
+- Last.fm automatic track scrobbling can be enabled through keybinds and registering your API keys.
 
 ## Keybinds
 
@@ -29,6 +30,8 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 | F1                      | Toggles dark mode                                                      |
 | F2                      | Toggles adblocker                                                      |
 | F3                      | Shows the proxy config window                                          |
+| F4                      | Insert last.fm api keys for scrobbling functionality                   |
+| Shift + F4              | Reset last.fm keys in case of errors                                   |
 | Ctrl + B or Command + B | Goes back to the previous web page                                     |
 | Ctrl + F or Command + F | Goes forward a web page                                                |
 
