@@ -4,13 +4,15 @@ import { app, BrowserWindow, Menu, dialog } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 
-import { DarkModeCSS } from './dark';
+import { DarkModeCSS } from './themes/dark';
+
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
 
-import { authenticateLastFm, scrobbleTrack, updateNowPlaying, shouldScrobble, timeStringToSeconds } from './lastfm';
-import { setupLastFmConfig } from './lastfm-auth';
-import type { ScrobbleState } from './lastfm';
+import { authenticateLastFm, scrobbleTrack, updateNowPlaying, shouldScrobble, timeStringToSeconds } from './lastfm/lastfm';
+import { setupLastFmConfig } from './lastfm/lastfm-auth';
+import type { ScrobbleState } from './lastfm/lastfm';
+
 import fetch from 'cross-fetch';
 
 const { autoUpdater } = require('electron-updater');
