@@ -8,7 +8,8 @@ import { DarkModeCSS } from './dark';
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
 
-import { authenticateLastFm, getLastFmSession, scrobbleTrack, updateNowPlaying, shouldScrobble, timeStringToSeconds } from './lastfm';
+import { authenticateLastFm, scrobbleTrack, updateNowPlaying, shouldScrobble, timeStringToSeconds } from './lastfm';
+import { setupLastFmConfig } from './lastfm-auth';
 import type { ScrobbleState } from './lastfm';
 import fetch from 'cross-fetch';
 
@@ -17,7 +18,6 @@ const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 const clientId = '1090770350251458592';
 const store = new Store();
-
 
 export interface Info {
     rpc: DiscordClient;
@@ -79,7 +79,6 @@ async function createWindow() {
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
-    mainWindow.webContents.openDevTools();
     autoUpdater.checkForUpdates();
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
@@ -142,7 +141,9 @@ async function createWindow() {
                         executeJS(
                             `document.querySelector('.playbackTimeline__timePassed span:last-child')?.innerText ?? ''`,
                         ),
-                        executeJS(`document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`),
+                        executeJS(
+                            `document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`,
+                        ),
                     ]);
 
                     await updateNowPlaying(currentTrack, store);
@@ -155,37 +156,50 @@ async function createWindow() {
                     const elapsedMilliseconds = parseTime(elapsedTime);
                     const totalMilliseconds = parseTime(totalTime);
 
-                    if (!currentScrobbleState || 
-                        currentScrobbleState.artist !== currentTrack.author || 
-                        currentScrobbleState.title !== currentTrack.title) {
-                        
+                    if (
+                        !currentScrobbleState ||
+                        currentScrobbleState.artist !== currentTrack.author ||
+                        currentScrobbleState.title !== currentTrack.title
+                    ) {
                         // Scrobble previous track if it wasn't scrobbled and met criteria
-                        if (currentScrobbleState && !currentScrobbleState.scrobbled && 
-                            shouldScrobble(currentScrobbleState)) {
-                            await scrobbleTrack({
-                                author: currentScrobbleState.artist,
-                                title: currentScrobbleState.title
-                            }, store);
+                        if (
+                            currentScrobbleState &&
+                            !currentScrobbleState.scrobbled &&
+                            shouldScrobble(currentScrobbleState)
+                        ) {
+                            await scrobbleTrack(
+                                {
+                                    author: currentScrobbleState.artist,
+                                    title: currentScrobbleState.title,
+                                },
+                                store,
+                            );
                         }
-        
+
                         // Start tracking new track
                         currentScrobbleState = {
                             artist: currentTrack.author,
                             title: currentTrack.title,
                             startTime: Date.now(),
                             duration: timeStringToSeconds(trackInfo.duration),
-                            scrobbled: false
+                            scrobbled: false,
                         };
-                    } else if (currentScrobbleState && !currentScrobbleState.scrobbled && 
-                              shouldScrobble(currentScrobbleState)) {
+                    } else if (
+                        currentScrobbleState &&
+                        !currentScrobbleState.scrobbled &&
+                        shouldScrobble(currentScrobbleState)
+                    ) {
                         // Scrobble current track if it meets criteria
-                        await scrobbleTrack({
-                            author: currentScrobbleState.artist,
-                            title: currentScrobbleState.title
-                        }, store);
+                        await scrobbleTrack(
+                            {
+                                author: currentScrobbleState.artist,
+                                title: currentScrobbleState.title,
+                            },
+                            store,
+                        );
                         currentScrobbleState.scrobbled = true;
-                    } 
-                    
+                    }
+
                     info.rpc.user?.setActivity({
                         type: ActivityType.Listening,
                         details: shortenString(currentTrack.title),
@@ -237,12 +251,21 @@ async function createWindow() {
     localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
 
     localShortcuts.register(mainWindow, 'F4', async () => {
-        authenticateLastFm(mainWindow, store);
+        const apikey = store.get('lastFmApiKey');
+        const secret = store.get('lastFmSecret');
+        if (!apikey || !secret) {
+            await setupLastFmConfig(mainWindow, store);
+        } else {
+            await authenticateLastFm(mainWindow, store);
+            injectToastNotification('Last.fm authenticated');
+        }
+    });
+    localShortcuts.register(mainWindow, 'Shift+F4', async () => {
+        await setupLastFmConfig(mainWindow, store); //force api keys reset
     });
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
-
 // When Electron has finished initializing, create the main window
 app.on('ready', createWindow);
 
@@ -281,15 +304,6 @@ app.on('login', async (_event, _webContents, _request, authInfo, callback) => {
         if (!store.get('proxyEnabled')) {
             return callback('', '');
         }
-        const lastFmToken = await prompt({
-            title: 'Last.fm Token',
-            label: 'Enter the token you received after logging in to Last.fm',
-            inputAttrs: {
-                type: 'text',
-            },
-            type: 'input',
-        });
-        await getLastFmSession(lastFmToken, store);
 
         const { user, password } = store.get('proxyData');
 
@@ -352,7 +366,7 @@ function shortenString(str: string): string {
 }
 
 // Function to inject toast notification into the main page
-function injectToastNotification(message: string) {
+export function injectToastNotification(message: string) {
     if (mainWindow) {
         mainWindow.webContents.executeJavaScript(`
       const notificationElement = document.createElement('div');
