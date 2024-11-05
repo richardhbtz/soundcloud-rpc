@@ -3,7 +3,6 @@ import type { BrowserWindow } from 'electron';
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';
 import type ElectronStore = require('electron-store');
-import { injectToastNotification } from './main';
 
 export interface ScrobbleState {
     artist: string;
@@ -140,7 +139,6 @@ async function scrobbleTrack(trackInfo: { author: string; title: string }, store
             console.error('Last.fm scrobble error', data.message);
         } else {
             console.log(`Track scrobbled on Last.fm ${trackInfo.author} - ${trackInfo.title}`);
-            injectToastNotification(`Scrobbled track: ${trackInfo.author} - ${trackInfo.title}`);
         }
     } catch (error) {
         console.error('Failed to scrobble track:', error);
