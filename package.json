@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "🎵 A Soundcloud client with Discord Rich Presence support",
   "author": {
     "name": "Richard Habitzreuter",
@@ -8,15 +8,14 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
     "lint": "eslint -c .eslintrc --ext .ts ./src",
-    "start": "npm run build && electron ./tsc/main.js",
-    "dist": "npm run build && electron-builder --dir",
-    "dist-win": "npm run build && electron-builder -w nsis",
-    "dist-mac": "npm run build && electron-builder -m dmg",
-    "dist-linux-deb": "npm run build && electron-builder -l deb",
-    "dist-linux-appimage": "npm run build && electron-builder -l appimage"
+    "dev": "npm run build && electron ./tsc/main.js",
+    "build": "tsc && electron-builder --dir",
+    "build-win": "tsc && electron-builder -w nsis",
+    "build-win-ptb": "tsc && electron-builder -w portable",
+    "build-mac": "tsc && electron-builder -m dmg",
+    "build-linux-deb": "tsc && electron-builder -l deb",
+    "build-linux-appimage": "tsc && electron-builder -l appimage"
   },
   "main": "./tsc/main.js",
   "repository": "https://github.com/richardhbtz/soundcloud-rpc",
@@ -32,12 +31,12 @@
       "tsc/**/*"
     ],
     "directories": {
-      "output": "dist"
+      "output": "build"
     },
     "mac": {
       "target": "dmg",
       "icon": "assets/icons/soundcloud-mac.icns",
-      "artifactName": "soundcloud-${version}.installer-mac.${ext}"
+      "artifactName": "soundcloud-${version}.mac.${ext}"
     },
     "win": {
       "target": "nsis",

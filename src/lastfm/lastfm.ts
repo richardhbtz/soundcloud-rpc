@@ -153,7 +153,6 @@ const trackChanged = (current: any, previous: any): boolean => {
 async function updateNowPlaying(trackInfo: { author: any; title: any }, store: ElectronStore): Promise<void> {
     const sessionKey = store.get('lastFmSessionKey');
     if (!sessionKey) {
-        console.error('No Last.fm session key found');
         return;
     }
     const apiKey = store.get('lastFmApiKey') as string;

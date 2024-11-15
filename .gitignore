@@ -1,5 +1,5 @@
 engine.bin
 node_modules
-dist
+build
 tsc
 **/.DS_Store

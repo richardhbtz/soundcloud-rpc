@@ -1,6 +1,6 @@
 const Store = require('electron-store');
 
-import { app, BrowserWindow, Menu, dialog } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -14,6 +14,7 @@ import { setupLastFmConfig } from './lastfm/lastfm-auth';
 import type { ScrobbleState } from './lastfm/lastfm';
 
 import fetch from 'cross-fetch';
+import { setupDarwinMenu } from './macos/menu';
 
 const { autoUpdater } = require('electron-updater');
 const localShortcuts = require('electron-localshortcut');
@@ -26,6 +27,7 @@ export interface Info {
     ready: boolean;
     autoReconnect: boolean;
 }
+
 
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -48,15 +50,15 @@ const info: Info = {
 
 info.rpc.login().catch(console.error);
 
-Menu.setApplicationMenu(null);
+setupDarwinMenu();
 
 let mainWindow: BrowserWindow | null;
 let blocker: ElectronBlocker;
 let currentScrobbleState: ScrobbleState | null = null;
+let displayWhenIdling = false; // Whether to display a status message when music is paused
+let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
 
 async function createWindow() {
-    let displayWhenIdling = false; // Whether to display a status message when music is paused
-
     let bounds = store.get('bounds');
     let maximazed = store.get('maximazed');
 
@@ -81,9 +83,10 @@ async function createWindow() {
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
-    autoUpdater.checkForUpdates();
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
+
+    autoUpdater.checkForUpdates();
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
@@ -202,16 +205,21 @@ async function createWindow() {
                         currentScrobbleState.scrobbled = true;
                     }
 
+                    if (!info.rpc.isConnected) {
+                        if (await !info.rpc.login().catch(console.error)) {
+                            return;
+                        }
+                    }
+
                     info.rpc.user?.setActivity({
                         type: ActivityType.Listening,
                         details: shortenString(currentTrack.title),
-                        state: `by ${shortenString(trackInfo.author)}`,
+                        state: `${shortenString(trackInfo.author)}`,
                         largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
-                        largeImageText: currentTrack.title,
                         startTimestamp: Date.now() - elapsedMilliseconds,
                         endTimestamp: Date.now() + (totalMilliseconds - elapsedMilliseconds),
-                        smallImageKey: 'soundcloud-logo',
-                        smallImageText: 'SoundCloud',
+                        smallImageKey: displaySCSmallIcon ? 'soundcloud-logo' : '',
+                        smallImageText: displaySCSmallIcon ? 'SoundCloud' : '',
                         instance: false,
                     });
                 } else if (displayWhenIdling) {
@@ -264,11 +272,6 @@ async function createWindow() {
         }
     });
 
-    // Register Shift + F4 shortcut for force resetting the last.fm api keys
-    localShortcuts.register(mainWindow, 'Shift+F4', async () => {
-        await setupLastFmConfig(mainWindow, store);
-    });
-    
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
