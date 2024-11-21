@@ -1,6 +1,6 @@
 const Store = require('electron-store');
 
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, Menu } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -28,7 +28,6 @@ export interface Info {
     autoReconnect: boolean;
 }
 
-
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -50,7 +49,10 @@ const info: Info = {
 
 info.rpc.login().catch(console.error);
 
-setupDarwinMenu();
+if (process.platform === "darwin")
+    setupDarwinMenu();
+else
+    Menu.setApplicationMenu(null);
 
 let mainWindow: BrowserWindow | null;
 let blocker: ElectronBlocker;
@@ -84,6 +86,8 @@ async function createWindow() {
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
 
+    await mainWindow.webContents.insertCSS(DarkModeCSS);
+
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
 
     autoUpdater.checkForUpdates();
@@ -91,7 +95,6 @@ async function createWindow() {
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
         if (store.get('darkMode')) {
-            await mainWindow.webContents.insertCSS(DarkModeCSS);
         }
 
         if (store.get('adBlocker')) {
@@ -130,9 +133,14 @@ async function createWindow() {
                         return;
                     }
 
+                    console.log(trackInfo.title);
+
                     const currentTrack = {
                         author: trackInfo.author as string,
-                        title: trackInfo.title.replace(/\n.*/s, '').replace('Current track:', '') as string,
+                        title: trackInfo.title
+                            .replace(/.*?:\s*/, '') // Remove everything up to and including the first colon.
+                            .replace(/\n.*/, '') // Remove everything after the first newline.
+                            .trim() as string, // Clean up any leading/trailing spaces.
                     };
 
                     const artworkUrl = await executeJS(`
