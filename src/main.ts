@@ -85,8 +85,10 @@ async function createWindow() {
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
-
-    await mainWindow.webContents.insertCSS(DarkModeCSS);
+    
+    if (store.get('darkMode')) {
+        await mainWindow.webContents.insertCSS(DarkModeCSS);
+    }
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
 
@@ -94,8 +96,7 @@ async function createWindow() {
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
-        if (store.get('darkMode')) {
-        }
+
 
         if (store.get('adBlocker')) {
             const blocker = await ElectronBlocker.fromLists(
