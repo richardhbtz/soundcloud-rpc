@@ -9,7 +9,7 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint -c .eslintrc --ext .ts ./src",
-    "dev": "npm run build && electron ./tsc/main.js",
+    "dev": "tsc && electron ./tsc/main.js",
     "build": "tsc && electron-builder --dir",
     "build-win": "tsc && electron-builder -w nsis",
     "build-win-ptb": "tsc && electron-builder -w portable",
@@ -36,12 +36,16 @@
     "mac": {
       "target": "dmg",
       "icon": "assets/icons/soundcloud-mac.icns",
-      "artifactName": "soundcloud-${version}.mac.${ext}"
+      "artifactName": "soundcloud-${version}-mac.${ext}"
     },
     "win": {
       "target": "nsis",
       "icon": "assets/icons/soundcloud-win.ico",
-      "artifactName": "soundcloud-${version}.installer-win.${ext}"
+      "artifactName": "soundcloud-${version}-installer-win.${ext}"
+    },
+    "linux": {
+      "target": "AppImage",
+      "artifactName": "soundcloud-${version}-installer-linux.${ext}"
     }
   },
   "devDependencies": {
