@@ -222,7 +222,7 @@ async function createWindow() {
 
                     info.rpc.user?.setActivity({
                         type: ActivityType.Listening,
-                        details: shortenString(currentTrack.title),
+                        details: shortenString(currentTrack.title) + (currentTrack.title.length < 2 ? '⠀⠀' : ''),
                         state: `${shortenString(trackInfo.author)}`,
                         largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
                         startTimestamp: Date.now() - elapsedMilliseconds,
