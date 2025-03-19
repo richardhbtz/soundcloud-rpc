@@ -1,6 +1,4 @@
-import { app, Menu, shell, MenuItemConstructorOptions } from 'electron';
-
-const isMac = process.platform === 'darwin';
+import { Menu } from 'electron';
 
 const template: Electron.MenuItemConstructorOptions[] = [{
     label: 'Edit',

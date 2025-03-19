@@ -42,6 +42,7 @@ async function authenticateLastFm(mainWindow: BrowserWindow, store: ElectronStor
     }
 
     const authUrl = `https://www.last.fm/api/auth/?api_key=${apiKey}&cb=https://soundcloud.com/discover`;
+
     await mainWindow.loadURL(authUrl);
 
     mainWindow.webContents.on('will-redirect', async (_, url) => {

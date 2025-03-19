@@ -28,17 +28,6 @@ export interface Info {
     autoReconnect: boolean;
 }
 
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
-
-autoUpdater.on('update-available', () => {
-    injectToastNotification('Update Available');
-});
-
-autoUpdater.on('update-downloaded', () => {
-    injectToastNotification('Update Completed');
-});
-
 const info: Info = {
     rpc: new DiscordClient({
         clientId,
@@ -49,18 +38,34 @@ const info: Info = {
 
 info.rpc.login().catch(console.error);
 
-if (process.platform === "darwin")
-    setupDarwinMenu();
-else
-    Menu.setApplicationMenu(null);
-
 let mainWindow: BrowserWindow | null;
 let blocker: ElectronBlocker;
 let currentScrobbleState: ScrobbleState | null = null;
+
 let displayWhenIdling = false; // Whether to display a status message when music is paused
 let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
 
-async function createWindow() {
+function setupUpdater() {
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('update-available', () => {
+        injectToastNotification('Update Available');
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+        injectToastNotification('Update Completed');
+    });
+}
+
+async function init() {
+    setupUpdater();
+
+    if (process.platform === "darwin")
+        setupDarwinMenu();
+    else
+        Menu.setApplicationMenu(null);
+
     let bounds = store.get('bounds');
     let maximazed = store.get('maximazed');
 
@@ -85,10 +90,6 @@ async function createWindow() {
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
-    
-    if (store.get('darkMode')) {
-        await mainWindow.webContents.insertCSS(DarkModeCSS);
-    }
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
 
@@ -96,7 +97,17 @@ async function createWindow() {
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
+        const apikey = store.get('lastFmApiKey');
+        const secret = store.get('lastFmSecret');
 
+        if (apikey && secret) {
+            await authenticateLastFm(mainWindow, store);
+            injectToastNotification('Last.fm authenticated');
+        }
+
+        if (store.get('darkMode')) {
+            await mainWindow.webContents.insertCSS(DarkModeCSS);
+        }
 
         if (store.get('adBlocker')) {
             const blocker = await ElectronBlocker.fromLists(
@@ -134,8 +145,6 @@ async function createWindow() {
                         return;
                     }
 
-                    console.log(trackInfo.title);
-
                     const currentTrack = {
                         author: trackInfo.author as string,
                         title: trackInfo.title
@@ -158,7 +167,7 @@ async function createWindow() {
                         executeJS(
                             `document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`,
                         ),
-                    ]);
+                    ])//;
 
                     await updateNowPlaying(currentTrack, store);
 
@@ -285,7 +294,7 @@ async function createWindow() {
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
 // When Electron has finished initializing, create the main window
-app.on('ready', createWindow);
+app.on('ready', init);
 
 // Quit the app when all windows are closed, unless running on macOS (where it's typical to leave apps running)
 app.on('window-all-closed', function () {
@@ -297,7 +306,7 @@ app.on('window-all-closed', function () {
 // When the app is activated, create the main window if it doesn't already exist
 app.on('activate', function () {
     if (mainWindow === null) {
-        createWindow();
+        init();
     }
 });
 
