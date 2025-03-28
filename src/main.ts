@@ -95,6 +95,10 @@ async function init() {
 
     autoUpdater.checkForUpdates();
 
+    if (store.get('darkMode')) {
+        await mainWindow.webContents.insertCSS(DarkModeCSS);
+    }
+
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
         const apikey = store.get('lastFmApiKey');
@@ -103,10 +107,6 @@ async function init() {
         if (apikey && secret) {
             await authenticateLastFm(mainWindow, store);
             injectToastNotification('Last.fm authenticated');
-        }
-
-        if (store.get('darkMode')) {
-            await mainWindow.webContents.insertCSS(DarkModeCSS);
         }
 
         if (store.get('adBlocker')) {
@@ -290,9 +290,30 @@ async function init() {
         }
     });
 
+    let zoomLevel = mainWindow.webContents.getZoomLevel();
+
+    // Zoom In (Ctrl + +)
+    localShortcuts.register(mainWindow, 'CmdOrCtrl+=', () => {
+        zoomLevel = Math.min(zoomLevel + 1, 9); // Limit zoom level to 9
+        mainWindow.webContents.setZoomLevel(zoomLevel);
+    });
+
+    // Zoom Out (Ctrl + -)
+    localShortcuts.register(mainWindow, 'CmdOrCtrl+-', () => {
+        zoomLevel = Math.max(zoomLevel - 1, -9); // Limit zoom level to -9
+        mainWindow.webContents.setZoomLevel(zoomLevel);
+    });
+
+    // Reset Zoom (Ctrl + 0)
+    localShortcuts.register(mainWindow, 'CmdOrCtrl+0', () => {
+        zoomLevel = 0; // Reset zoom level to default
+        mainWindow.webContents.setZoomLevel(zoomLevel);
+    });
+
     localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
     localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
+
 // When Electron has finished initializing, create the main window
 app.on('ready', init);
 
