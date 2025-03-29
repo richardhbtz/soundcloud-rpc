@@ -56,10 +56,13 @@ function setupUpdater() {
     autoUpdater.on('update-downloaded', () => {
         injectToastNotification('Update Completed');
     });
+
+    autoUpdater.checkForUpdates();
 }
 
 async function init() {
     setupUpdater();
+
 
     if (process.platform === "darwin")
         setupDarwinMenu();
@@ -72,12 +75,13 @@ async function init() {
     mainWindow = new BrowserWindow({
         width: bounds ? bounds.width : 1280,
         height: bounds ? bounds.height : 720,
+        backgroundColor: store.get('darkMode') ? '#0b0c0c' : '#ffffff',
         webPreferences: {
             nodeIntegration: false,
         },
     });
 
-    if (maximazed) mainWindow.maximize();
+    if (maximazed || !bounds) mainWindow.maximize();
 
     // Setup proxy
     if (store.get('proxyEnabled')) {
@@ -92,12 +96,11 @@ async function init() {
     mainWindow.loadURL('https://soundcloud.com/discover');
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
-
-    autoUpdater.checkForUpdates();
-
-    if (store.get('darkMode')) {
-        await mainWindow.webContents.insertCSS(DarkModeCSS);
-    }
+    mainWindow.webContents.on('dom-ready', async () => {
+        if (store.get('darkMode') && mainWindow.webContents.getURL().startsWith('https://soundcloud.com/')) {
+            mainWindow.webContents.insertCSS(DarkModeCSS);
+        }
+    });
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
@@ -275,6 +278,10 @@ async function init() {
     // Register F2 shortcut for toggling the adblocker
     localShortcuts.register(mainWindow, 'F2', () => toggleAdBlocker());
 
+    localShortcuts.register(mainWindow, 'F12', () => {
+        mainWindow.webContents.openDevTools({ mode: 'detach' });
+    });
+
     // Register F3 shortcut to show the proxy window
     localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
 
@@ -423,7 +430,7 @@ export function injectToastNotification(message: string) {
       notificationElement.style.fontSize = '20px';
       notificationElement.style.left = '50%';
       notificationElement.style.transform = 'translateX(-50%)';
-      notificationElement.style.backgroundColor = '#333';
+      notificationElement.style.backgroundColor = '#1a1a1a';
       notificationElement.style.color = '#fff';
       notificationElement.style.padding = '10px 20px';
       notificationElement.style.borderRadius = '5px';
