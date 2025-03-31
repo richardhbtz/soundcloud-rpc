@@ -17,6 +17,13 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 2. Run `npm install` to install the required dependencies.
 3. Run `npm start` to launch the application.
 
+### macOS Users
+If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the issue:
+```
+xattr -dr com.apple.quarantine /Applications/soundcloud.app
+```
+After running this command, the app should launch without any problem.
+
 ## Configuration
 
 - The application settings are stored locally using Electron's `electron-store` module.
