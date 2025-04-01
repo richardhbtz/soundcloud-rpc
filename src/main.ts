@@ -63,7 +63,6 @@ function setupUpdater() {
 async function init() {
     setupUpdater();
 
-
     if (process.platform === "darwin")
         setupDarwinMenu();
     else
@@ -80,6 +79,8 @@ async function init() {
             nodeIntegration: false,
         },
     });
+
+    mainWindow.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     if (maximazed || !bounds) mainWindow.maximize();
 
@@ -107,7 +108,7 @@ async function init() {
         const apikey = store.get('lastFmApiKey');
         const secret = store.get('lastFmSecret');
 
-        if (apikey && secret) {
+        if (apikey && secret && mainWindow.webContents.getURL().startsWith('https://soundcloud.com/')) {
             await authenticateLastFm(mainWindow, store);
             injectToastNotification('Last.fm authenticated');
         }
