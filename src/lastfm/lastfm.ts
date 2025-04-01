@@ -30,7 +30,6 @@ function shouldScrobble(state: ScrobbleState): boolean {
 }
 
 async function authenticateLastFm(mainWindow: BrowserWindow, store: ElectronStore): Promise<void> {
-    console.log("authentication called");
     const lastFmSessionKey = store.get('lastFmSessionKey');
     if (lastFmSessionKey) {
         return; // Already authenticated

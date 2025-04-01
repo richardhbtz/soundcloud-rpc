@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "🎵 A Soundcloud client with Discord Rich Presence support",
   "author": {
     "name": "Richard Habitzreuter",
