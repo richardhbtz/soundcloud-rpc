@@ -9,7 +9,13 @@ import { DarkModeCSS } from './themes/dark';
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
 
-import { authenticateLastFm, scrobbleTrack, updateNowPlaying, shouldScrobble, timeStringToSeconds } from './lastfm/lastfm';
+import {
+    authenticateLastFm,
+    scrobbleTrack,
+    updateNowPlaying,
+    shouldScrobble,
+    timeStringToSeconds,
+} from './lastfm/lastfm';
 import { setupLastFmConfig } from './lastfm/lastfm-auth';
 import type { ScrobbleState } from './lastfm/lastfm';
 
@@ -17,6 +23,7 @@ import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 
 const { autoUpdater } = require('electron-updater');
+const windowStateManager = require('electron-window-state');
 const localShortcuts = require('electron-localshortcut');
 const prompt = require('electron-prompt');
 const clientId = '1090770350251458592';
@@ -63,26 +70,27 @@ function setupUpdater() {
 async function init() {
     setupUpdater();
 
-    if (process.platform === "darwin")
-        setupDarwinMenu();
-    else
-        Menu.setApplicationMenu(null);
+    if (process.platform === 'darwin') setupDarwinMenu();
+    else Menu.setApplicationMenu(null);
 
-    let bounds = store.get('bounds');
-    let maximazed = store.get('maximazed');
+    let windowState = windowStateManager({ defaultWidth: 800, defaultHeight: 800 });
 
     mainWindow = new BrowserWindow({
-        width: bounds ? bounds.width : 1280,
-        height: bounds ? bounds.height : 720,
+        width: windowState.width,
+        height: windowState.height,
+        x: windowState.x,
+        y: windowState.y,
         backgroundColor: store.get('darkMode') ? '#0b0c0c' : '#ffffff',
         webPreferences: {
             nodeIntegration: false,
         },
     });
 
-    mainWindow.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    windowState.manage(mainWindow);
 
-    if (maximazed || !bounds) mainWindow.maximize();
+    mainWindow.webContents.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    );
 
     // Setup proxy
     if (store.get('proxyEnabled')) {
@@ -171,7 +179,7 @@ async function init() {
                         executeJS(
                             `document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`,
                         ),
-                    ])//;
+                    ]); //;
 
                     await updateNowPlaying(currentTrack, store);
 
@@ -235,8 +243,8 @@ async function init() {
 
                     info.rpc.user?.setActivity({
                         type: ActivityType.Listening,
-                        details: `${shortenString(currentTrack.title)}${(currentTrack.title.length < 2 ? '⠀⠀' : '')}`,
-                        state: `${shortenString(trackInfo.author)}${(trackInfo.author.length < 2 ? '⠀⠀' : '')}`,
+                        details: `${shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
+                        state: `${shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
                         largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
                         startTimestamp: Date.now() - elapsedMilliseconds,
                         endTimestamp: Date.now() + (totalMilliseconds - elapsedMilliseconds),
