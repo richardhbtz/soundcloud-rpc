@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "🎵 A Soundcloud client with Discord Rich Presence support",
   "author": {
     "name": "Richard Habitzreuter",
@@ -56,12 +56,12 @@
     "@typescript-eslint/parser": "^4.33.0",
     "electron": "^35.1.5",
     "electron-builder": "^24.9.1",
-    "electron-window-state": "^5.0.3",
     "eslint": "^7.32.0",
     "typescript": "^4.8.3"
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.28.2",
+    "electron-window-state": "^5.0.3",
     "@xhayper/discord-rpc": "^1.2.0",
     "cross-fetch": "^4.0.0",
     "discord-rpc": "^4.0.1",
