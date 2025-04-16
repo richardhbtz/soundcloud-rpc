@@ -27,14 +27,13 @@ After running this command, the app should launch without any problem.
 ## Configuration
 
 - The application settings are stored locally using Electron's `electron-store` module.
-- Dark mode and adblocker settings can be toggled using keybinds.
+- Adblocker settings can be toggled using keybinds.
 - Last.fm automatic track scrobbling can be enabled through keybinds and registering your API keys.
 
 ## Keybinds
 
 | Keybinding              | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
-| F1                      | Toggles dark mode                                                      |
 | F2                      | Toggles adblocker                                                      |
 | F3                      | Shows the proxy config window                                          |
 | F4                      | Insert last.fm api keys for scrobbling functionality                   |

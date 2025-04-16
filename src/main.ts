@@ -20,7 +20,7 @@ import type { ScrobbleState } from './lastfm/lastfm';
 
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
-import { NotificationManager } from './notifications/NotificationManager';
+import { NotificationManager } from './notifications/notificationManager';
 
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
