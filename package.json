@@ -54,8 +54,9 @@
     "@types/semver": "^7.5.8",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
-    "electron": "^24.3.0",
+    "electron": "^35.1.5",
     "electron-builder": "^24.9.1",
+    "electron-window-state": "^5.0.3",
     "eslint": "^7.32.0",
     "typescript": "^4.8.3"
   },

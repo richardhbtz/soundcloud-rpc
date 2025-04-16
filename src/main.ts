@@ -4,8 +4,6 @@ import { app, BrowserWindow, dialog, Menu } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 
-import { DarkModeCSS } from './themes/dark';
-
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
 
@@ -16,11 +14,13 @@ import {
     shouldScrobble,
     timeStringToSeconds,
 } from './lastfm/lastfm';
+
 import { setupLastFmConfig } from './lastfm/lastfm-auth';
 import type { ScrobbleState } from './lastfm/lastfm';
 
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
+import { NotificationManager } from './notifications/NotificationManager';
 
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
@@ -48,6 +48,7 @@ info.rpc.login().catch(console.error);
 let mainWindow: BrowserWindow | null;
 let blocker: ElectronBlocker;
 let currentScrobbleState: ScrobbleState | null = null;
+let notificationManager: NotificationManager;
 
 let displayWhenIdling = false; // Whether to display a status message when music is paused
 let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
@@ -80,11 +81,12 @@ async function init() {
         height: windowState.height,
         x: windowState.x,
         y: windowState.y,
-        backgroundColor: store.get('darkMode') ? '#0b0c0c' : '#ffffff',
         webPreferences: {
             nodeIntegration: false,
         },
     });
+
+    notificationManager = new NotificationManager(mainWindow);
 
     windowState.manage(mainWindow);
 
@@ -105,11 +107,6 @@ async function init() {
     mainWindow.loadURL('https://soundcloud.com/discover');
 
     const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
-    mainWindow.webContents.on('dom-ready', async () => {
-        if (store.get('darkMode') && mainWindow.webContents.getURL().startsWith('https://soundcloud.com/')) {
-            mainWindow.webContents.insertCSS(DarkModeCSS);
-        }
-    });
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
@@ -268,7 +265,7 @@ async function init() {
             } catch (error) {
                 console.error('Error during RPC update:', error);
             }
-        }, 10000);
+        }, 5000);
     });
 
     // Emitted when the window is closed.
@@ -281,8 +278,6 @@ async function init() {
         mainWindow = null;
     });
 
-    // Register F1 shortcut for toggling dark mode
-    localShortcuts.register(mainWindow, 'F1', () => toggleDarkMode());
 
     // Register F2 shortcut for toggling the adblocker
     localShortcuts.register(mainWindow, 'F2', () => toggleAdBlocker());
@@ -304,6 +299,12 @@ async function init() {
             await authenticateLastFm(mainWindow, store);
             injectToastNotification('Last.fm authenticated');
         }
+    });
+
+    localShortcuts.register(mainWindow, 'F6', async () => {
+        store.delete('lastFmApiKey');
+        store.delete('lastFmSecret');
+        mainWindow.webContents.reload();
     });
 
     let zoomLevel = mainWindow.webContents.getZoomLevel();
@@ -375,6 +376,10 @@ app.on('login', async (_event, _webContents, _request, authInfo, callback) => {
     }
 });
 
+function shortenString(str: string): string {
+    return str.length > 128 ? str.substring(0, 128) + '...' : str;
+}
+
 // Function to toggle proxy
 async function toggleProxy() {
     const proxyUri = await prompt({
@@ -414,48 +419,9 @@ async function toggleProxy() {
     }
 }
 
-//Function to toggle dark mode
-function toggleDarkMode() {
-    const darkModeEnabled = store.get('darkMode');
-    store.set('darkMode', !darkModeEnabled);
-
-    if (mainWindow) {
-        mainWindow.reload();
-        injectToastNotification(darkModeEnabled ? 'Dark mode disabled' : 'Dark mode enabled');
-    }
-}
-
-function shortenString(str: string): string {
-    return str.length > 128 ? str.substring(0, 128) + '...' : str;
-}
-
 // Function to inject toast notification into the main page
 export function injectToastNotification(message: string) {
-    if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`
-      const notificationElement = document.createElement('div');
-      notificationElement.style.position = 'fixed';
-      notificationElement.style.bottom = '50px';
-      notificationElement.style.fontSize = '20px';
-      notificationElement.style.left = '50%';
-      notificationElement.style.transform = 'translateX(-50%)';
-      notificationElement.style.backgroundColor = '#1a1a1a';
-      notificationElement.style.color = '#fff';
-      notificationElement.style.padding = '10px 20px';
-      notificationElement.style.borderRadius = '5px';
-      notificationElement.style.opacity = '0'; 
-      notificationElement.style.transition = 'opacity 0.5s';
-      setTimeout(() => {
-        notificationElement.style.opacity = '1';
-      }, 100); 
-      notificationElement.innerHTML = '${message}';
-      document.body.appendChild(notificationElement);
-      setTimeout(() => {
-        notificationElement.style.opacity = '0';
-        setTimeout(() => {
-          notificationElement.remove();
-        }, 500); 
-      }, 4500); // Duration of showing the notification
-    `);
+    if (mainWindow && notificationManager) {
+        notificationManager.show(message);
     }
 }
