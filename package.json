@@ -61,13 +61,14 @@
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.28.2",
-    "electron-window-state": "^5.0.3",
     "@xhayper/discord-rpc": "^1.2.0",
     "cross-fetch": "^4.0.0",
     "discord-rpc": "^4.0.1",
     "electron-localshortcut": "^3.2.1",
     "electron-prompt": "^1.7.0",
     "electron-store": "^8.1.0",
-    "electron-updater": "^6.3.4"
+    "electron-updater": "^6.3.4",
+    "electron-window-state": "^5.0.3",
+    "jsdom": "^26.1.0"
   }
 }

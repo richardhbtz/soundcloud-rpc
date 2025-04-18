@@ -83,16 +83,48 @@ async function init() {
         y: windowState.y,
         webPreferences: {
             nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+            webSecurity: true,
+            javascript: true,
+            images: true,
+            plugins: true,
+            experimentalFeatures: false,
+            devTools: false,
         },
+        backgroundColor: '#ffffff',
     });
 
     notificationManager = new NotificationManager(mainWindow);
 
     windowState.manage(mainWindow);
 
-    mainWindow.webContents.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    );
+    // Set more convincing Chrome-like properties
+    const userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    mainWindow.webContents.setUserAgent(userAgent);
+
+    // Configure session to be more browser-like
+    const session = mainWindow.webContents.session;
+    //await session.codecache(true);
+    
+    // Set common Chrome headers
+    session.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = {
+            ...details.requestHeaders,
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': userAgent,
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-User': '?1',
+            'Sec-Fetch-Dest': 'document',
+        };
+        callback({ requestHeaders: headers });
+    });
 
     // Setup proxy
     if (store.get('proxyEnabled')) {
@@ -105,8 +137,6 @@ async function init() {
 
     // Load the SoundCloud website
     mainWindow.loadURL('https://soundcloud.com/discover');
-
-    const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
 
     // Wait for the page to fully load
     mainWindow.webContents.on('did-finish-load', async () => {
@@ -134,49 +164,53 @@ async function init() {
 
         setInterval(async () => {
             try {
-                const isPlaying = await executeJS(`
-                    document.querySelector('.playControls__play').classList.contains('playing')
-                `);
+                // Get page content using webContents
+                const html = await mainWindow.webContents.executeJavaScript(
+                    `document.documentElement.outerHTML`,
+                    true
+                );
+                
+                // Create a DOM parser to work with the HTML content
+                const parser = new (require('jsdom')).JSDOM(html);
+                const document = parser.window.document;
+
+                // Check if playing
+                const playButton = document.querySelector('.playControls__play');
+                const isPlaying = playButton ? playButton.classList.contains('playing') : false;
 
                 if (isPlaying) {
-                    const trackInfo = await executeJS(`
-                    new Promise(resolve => {
-                        const titleEl = document.querySelector('.playbackSoundBadge__titleLink');
-                        const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
-                        resolve({
-                            title: titleEl?.innerText ?? '',
-                            author: authorEl?.innerText ?? ''
-                        });
-                    });
-                `);
+                    // Get track info from DOM
+                    const titleEl = document.querySelector('.playbackSoundBadge__titleLink');
+                    const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
+                    const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
+                    const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
+                    const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
+
+                    const trackInfo = {
+                        title: titleEl?.textContent?.trim() || '',
+                        author: authorEl?.textContent?.trim() || '',
+                        artwork: artworkEl ? artworkEl.style.backgroundImage.slice(5, -2) : '',
+                        elapsed: elapsedEl?.textContent?.trim() || '',
+                        duration: durationEl?.textContent?.trim() || ''
+                    };
+                    
+                    console.log(trackInfo);
+
                     if (!trackInfo.title || !trackInfo.author) {
                         console.log('Incomplete track info:', trackInfo);
                         return;
                     }
 
                     const currentTrack = {
-                        author: trackInfo.author as string,
+                        author: trackInfo.author,
                         title: trackInfo.title
-                            .replace(/.*?:\s*/, '') // Remove everything up to and including the first colon.
-                            .replace(/\n.*/, '') // Remove everything after the first newline.
-                            .trim() as string, // Clean up any leading/trailing spaces.
+                            .replace(/.*?:\s*/, '')
+                            .replace(/\n.*/, '')
+                            .trim()
                     };
 
-                    const artworkUrl = await executeJS(`
-                    new Promise(resolve => {
-                        const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
-                        resolve(artworkEl ? artworkEl.style.backgroundImage.slice(5, -2) : '');
-                    });
-                `);
-
-                    const [elapsedTime, totalTime] = await Promise.all([
-                        executeJS(
-                            `document.querySelector('.playbackTimeline__timePassed span:last-child')?.innerText ?? ''`,
-                        ),
-                        executeJS(
-                            `document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`,
-                        ),
-                    ]); //;
+                    const [elapsedTime, totalTime] = [trackInfo.elapsed, trackInfo.duration];
+                    const artworkUrl = trackInfo.artwork;
 
                     await updateNowPlaying(currentTrack, store);
 
