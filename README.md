@@ -9,6 +9,14 @@
 ### Release
 For the latest version of soundcloud-rpc, download the installer or executable file from the [latest release](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
 
+> [!NOTE]
+>### macOS Users
+>If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the issue:
+>```
+>xattr -dr com.apple.quarantine /Applications/soundcloud.app
+>```
+>After running this command, the app should launch without any problem.
+
 ### Manual
 
 Before installing and running this app, you must have [Node.js](https://nodejs.org/) installed on your machine. 
@@ -16,13 +24,6 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 1. Clone this repository to your local machine
 2. Run `npm install` to install the required dependencies.
 3. Run `npm start` to launch the application.
-
-### macOS Users
-If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the issue:
-```
-xattr -dr com.apple.quarantine /Applications/soundcloud.app
-```
-After running this command, the app should launch without any problem.
 
 ## Configuration
 
