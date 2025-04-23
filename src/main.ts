@@ -105,7 +105,6 @@ async function init() {
 
     // Configure session to be more browser-like
     const session = mainWindow.webContents.session;
-    //await session.codecache(true);
     
     // Set common Chrome headers
     session.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -187,9 +186,9 @@ async function init() {
                     const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
 
                     const trackInfo = {
-                        title: titleEl?.textContent?.trim() || '',
+                        title: artworkEl?.getAttribute("aria-label") || '',
                         author: authorEl?.textContent?.trim() || '',
-                        artwork: artworkEl ? artworkEl.style.backgroundImage.slice(5, -2) : '',
+                        artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\(['"]?|['"]?\)$/g, '') : '',
                         elapsed: elapsedEl?.textContent?.trim() || '',
                         duration: durationEl?.textContent?.trim() || ''
                     };
