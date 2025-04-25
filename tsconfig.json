@@ -10,7 +10,9 @@
       "*": [
         "node_modules/*"
       ]
-    }
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
   },
   "include": [
     "src/**/*"

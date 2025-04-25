@@ -22,6 +22,16 @@ import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
 
+import * as en from './i18n/en.json';
+import * as pt_BR from './i18n/pt-BR.json';
+import * as es from './i18n/es.json';
+
+const translations = {
+    en,
+    "pt-BR": pt_BR,
+    es
+  } as const;
+
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
 const localShortcuts = require('electron-localshortcut');
@@ -143,9 +153,12 @@ async function init() {
                     new Promise(resolve => {
                         const titleEl = document.querySelector('.playbackSoundBadge__titleLink');
                         const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
+                        const langEl = document.querySelector('html');
                         resolve({
                             title: titleEl?.innerText ?? '',
-                            author: authorEl?.innerText ?? ''
+                            author: authorEl?.innerText ?? '',
+                            url: titleEl?.href ?? '',
+                            lang: langEl?.getAttribute('lang') ?? ''
                         });
                     });
                 `);
@@ -160,7 +173,16 @@ async function init() {
                             .replace(/.*?:\s*/, '') // Remove everything up to and including the first colon.
                             .replace(/\n.*/, '') // Remove everything after the first newline.
                             .trim() as string, // Clean up any leading/trailing spaces.
+                        url: trackInfo.url as string,
+                        lang: trackInfo.lang as string
                     };
+
+                    type Lang = keyof typeof translations;
+                    const lang: Lang = ["en", "pt-BR", "es"].includes(currentTrack.lang) 
+                        ? (currentTrack.lang as Lang) 
+                        : "en";
+
+                    const getText = (key: keyof typeof translations[Lang]) => translations[lang][key] || key;
 
                     const artworkUrl = await executeJS(`
                     new Promise(resolve => {
@@ -248,6 +270,12 @@ async function init() {
                         smallImageKey: displaySCSmallIcon ? 'soundcloud-logo' : '',
                         smallImageText: displaySCSmallIcon ? 'SoundCloud' : '',
                         instance: false,
+                        buttons: [
+                            {
+                                label: `▶️ ${getText('listenOnSoundcloud')}`,
+                                url: currentTrack.url
+                            }
+                        ]
                     });
                 } else if (displayWhenIdling) {
                     info.rpc.user?.setActivity({
