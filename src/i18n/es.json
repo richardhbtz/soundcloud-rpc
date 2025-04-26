@@ -1,3 +1,7 @@
 {
-    "listenOnSoundcloud": "Escuchar en SoundCloud"
+    "listenOnSoundcloud": "Escuchar en SoundCloud",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "play": "Reproducir",
+    "pause": "Pausar"
 }

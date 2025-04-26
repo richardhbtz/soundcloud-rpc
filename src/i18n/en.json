@@ -1,3 +1,7 @@
 {
-    "listenOnSoundcloud": "Listen on SoundCloud"
+    "listenOnSoundcloud": "Listen on SoundCloud",
+    "previous": "Previous",
+    "next": "Next",
+    "play": "Play",
+    "pause": "Pause"
 }

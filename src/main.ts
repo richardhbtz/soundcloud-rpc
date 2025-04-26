@@ -1,6 +1,6 @@
 const Store = require('electron-store');
 
-import { app, BrowserWindow, dialog, Menu } from 'electron';
+import { app, BrowserWindow, dialog, Menu, nativeImage } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -25,6 +25,7 @@ import { NotificationManager } from './notifications/notificationManager';
 import * as en from './i18n/en.json';
 import * as pt_BR from './i18n/pt-BR.json';
 import * as es from './i18n/es.json';
+import path from 'path';
 
 const translations = {
     en,
@@ -62,6 +63,7 @@ let notificationManager: NotificationManager;
 
 let displayWhenIdling = false; // Whether to display a status message when music is paused
 let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
+let lang: Lang = 'en'; // Default language
 
 function setupUpdater() {
     autoUpdater.autoDownload = true;
@@ -76,6 +78,77 @@ function setupUpdater() {
     });
 
     autoUpdater.checkForUpdates();
+}
+
+type Lang = keyof typeof translations;
+
+// Refresh translations based on the current language
+function refreshTranslations() {
+    const language: Lang = ["en", "pt-BR", "es"].includes(lang)
+        ? (lang as Lang)
+        : "en";
+
+    return (key: keyof typeof translations[Lang]) => translations[language][key] || key;
+}
+
+let getText = refreshTranslations();
+
+// Get the current language from the web page
+async function getLanguage(win: BrowserWindow | null) {
+    if (!win) return;
+
+    const langInfo = await win.webContents.executeJavaScript(`
+        const langEl = document.querySelector('html');
+        new Promise(resolve => {
+            resolve({
+                lang: langEl ? langEl.getAttribute('lang') : 'en',
+            });
+        })
+    `);
+
+    lang = langInfo.lang as Lang;
+}
+
+// Set thumbar buttons for the media controls
+function updateThumbarButtons(win: BrowserWindow | null, isPlaying: any) {
+    if (!win) return;
+
+    const backwardIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/backward.ico'));
+    const playIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/play.ico'));
+    const pauseIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/pause.ico'));
+    const forwardIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/forward.ico'));
+
+    win.setThumbarButtons([
+        {
+            tooltip: getText('previous'),
+            icon: backwardIcon,
+            click: () => {
+                mainWindow.webContents.executeJavaScript(`
+                    document.querySelector('.skipControl__previous')?.click();
+                  `);
+            }
+        },
+        {
+            tooltip: isPlaying ? getText('pause') : getText('play'),
+            icon: isPlaying ? pauseIcon : playIcon,
+            click: () => {
+                isPlaying = !isPlaying;
+                updateThumbarButtons(win, isPlaying);
+                mainWindow.webContents.executeJavaScript(`
+                    document.querySelector('.playControl')?.click();
+                  `);
+            }
+        },
+        {
+            tooltip: getText('next'),
+            icon: forwardIcon,
+            click: () => {
+                mainWindow.webContents.executeJavaScript(`
+                    document.querySelector('.skipControl__next')?.click();
+                  `);
+            }
+        }
+    ]);
 }
 
 async function init() {
@@ -142,6 +215,15 @@ async function init() {
             blocker.enableBlockingInSession(mainWindow.webContents.session);
         }
 
+        await getLanguage(mainWindow);
+        getText = refreshTranslations();
+
+        const isPlaying = await executeJS(`
+            document.querySelector('.playControls__play').classList.contains('playing')
+        `);
+
+        updateThumbarButtons(mainWindow, isPlaying);
+
         setInterval(async () => {
             try {
                 const isPlaying = await executeJS(`
@@ -153,12 +235,10 @@ async function init() {
                     new Promise(resolve => {
                         const titleEl = document.querySelector('.playbackSoundBadge__titleLink');
                         const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
-                        const langEl = document.querySelector('html');
                         resolve({
                             title: titleEl?.innerText ?? '',
                             author: authorEl?.innerText ?? '',
-                            url: titleEl?.href ?? '',
-                            lang: langEl?.getAttribute('lang') ?? ''
+                            url: titleEl?.href ?? ''
                         });
                     });
                 `);
@@ -173,16 +253,8 @@ async function init() {
                             .replace(/.*?:\s*/, '') // Remove everything up to and including the first colon.
                             .replace(/\n.*/, '') // Remove everything after the first newline.
                             .trim() as string, // Clean up any leading/trailing spaces.
-                        url: trackInfo.url as string,
-                        lang: trackInfo.lang as string
+                        url: trackInfo.url as string
                     };
-
-                    type Lang = keyof typeof translations;
-                    const lang: Lang = ["en", "pt-BR", "es"].includes(currentTrack.lang) 
-                        ? (currentTrack.lang as Lang) 
-                        : "en";
-
-                    const getText = (key: keyof typeof translations[Lang]) => translations[lang][key] || key;
 
                     const artworkUrl = await executeJS(`
                     new Promise(resolve => {
