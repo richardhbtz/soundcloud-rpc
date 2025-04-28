@@ -34,34 +34,40 @@ function setSvgContent(element, svgContent) {
 // Initialize icons
 function initializeIcons() {
     try {
-        // Minimize icon
-        const minimizeBtn = document.querySelector('#minimize-btn svg');
-        setSvgContent(minimizeBtn, loadSvgContent('minimize.svg'));
+        // Only initialize SVG icons if we're on Windows
+        if (process.platform === 'win32') {
+            // Minimize icon
+            const minimizeBtn = document.querySelector('#minimize-btn svg');
+            setSvgContent(minimizeBtn, loadSvgContent('minimize.svg'));
 
-        // Maximize/Restore icons
-        const maximizeIcon = document.getElementById('maximize-icon');
-        const restoreIcon = document.getElementById('restore-icon');
-        setSvgContent(maximizeIcon, loadSvgContent('maximize.svg'));
-        setSvgContent(restoreIcon, loadSvgContent('restore.svg'));
+            // Maximize/Restore icons
+            const maximizeIcon = document.getElementById('maximize-icon');
+            const restoreIcon = document.getElementById('restore-icon');
+            setSvgContent(maximizeIcon, loadSvgContent('maximize.svg'));
+            setSvgContent(restoreIcon, loadSvgContent('restore.svg'));
 
-        // Close icon
-        const closeBtn = document.querySelector('#close-btn svg');
-        setSvgContent(closeBtn, loadSvgContent('close.svg'));
+            // Close icon
+            const closeBtn = document.querySelector('#close-btn svg');
+            setSvgContent(closeBtn, loadSvgContent('close.svg'));
+        }
     } catch (error) {
         console.error('Error initializing icons:', error);
     }
 }
 
-// Window control event listeners
-document.getElementById('minimize-btn').addEventListener('click', () => {
+// Set platform class on body
+document.body.classList.add(`platform-${process.platform}`);
+
+// Window control event listeners for Windows
+document.getElementById('minimize-btn')?.addEventListener('click', () => {
     ipcRenderer.send('minimize-window');
 });
 
-document.getElementById('maximize-btn').addEventListener('click', () => {
+document.getElementById('maximize-btn')?.addEventListener('click', () => {
     ipcRenderer.send('maximize-window');
 });
 
-document.getElementById('close-btn').addEventListener('click', () => {
+document.getElementById('close-btn')?.addEventListener('click', () => {
     ipcRenderer.send('close-window');
 });
 
@@ -73,9 +79,11 @@ document.querySelector('.title-bar').addEventListener('dblclick', () => {
 // Listen for window state changes
 ipcRenderer.on('window-state-changed', (_, state) => {
     isMaximized = state === 'maximized';
-    document.getElementById('maximize-icon').style.display = isMaximized ? 'none' : 'inline-flex';
-    document.getElementById('restore-icon').style.display = isMaximized ? 'inline-flex' : 'none';
-    document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
+    if (process.platform === 'win32') {
+        document.getElementById('maximize-icon').style.display = isMaximized ? 'none' : 'inline-flex';
+        document.getElementById('restore-icon').style.display = isMaximized ? 'inline-flex' : 'none';
+        document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
+    }
 });
 
 // Listen for theme changes

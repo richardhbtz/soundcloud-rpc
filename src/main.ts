@@ -72,7 +72,9 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         height: windowState.height,
         x: windowState.x,
         y: windowState.y,
-        frame: false,
+        frame: process.platform === 'darwin',
+        titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
+        trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 10 } : undefined,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,

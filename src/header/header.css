@@ -42,7 +42,17 @@ body {
     -webkit-app-region: no-drag;
 }
 
-.window-controls .control,
+.control-group {
+    display: flex;
+    align-items: center;
+}
+
+/* Windows Controls */
+.windows-controls {
+    display: none;
+}
+
+.windows-controls .control,
 .theme-toggle {
     display: flex;
     align-items: center;
@@ -53,11 +63,7 @@ body {
     transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-.theme-toggle {
-    width: 46px;
-}
-
-.window-controls .control svg,
+.windows-controls .control svg,
 .theme-toggle svg {
     color: #ffffff;
     transition: color 0.3s;
@@ -65,6 +71,10 @@ body {
     height: 10px;
     display: block;
     filter: invert(100%);
+}
+
+.theme-toggle {
+    width: 46px;
 }
 
 .theme-toggle svg {
@@ -84,30 +94,32 @@ body {
     position: absolute;
 }
 
-.window-controls .maximize:hover i {
+.windows-controls .maximize:hover i {
     transform: scale(0.9);
 }
 
-.window-controls .minimize:hover i {
+.windows-controls .minimize:hover i {
     transform: translateY(1px);
 }
 
-.window-controls .close:hover {
+.windows-controls .close:hover {
     background-color: #e81123;
 }
 
-.window-controls .close:hover svg {
+.windows-controls .close:hover svg {
     color: #ffffff;
 }
 
-.visible {
-    display: inline-flex;
-}
-
-.hidden {
+/* Platform specific display */
+body.platform-darwin .windows-controls {
     display: none;
 }
 
+body.platform-win32 .windows-controls {
+    display: flex;
+}
+
+/* Theme specific styles */
 :root {
     --header-bg: #121212;
     --header-text: #ffffff;
@@ -122,21 +134,21 @@ html.theme-light .custom-header {
     color: #333333;
 }
 
-html.theme-light .window-controls .control svg,
+html.theme-light .windows-controls .control svg,
 html.theme-light .theme-toggle svg {
     color: #333333;
 }
 
-html.theme-light .window-controls .control:hover,
+html.theme-light .windows-controls .control:hover,
 html.theme-light .theme-toggle:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-html.theme-light .window-controls .close:hover {
+html.theme-light .windows-controls .close:hover {
     background-color: #e81123;
 }
 
-html.theme-light .window-controls .close:hover svg {
+html.theme-light .windows-controls .close:hover svg {
     color: #ffffff;
 }
 
@@ -149,45 +161,21 @@ html.theme-light:root {
     --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 }
 
-/* Light theme */
-html.theme-light .custom-header {
-    background-color: #ffffff;
-    color: #333333;
-}
-
-html.theme-light .window-controls .control svg,
-html.theme-light .theme-toggle svg {
-    color: #333333;
-}
-
-html.theme-light .window-controls .control:hover,
-html.theme-light .theme-toggle:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-html.theme-light .window-controls .close:hover {
-    background-color: #e81123;
-}
-
-html.theme-light .window-controls .close:hover svg {
-    color: #ffffff;
-}
-
 /* Dark theme */
 .custom-header {
     background-color: #121212;
     color: #ffffff;
 }
 
-.window-controls .control:hover,
+.windows-controls .control:hover,
 .theme-toggle:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.window-controls .close:hover {
+.windows-controls .close:hover {
     background-color: #e81123;
 }
 
-.window-controls .close:hover svg {
+.windows-controls .close:hover svg {
     color: #ffffff;
 }
