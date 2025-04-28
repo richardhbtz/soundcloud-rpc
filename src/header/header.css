@@ -1,0 +1,193 @@
+@font-face {
+	font-family: 'SC-Font';
+	src: url('https://assets.web.soundcloud.cloud/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
+	font-weight: bold;
+	font-style: normal;
+	font-display: swap;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'SC-Font', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+        'Open Sans', 'Helvetica Neue', sans-serif;
+    user-select: none;
+    overflow: hidden;
+}
+
+.custom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+    background-color: #121212;
+    color: #ffffff;
+    -webkit-app-region: drag;
+    padding: 0 0px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 140px);
+    cursor: default;
+}
+
+.window-controls {
+    display: flex;
+    -webkit-app-region: no-drag;
+}
+
+.window-controls .control,
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 32px;
+    opacity: 0.85;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.theme-toggle {
+    width: 46px;
+}
+
+.window-controls .control svg,
+.theme-toggle svg {
+    color: #ffffff;
+    transition: color 0.3s;
+    width: 10px;
+    height: 10px;
+    display: block;
+    filter: invert(100%);
+}
+
+.theme-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.icon-container svg {
+    position: absolute;
+}
+
+.window-controls .maximize:hover i {
+    transform: scale(0.9);
+}
+
+.window-controls .minimize:hover i {
+    transform: translateY(1px);
+}
+
+.window-controls .close:hover {
+    background-color: #e81123;
+}
+
+.window-controls .close:hover svg {
+    color: #ffffff;
+}
+
+.visible {
+    display: inline-flex;
+}
+
+.hidden {
+    display: none;
+}
+
+:root {
+    --header-bg: #121212;
+    --header-text: #ffffff;
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --scrollbar-bg: rgba(255, 255, 255, 0.05);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+}
+
+html.theme-light .custom-header {
+    background-color: #ffffff;
+    color: #333333;
+}
+
+html.theme-light .window-controls .control svg,
+html.theme-light .theme-toggle svg {
+    color: #333333;
+}
+
+html.theme-light .window-controls .control:hover,
+html.theme-light .theme-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+html.theme-light .window-controls .close:hover {
+    background-color: #e81123;
+}
+
+html.theme-light .window-controls .close:hover svg {
+    color: #ffffff;
+}
+
+html.theme-light:root {
+    --header-bg: #ffffff;
+    --header-text: #333333;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+    --scrollbar-bg: rgba(0, 0, 0, 0.05);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme */
+html.theme-light .custom-header {
+    background-color: #ffffff;
+    color: #333333;
+}
+
+html.theme-light .window-controls .control svg,
+html.theme-light .theme-toggle svg {
+    color: #333333;
+}
+
+html.theme-light .window-controls .control:hover,
+html.theme-light .theme-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+html.theme-light .window-controls .close:hover {
+    background-color: #e81123;
+}
+
+html.theme-light .window-controls .close:hover svg {
+    color: #ffffff;
+}
+
+/* Dark theme */
+.custom-header {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+.window-controls .control:hover,
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.window-controls .close:hover {
+    background-color: #e81123;
+}
+
+.window-controls .close:hover svg {
+    color: #ffffff;
+}
