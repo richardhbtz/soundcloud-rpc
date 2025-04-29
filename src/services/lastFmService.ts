@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';
@@ -47,11 +47,11 @@ function generateApiSignature(
 }
 
 export class LastFmService {
-    private window: BrowserWindow;
+    private window: BrowserView;
     private store: ElectronStore;
     private currentScrobbleState: ScrobbleState | null = null;
 
-    constructor(window: BrowserWindow, store: ElectronStore) {
+    constructor(window: BrowserView, store: ElectronStore) {
         this.window = window;
         this.store = store;
 
@@ -101,7 +101,7 @@ export class LastFmService {
 
         const authUrl = `https://www.last.fm/api/auth/?api_key=${apikey}&cb=https://soundcloud.com/discover`;
 
-        await this.window.loadURL(authUrl);
+        await this.window.webContents.loadURL(authUrl);
 
         this.window.webContents.on('will-redirect', async (_, url) => {
             try {
@@ -109,7 +109,7 @@ export class LastFmService {
                 const token = urlObj.searchParams.get('token');
                 if (token) {
                     await this.getLastFmSession(apikey as string, token as string);
-                    this.window.loadURL('https://soundcloud.com/discover');
+                    this.window.webContents.loadURL('https://soundcloud.com/discover');
                 }
             } catch (error) {
                 console.error('Error during Last.fm authentication', error);

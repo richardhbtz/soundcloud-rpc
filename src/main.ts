@@ -1,7 +1,6 @@
-import { app, BrowserWindow, dialog, Menu, ipcMain, BrowserView } from 'electron';
+import { app, BrowserWindow, dialog, Menu, ipcMain, BrowserView, WebContents } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
-import { Client as DiscordClient } from '@xhayper/discord-rpc';
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
@@ -14,7 +13,6 @@ import path = require('path');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
-const localShortcuts = require('electron-localshortcut');
 
 // Store configuration
 const store = new Store({
@@ -323,10 +321,14 @@ async function init() {
     settingsManager = new SettingsManager(mainWindow, store);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
     presenceService = new PresenceService(mainWindow, store);
-    lastFmService = new LastFmService(mainWindow, store);
+    lastFmService = new LastFmService(contentView, store);
 
     setupWindowControls();
-    setupShortcuts();
+
+    setupShortcuts(contentView.webContents);
+    setupShortcuts(mainWindow.webContents);
+    setupShortcuts(settingsManager.getView().webContents);
+
     setupThemeHandlers();
 
     // Configure session
@@ -375,6 +377,8 @@ async function init() {
             );
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
+
+        notificationManager.show('Press \'F1\' to open settings');
 
         // Start polling for track info
         setInterval(pollTrackInfo, 5000);
@@ -516,50 +520,50 @@ function applyThemeToContent(isDark: boolean) {
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
 }
 
-function setupShortcuts() {
+function setupShortcuts(contents: WebContents) {
     if (!mainWindow || !contentView) return;
 
-    contentView.webContents.on('before-input-event', (event, input) => {
+    contents.on('before-input-event', (event, input) => {
         if (input.key === 'F1' && !input.alt && !input.control && !input.meta && !input.shift) {
             settingsManager.toggle();
             event.preventDefault();
         }
 
         if (input.key === '=' && input.control && !input.alt && !input.meta && !input.shift) {
-            const zoomLevel = contentView.webContents.getZoomLevel();
-            contentView.webContents.setZoomLevel(Math.min(zoomLevel + 1, 9));
+            const zoomLevel = contents.getZoomLevel();
+            contents.setZoomLevel(Math.min(zoomLevel + 1, 9));
             event.preventDefault();
         }
 
         if (input.key === '-' && input.control && !input.alt && !input.meta && !input.shift) {
-            const zoomLevel = contentView.webContents.getZoomLevel();
-            contentView.webContents.setZoomLevel(Math.max(zoomLevel - 1, -9));
+            const zoomLevel = contents.getZoomLevel();
+            contents.setZoomLevel(Math.max(zoomLevel - 1, -9));
             event.preventDefault();
         }
 
         if (input.key === '0' && input.control && !input.alt && !input.meta && !input.shift) {
-            contentView.webContents.setZoomLevel(0);
+            contents.setZoomLevel(0);
             event.preventDefault();
         }
 
         if ((input.key === 'b' || input.key === 'p') && input.control && !input.alt && !input.meta && !input.shift) {
-            if (contentView.webContents.canGoBack()) {
-                contentView.webContents.goBack();
+            if (contents.canGoBack()) {
+                contents.goBack();
             }
             event.preventDefault();
         }
 
         if ((input.key === 'f' || input.key === 'n') && input.control && !input.alt && !input.meta && !input.shift) {
-            if (contentView.webContents.canGoForward()) {
-                contentView.webContents.goForward();
+            if (contents.canGoForward()) {
+                contents.goForward();
             }
             event.preventDefault();
         }
     });
 
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (contentView) {
-            contentView.webContents.sendInputEvent({
+        if (contents) {
+            contents.sendInputEvent({
                 type: input.type === 'keyDown' ? 'keyDown' : 'keyUp',
                 keyCode: input.key,
                 modifiers: [],

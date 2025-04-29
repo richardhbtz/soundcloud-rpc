@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow, WebContentsView } from 'electron';
+import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 
 export class SettingsManager {
@@ -33,7 +33,6 @@ export class SettingsManager {
     }
 
     public toggle(): void {
-        console.log('toggle');
         if (this.isVisible) {
             this.hide();
         } else {

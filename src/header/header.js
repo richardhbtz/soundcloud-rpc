@@ -55,6 +55,7 @@ function initializeIcons() {
     }
 }
 
+
 // Set platform class on body
 document.body.classList.add(`platform-${process.platform}`);
 
@@ -80,8 +81,17 @@ document.querySelector('.title-bar').addEventListener('dblclick', () => {
 ipcRenderer.on('window-state-changed', (_, state) => {
     isMaximized = state === 'maximized';
     if (process.platform === 'win32') {
-        document.getElementById('maximize-icon').style.display = isMaximized ? 'none' : 'inline-flex';
-        document.getElementById('restore-icon').style.display = isMaximized ? 'inline-flex' : 'none';
+        const maximizeIcon = document.getElementById('maximize-icon');
+        const restoreIcon = document.getElementById('restore-icon');
+
+        if (isMaximized) {
+            maximizeIcon.style.display = 'none';
+            restoreIcon.style.display = 'inline-flex';
+        } else {
+            maximizeIcon.style.display = 'inline-flex';
+            restoreIcon.style.display = 'none';
+        }
+
         document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
     }
 });
@@ -92,8 +102,9 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
     if (isDark) {
         document.documentElement.classList.remove('theme-light');
     } else {
+        ('theme-light');
+        console.log
         document.documentElement.classList.add('theme-light');
-        console.log('theme-light');
     }
 });
 
