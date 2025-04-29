@@ -22,16 +22,8 @@ import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
 
-import * as en from './i18n/en.json';
-import * as pt_BR from './i18n/pt-BR.json';
-import * as es from './i18n/es.json';
 import path from 'path';
-
-const translations = {
-    en,
-    "pt-BR": pt_BR,
-    es
-  } as const;
+import { TranslationService } from './services/translationService';
 
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
@@ -60,10 +52,10 @@ let mainWindow: BrowserWindow | null;
 let blocker: ElectronBlocker;
 let currentScrobbleState: ScrobbleState | null = null;
 let notificationManager: NotificationManager;
+let translationService = new TranslationService();
 
 let displayWhenIdling = false; // Whether to display a status message when music is paused
 let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
-let lang: Lang = 'en'; // Default language
 
 function setupUpdater() {
     autoUpdater.autoDownload = true;
@@ -80,20 +72,7 @@ function setupUpdater() {
     autoUpdater.checkForUpdates();
 }
 
-type Lang = keyof typeof translations;
-
-// Refresh translations based on the current language
-function refreshTranslations() {
-    const language: Lang = ["en", "pt-BR", "es"].includes(lang)
-        ? (lang as Lang)
-        : "en";
-
-    return (key: keyof typeof translations[Lang]) => translations[language][key] || key;
-}
-
-let getText = refreshTranslations();
-
-// Get the current language from the web page
+// Update the language when retrieved from the web page
 async function getLanguage(win: BrowserWindow | null) {
     if (!win) return;
 
@@ -106,7 +85,7 @@ async function getLanguage(win: BrowserWindow | null) {
         })
     `);
 
-    lang = langInfo.lang as Lang;
+    translationService.setLanguage(langInfo.lang);
 }
 
 // Set thumbar buttons for the media controls
@@ -120,7 +99,7 @@ function updateThumbarButtons(win: BrowserWindow | null, isPlaying: any) {
 
     win.setThumbarButtons([
         {
-            tooltip: getText('previous'),
+            tooltip: translationService.translate('previous'),
             icon: backwardIcon,
             click: () => {
                 mainWindow.webContents.executeJavaScript(`
@@ -129,7 +108,7 @@ function updateThumbarButtons(win: BrowserWindow | null, isPlaying: any) {
             }
         },
         {
-            tooltip: isPlaying ? getText('pause') : getText('play'),
+            tooltip: isPlaying ? translationService.translate('pause') : translationService.translate('play'),
             icon: isPlaying ? pauseIcon : playIcon,
             click: () => {
                 isPlaying = !isPlaying;
@@ -140,7 +119,7 @@ function updateThumbarButtons(win: BrowserWindow | null, isPlaying: any) {
             }
         },
         {
-            tooltip: getText('next'),
+            tooltip: translationService.translate('next'),
             icon: forwardIcon,
             click: () => {
                 mainWindow.webContents.executeJavaScript(`
@@ -216,7 +195,6 @@ async function init() {
         }
 
         await getLanguage(mainWindow);
-        getText = refreshTranslations();
 
         const isPlaying = await executeJS(`
             document.querySelector('.playControls__play').classList.contains('playing')
@@ -344,7 +322,7 @@ async function init() {
                         instance: false,
                         buttons: [
                             {
-                                label: `▶️ ${getText('listenOnSoundcloud')}`,
+                                label: `▶️ ${translationService.translate('listenOnSoundcloud')}`,
                                 url: currentTrack.url
                             }
                         ]
