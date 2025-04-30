@@ -35,6 +35,8 @@ const store = new Store({
     encryptionKey: 'soundcloud-rpc-config',
 });
 
+let isDarkTheme = store.get('theme') !== 'light';
+
 // Global variables
 let mainWindow: BrowserWindow | null;
 let notificationManager: NotificationManager;
@@ -257,7 +259,6 @@ function setupWindowControls() {
         if (mainWindow) mainWindow.close();
     });
 
-    isDarkTheme = store.get('theme') !== 'light';
     ipcMain.on('toggle-theme', () => {
         isDarkTheme = !isDarkTheme;
         if (headerView) {
@@ -276,7 +277,6 @@ function setupWindowControls() {
 
 let headerView: BrowserView | null;
 let contentView: BrowserView | null;
-let isDarkTheme = true;
 
 // Main initialization
 async function init() {
@@ -328,6 +328,11 @@ async function init() {
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
     presenceService = new PresenceService(mainWindow, store);
     lastFmService = new LastFmService(contentView, store);
+
+    // Add settings toggle handler
+    ipcMain.on('toggle-settings', () => {
+        settingsManager.toggle();
+    });
 
     setupWindowControls();
 

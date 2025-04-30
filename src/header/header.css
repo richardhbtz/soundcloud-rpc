@@ -63,13 +63,6 @@ body {
     transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-.window-controls svg {
-    stroke: #ffffff;
-    color: #ffffff;
-    filter: invert(100%);
-    fill: #ffffff;
-}
-
 .windows-controls .control svg,
 .theme-toggle svg {
     transition: color 0.3s;
@@ -77,6 +70,7 @@ body {
     height: 10px;
     display: block;
     color: #ffffff;
+    filter: invert(100%);
 }
 
 
@@ -134,7 +128,7 @@ html.theme-light .custom-header {
 
 html.theme-light .windows-controls .control svg,
 html.theme-light .theme-toggle svg {
-    color: #333333;
+    filter: invert(0%);
 }
 
 html.theme-light .windows-controls .control:hover,
