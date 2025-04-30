@@ -6,6 +6,22 @@ const path = require('path');
 let isMaximized = false;
 let isDarkTheme = true;
 
+// Helper function to update window controls
+function updateWindowControls() {
+    console.log('updateWindowControls', isMaximized);
+    if (process.platform === 'win32') {
+        const maximizeBtn = document.querySelector('#maximize-btn svg');
+        if (!maximizeBtn) return;
+
+        // Load and set the appropriate icon
+        const iconName = isMaximized ? 'restore.svg' : 'maximize.svg';
+        setSvgContent(maximizeBtn, loadSvgContent(iconName));
+        
+        // Update the button title
+        document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
+    }
+}
+
 // Helper function to load SVG file
 function loadSvgContent(filename) {
     try {
@@ -40,11 +56,9 @@ function initializeIcons() {
             const minimizeBtn = document.querySelector('#minimize-btn svg');
             setSvgContent(minimizeBtn, loadSvgContent('minimize.svg'));
 
-            // Maximize/Restore icons
-            const maximizeIcon = document.getElementById('maximize-icon');
-            const restoreIcon = document.getElementById('restore-icon');
-            setSvgContent(maximizeIcon, loadSvgContent('maximize.svg'));
-            setSvgContent(restoreIcon, loadSvgContent('restore.svg'));
+            // Initial maximize/restore icon
+            const maximizeBtn = document.querySelector('#maximize-btn svg');
+            setSvgContent(maximizeBtn, loadSvgContent('maximize.svg'));
 
             // Close icon
             const closeBtn = document.querySelector('#close-btn svg');
@@ -54,7 +68,6 @@ function initializeIcons() {
         console.error('Error initializing icons:', error);
     }
 }
-
 
 // Set platform class on body
 document.body.classList.add(`platform-${process.platform}`);
@@ -66,6 +79,8 @@ document.getElementById('minimize-btn')?.addEventListener('click', () => {
 
 document.getElementById('maximize-btn')?.addEventListener('click', () => {
     ipcRenderer.send('maximize-window');
+    isMaximized = !isMaximized;
+    updateWindowControls();
 });
 
 document.getElementById('close-btn')?.addEventListener('click', () => {
@@ -73,27 +88,10 @@ document.getElementById('close-btn')?.addEventListener('click', () => {
 });
 
 // Double click on title bar to maximize/restore
-document.querySelector('.title-bar').addEventListener('dblclick', () => {
+document.querySelector('.title-bar')?.addEventListener('dblclick', () => {
     ipcRenderer.send('title-bar-double-click');
-});
-
-// Listen for window state changes
-ipcRenderer.on('window-state-changed', (_, state) => {
-    isMaximized = state === 'maximized';
-    if (process.platform === 'win32') {
-        const maximizeIcon = document.getElementById('maximize-icon');
-        const restoreIcon = document.getElementById('restore-icon');
-
-        if (isMaximized) {
-            maximizeIcon.style.display = 'none';
-            restoreIcon.style.display = 'inline-flex';
-        } else {
-            maximizeIcon.style.display = 'inline-flex';
-            restoreIcon.style.display = 'none';
-        }
-
-        document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
-    }
+    isMaximized = !isMaximized;
+    updateWindowControls();
 });
 
 // Listen for theme changes
@@ -102,8 +100,6 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
     if (isDark) {
         document.documentElement.classList.remove('theme-light');
     } else {
-        ('theme-light');
-        console.log
         document.documentElement.classList.add('theme-light');
     }
 });
@@ -111,5 +107,14 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
 // Initialize icons when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initializeIcons();
-    ipcRenderer.send('get-initial-state');
+    
+    // Check window state periodically
+    setInterval(() => {
+        ipcRenderer.invoke('is-maximized').then((maximized) => {
+            if (isMaximized !== maximized) {
+                isMaximized = maximized;
+                updateWindowControls();
+            }
+        });
+    }, 100);
 });

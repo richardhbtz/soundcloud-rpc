@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, Menu, ipcMain, BrowserView, WebContents } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, ipcRenderer } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -29,10 +29,10 @@ const store = new Store({
         displayWhenIdling: false,
         displaySCSmallIcon: false,
         discordRichPresence: true,
-        theme: 'dark'
+        theme: 'dark',
     },
     clearInvalidConfig: true,
-    encryptionKey: 'soundcloud-rpc-config'
+    encryptionKey: 'soundcloud-rpc-config',
 });
 
 // Global variables
@@ -84,25 +84,25 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             experimentalFeatures: false,
             devTools: false,
         },
-        backgroundColor: '#ffffff',
+        backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
 
-    // Set Chrome-like properties
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
+    const userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
 
     window.webContents.setUserAgent(userAgent);
 
-    // Configure session
     const session = window.webContents.session;
     session.webRequest.onBeforeSendHeaders((details, callback) => {
-        if (details.url.includes('google')) {
+        if (details.url.includes('google') || details.url.includes('icloud') || details.url.includes('apple')) {
             callback({ requestHeaders: details.requestHeaders });
             return;
         }
+
         const headers = {
             ...details.requestHeaders,
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
@@ -120,59 +120,72 @@ function createBrowserWindow(windowState: any): BrowserWindow {
 }
 
 // Track info polling
+let lastTrackInfo = {
+    title: '',
+    author: '',
+    artwork: '',
+    elapsed: '',
+    duration: '',
+    isPlaying: false,
+};
+
 async function pollTrackInfo() {
     if (!contentView) return;
 
     try {
-        const html = await contentView.webContents.executeJavaScript(
-            `document.documentElement.outerHTML`,
+        // Use direct DOM queries instead of parsing the entire HTML
+        const result = await contentView.webContents.executeJavaScript(
+            `
+            (function() {
+                const playButton = document.querySelector('.playControls__play');
+                const isPlaying = playButton ? playButton.classList.contains('playing') : false;
+                
+                if (!isPlaying) {
+                    return { isPlaying: false };
+                }
+
+                const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
+                const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
+                const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
+                const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
+
+                return {
+                    title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
+                    author: authorEl ? authorEl.textContent.trim() : '',
+                    artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\\(['"]?|['"]?\\)$/g, '') : '',
+                    elapsed: elapsedEl ? elapsedEl.textContent.trim() : '',
+                    duration: durationEl ? durationEl.textContent.trim() : '',
+                    isPlaying: true
+                };
+            })()
+        `,
             true
         );
 
-        const parser = new (require('jsdom')).JSDOM(html);
-        const document = parser.window.document;
+        // Only update if there are actual changes
+        const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
 
-        const playButton = document.querySelector('.playControls__play');
-        const isPlaying = playButton ? playButton.classList.contains('playing') : false;
+        if (hasChanges) {
+            lastTrackInfo = result;
 
-        if (isPlaying) {
-            const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
-            const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
-            const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
-            const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
+            if (result.isPlaying && result.title && result.author) {
+                await lastFmService.updateTrackInfo({
+                    title: result.title,
+                    author: result.author,
+                    duration: result.duration,
+                });
 
-            const trackInfo = {
-                title: artworkEl?.getAttribute("aria-label") || '',
-                author: authorEl?.textContent?.trim() || '',
-                artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\(['"]?|['"]?\)$/g, '') : '',
-                elapsed: elapsedEl?.textContent?.trim() || '',
-                duration: durationEl?.textContent?.trim() || ''
-            };
-
-            if (!trackInfo.title || !trackInfo.author) {
-                console.error('Incomplete track info:', trackInfo);
-                return;
+                await presenceService.updatePresence(result);
+            } else if (!result.isPlaying) {
+                await presenceService.updatePresence({
+                    title: '',
+                    author: '',
+                    artwork: '',
+                    elapsed: '',
+                    duration: '',
+                    isPlaying: false,
+                });
             }
-
-            await lastFmService.updateTrackInfo({
-                title: trackInfo.title,
-                author: trackInfo.author,
-                duration: trackInfo.duration
-            });
-
-            await presenceService.updatePresence({
-                ...trackInfo,
-                isPlaying: true
-            });
-        } else {
-            await presenceService.updatePresence({
-                title: '',
-                author: '',
-                artwork: '',
-                elapsed: '',
-                duration: '',
-                isPlaying: false
-            });
         }
     } catch (error) {
         console.error('Error during track info update:', error);
@@ -229,16 +242,10 @@ function setupWindowControls() {
     });
 
     mainWindow.on('maximize', () => {
-        if (headerView) {
-            headerView.webContents.send('window-state-changed', 'maximized');
-        }
         adjustContentViews();
     });
 
     mainWindow.on('unmaximize', () => {
-        if (headerView) {
-            headerView.webContents.send('window-state-changed', 'normal');
-        }
         adjustContentViews();
     });
 
@@ -259,10 +266,9 @@ function setupWindowControls() {
         applyThemeToContent(isDarkTheme);
     });
 
-    ipcMain.on('get-initial-state', () => {
-        if (headerView) {
-            headerView.webContents.send('window-state-changed', mainWindow.isMaximized() ? 'maximized' : 'normal');
-        }
+    // Handle is-maximized requests
+    ipcMain.handle('is-maximized', () => {
+        return mainWindow ? mainWindow.isMaximized() : false;
     });
 
     adjustContentViews();
@@ -333,7 +339,8 @@ async function init() {
 
     // Configure session
     const session = contentView.webContents.session;
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    const userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     session.webRequest.onBeforeSendHeaders((details, callback) => {
         if (details.url.includes('google')) {
             callback({ requestHeaders: details.requestHeaders });
@@ -342,7 +349,7 @@ async function init() {
         const headers = {
             ...details.requestHeaders,
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
@@ -373,15 +380,15 @@ async function init() {
                     path: 'engine.bin',
                     read: async (...args) => readFileSync(...args),
                     write: async (...args) => writeFileSync(...args),
-                },
+                }
             );
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
 
-        notificationManager.show('Press \'F1\' to open settings');
+        notificationManager.show("Press 'F1' to open settings");
 
-        // Start polling for track info
-        setInterval(pollTrackInfo, 5000);
+        // Start polling for track info with a more reasonable interval
+        setInterval(pollTrackInfo, 5000); // Changed to 10 seconds
     });
 
     // Register settings related events
@@ -425,7 +432,7 @@ async function init() {
 function setupThemeHandlers() {
     // Load initial theme from store
     isDarkTheme = store.get('theme', 'dark') === 'dark';
-    
+
     // Send initial theme to all views
     if (headerView) {
         headerView.webContents.send('theme-changed', isDarkTheme);
@@ -434,13 +441,13 @@ function setupThemeHandlers() {
         settingsManager.getView().webContents.send('theme-changed', isDarkTheme);
     }
     applyThemeToContent(isDarkTheme);
-    
+
     // Listen for theme changes from settings or header
     ipcMain.on('setting-changed', (_, data) => {
         if (data.key === 'theme') {
             isDarkTheme = data.value === 'dark';
             store.set('theme', data.value);
-            
+
             // Update all views
             if (headerView) {
                 headerView.webContents.send('theme-changed', isDarkTheme);

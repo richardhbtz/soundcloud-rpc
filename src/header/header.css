@@ -1,9 +1,9 @@
 @font-face {
-	font-family: 'SC-Font';
-	src: url('https://assets.web.soundcloud.cloud/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
-	font-weight: bold;
-	font-style: normal;
-	font-display: swap;
+    font-family: 'SC-Font';
+    src: url('https://assets.web.soundcloud.cloud/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
 }
 
 body {
@@ -63,24 +63,22 @@ body {
     transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
+.window-controls svg {
+    stroke: #ffffff;
+    color: #ffffff;
+    filter: invert(100%);
+    fill: #ffffff;
+}
+
 .windows-controls .control svg,
 .theme-toggle svg {
-    color: #ffffff;
     transition: color 0.3s;
     width: 10px;
     height: 10px;
     display: block;
-    filter: invert(100%);
+    color: #ffffff;
 }
 
-.theme-toggle {
-    width: 46px;
-}
-
-.theme-toggle svg {
-    width: 16px;
-    height: 16px;
-}
 
 .icon-container {
     display: flex;
