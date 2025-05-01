@@ -217,6 +217,8 @@ async function pollTrackInfo() {
                 });
 
                 await presenceService.updatePresence(result);
+
+                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
             } else if (!result.isPlaying) {
                 await presenceService.updatePresence({
                     title: '',
@@ -227,6 +229,8 @@ async function pollTrackInfo() {
                     isPlaying: false,
                     url: ''
                 });
+
+                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
             }
         }
     } catch (error) {
