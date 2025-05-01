@@ -21,5 +21,6 @@
     "enableRichPresence": "Enable Rich Presence",
     "displayWhenPaused": "Display when paused",
     "displaySmallIcon": "Display small icon",
+    "displayButtons": "Display buttons",
     "applyChanges": "Apply Changes"
 }

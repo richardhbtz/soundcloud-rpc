@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { ActivityType } from 'discord-api-types/v10';
-import { Client as DiscordClient } from '@xhayper/discord-rpc';
+import { Client as DiscordClient, SetActivity } from '@xhayper/discord-rpc';
 import { TranslationService } from './translationService';
 
 export interface Info {
@@ -16,6 +16,7 @@ export class PresenceService {
     private info: Info;
     private displayWhenIdling: boolean;
     private displaySCSmallIcon: boolean;
+    private displayButtons: boolean;
     private translationService: TranslationService;
 
     constructor(window: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
@@ -23,6 +24,7 @@ export class PresenceService {
         this.store = store;
         this.displayWhenIdling = store.get('displayWhenIdling', false) as boolean;
         this.displaySCSmallIcon = store.get('displaySCSmallIcon', false) as boolean;
+        this.displayButtons = store.get('displayButtons', false) as boolean;
         this.translationService = translationService;
 
         this.info = {
@@ -83,7 +85,7 @@ export class PresenceService {
                     }
                 }
 
-                this.info.rpc.user?.setActivity({
+                const activity: SetActivity = {
                     type: ActivityType.Listening,
                     details: `${this.shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
                     state: `${this.shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
@@ -93,13 +95,18 @@ export class PresenceService {
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
                     instance: false,
-                    buttons: [
+                };
+
+                if (this.displayButtons && currentTrack.url) {
+                    activity.buttons = [
                         {
                             label: `▶️ ${this.translationService.translate('listenOnSoundcloud')}`,
                             url: currentTrack.url
                         }
-                    ]
-                });
+                    ];
+                }
+
+                this.info.rpc.user?.setActivity(activity);
             } else if (this.displayWhenIdling && this.store.get('discordRichPresence')) {
                 this.info.rpc.user?.setActivity({
                     details: 'Listening to SoundCloud',
@@ -118,9 +125,12 @@ export class PresenceService {
         }
     }
 
-    public updateDisplaySettings(displayWhenIdling: boolean, displaySCSmallIcon: boolean): void {
+    public updateDisplaySettings(displayWhenIdling: boolean, displaySCSmallIcon: boolean, displayButtons?: boolean): void {
         this.displayWhenIdling = displayWhenIdling;
         this.displaySCSmallIcon = displaySCSmallIcon;
+        if (displayButtons !== undefined) {
+            this.displayButtons = displayButtons;
+        }
     }
 
     public async reconnect(): Promise<void> {

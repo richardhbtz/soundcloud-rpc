@@ -468,6 +468,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('displayButtons')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="displayButtons" ${
+                            this.store.get('displayButtons') ? 'checked' : ''
+                        }>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="setting-group">
@@ -569,6 +578,10 @@ export class SettingsManager {
                 ipcRenderer.send('setting-changed', { key: 'discordRichPresence', value: e.target.checked });
             });
 
+            document.getElementById('displayButtons').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'displayButtons', value: e.target.checked });
+            });
+
             // Apply all changes
             document.getElementById('applyChanges').addEventListener('click', () => {
                 ipcRenderer.send('apply-changes');
@@ -604,6 +617,7 @@ export class SettingsManager {
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(5) span').textContent = translations.displayButtons || 'Display buttons';
                     
                     document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
                 });
