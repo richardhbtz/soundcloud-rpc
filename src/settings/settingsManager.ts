@@ -395,10 +395,10 @@ export class SettingsManager {
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="proxyHost" placeholder="Proxy Host" value="${
+                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" value="${
                         this.store.get('proxyHost') || ''
                     }">
-                    <input type="text" class="textInput" id="proxyPort" placeholder="Proxy Port" value="${
+                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" value="${
                         this.store.get('proxyPort') || ''
                     }">
                 </div>
@@ -421,10 +421,10 @@ export class SettingsManager {
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="Last.fm API Key" value="${
+                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" value="${
                         this.store.get('lastFmApiKey') || ''
                     }">
-                    <input type="password" class="textInput" id="lastFmSecret" placeholder="Last.fm API Secret" value="${
+                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" value="${
                         this.store.get('lastFmSecret') || ''
                     }">
                 </div>
@@ -592,9 +592,13 @@ export class SettingsManager {
 
                     document.querySelector('.setting-group:nth-child(3) h2').textContent = translations.proxy || 'Proxy';
                     document.querySelector('.setting-group:nth-child(3) span').textContent = translations.enableProxy || 'Enable Proxy';
+                    document.getElementById('proxyHost').placeholder = translations.proxyHost || 'Proxy Host';
+                    document.getElementById('proxyPort').placeholder = translations.proxyPort || 'Proxy Port';
                     
                     document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable scrobbling';
                     document.querySelector('.setting-group:nth-child(4) .description .link').textContent = translations.createApiKeyLastFm || 'Create API Key';
+                    document.getElementById('lastFmApiKey').placeholder = translations.lastFmApiKey || 'Last.fm API Key';
+                    document.getElementById('lastFmSecret').placeholder = translations.lastFmSecret || 'Last.fm API Secret';
                     document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
 
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
