@@ -1,13 +1,15 @@
 import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
+import { TranslationService } from '../services/translationService';
 
 export class SettingsManager {
     private view: BrowserView;
     private isVisible = false;
     private parentWindow: BrowserWindow;
     private store: ElectronStore;
+    private translationService: TranslationService;
 
-    constructor(parentWindow: BrowserWindow, store: ElectronStore) {
+    constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
         this.parentWindow = parentWindow;
         this.store = store;
         this.view = new BrowserView({
@@ -16,6 +18,7 @@ export class SettingsManager {
                 contextIsolation: false,
             },
         });
+        this.translationService = translationService;
 
         // Add view immediately but keep it off-screen
         this.parentWindow.addBrowserView(this.view);
@@ -358,28 +361,32 @@ export class SettingsManager {
         </button>
         <div class="settings-panel">
             <div class="setting-group">
-                <h2>Client</h2>
+                <h2>${this.translationService.translate('client')}</h2>
                 <div class="setting-item">
-                    <span>Dark Mode</span>
+                    <span>${this.translationService.translate('darkMode')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="darkMode" ${theme !== 'light' ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
+            </div>
+
+            <div class="setting-group">
+                <h2>${this.translationService.translate('adBlocker')}</h2>
                 <div class="setting-item">
-                    <span>Enable AdBlocker</span>
+                    <span>${this.translationService.translate('enableAdBlocker')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="adBlocker" ${this.store.get('adBlocker') ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="description">Changes require app restart</div>
+                <div class="description">${this.translationService.translate('changesAppRestart')}</div>
             </div>
 
             <div class="setting-group">
-                <h2>Proxy</h2>
+                <h2>${this.translationService.translate('proxy')}</h2>
                 <div class="setting-item">
-                    <span>Enable Proxy</span>
+                    <span>${this.translationService.translate('enableProxy')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="proxyEnabled" ${this.store.get('proxyEnabled') ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -388,10 +395,10 @@ export class SettingsManager {
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="proxyHost" placeholder="Proxy Host" value="${
+                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" value="${
                         this.store.get('proxyHost') || ''
                     }">
-                    <input type="text" class="textInput" id="proxyPort" placeholder="Proxy Port" value="${
+                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" value="${
                         this.store.get('proxyPort') || ''
                     }">
                 </div>
@@ -405,7 +412,7 @@ export class SettingsManager {
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>Enable scrobbling</span>
+                    <span>${this.translationService.translate('enableLastFm')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="lastFmEnabled" ${this.store.get('lastFmEnabled') ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -414,16 +421,16 @@ export class SettingsManager {
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="Last.fm API Key" value="${
+                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" value="${
                         this.store.get('lastFmApiKey') || ''
                     }">
-                    <input type="password" class="textInput" id="lastFmSecret" placeholder="Last.fm API Secret" value="${
+                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" value="${
                         this.store.get('lastFmSecret') || ''
                     }">
                 </div>
                 <div class="description">
-                    <a href="#" id="createLastFmApiKey" class="link">Create API Key</a>
-                    - No callback URL needed
+                    <a href="#" id="createLastFmApiKey" class="link">${this.translationService.translate('createApiKeyLastFm')}</a>
+                    - ${this.translationService.translate('noCallbackUrl')}
                 </div>
             </div>
 
@@ -435,7 +442,7 @@ export class SettingsManager {
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>Enable Rich Presence</span>
+                    <span>${this.translationService.translate('enableRichPresence')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="discordRichPresence" ${
                             this.store.get('discordRichPresence') ? 'checked' : ''
@@ -444,7 +451,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>Display when paused</span>
+                    <span>${this.translationService.translate('displayWhenPaused')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="displayWhenIdling" ${
                             this.store.get('displayWhenIdling') ? 'checked' : ''
@@ -453,7 +460,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>Display small icon</span>
+                    <span>${this.translationService.translate('displaySmallIcon')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="displaySCSmallIcon" ${
                             this.store.get('displaySCSmallIcon') ? 'checked' : ''
@@ -464,7 +471,7 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
-                <button class="button" id="applyChanges">Apply Changes</button>
+                <button class="button" id="applyChanges">${this.translationService.translate('applyChanges')}</button>
             </div>
         </div>
         <script>
@@ -572,6 +579,35 @@ export class SettingsManager {
                 document.getElementById('darkMode').checked = isDark;
                 document.documentElement.classList.toggle('theme-light', !isDark);
             });
+
+            // Request translations from the main process
+            ipcRenderer.on('update-translations', () => {
+                ipcRenderer.invoke('get-translations').then((translations) => {
+                    document.querySelector('.setting-group:nth-child(1) h2').textContent = translations.client || 'Client';
+                    document.querySelector('.setting-group:nth-child(1) span').textContent = translations.darkMode || 'Dark Mode';
+                    
+                    document.querySelector('.setting-group:nth-child(2) h2').textContent = translations.adBlocker || 'Ad Blocker';
+                    document.querySelector('.setting-group:nth-child(2) span').textContent = translations.enableAdBlocker || 'Enable Ad Blocker';
+                    document.querySelector('.setting-group:nth-child(2) .description').textContent = translations.changesAppRestart || 'Changes require app restart';
+
+                    document.querySelector('.setting-group:nth-child(3) h2').textContent = translations.proxy || 'Proxy';
+                    document.querySelector('.setting-group:nth-child(3) span').textContent = translations.enableProxy || 'Enable Proxy';
+                    document.getElementById('proxyHost').placeholder = translations.proxyHost || 'Proxy Host';
+                    document.getElementById('proxyPort').placeholder = translations.proxyPort || 'Proxy Port';
+                    
+                    document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable scrobbling';
+                    document.querySelector('.setting-group:nth-child(4) .description .link').textContent = translations.createApiKeyLastFm || 'Create API Key';
+                    document.getElementById('lastFmApiKey').placeholder = translations.lastFmApiKey || 'Last.fm API Key';
+                    document.getElementById('lastFmSecret').placeholder = translations.lastFmSecret || 'Last.fm API Secret';
+                    document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
+
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
+                    
+                    document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
+                });
+            });
         `;
     }
 
@@ -599,5 +635,10 @@ export class SettingsManager {
             throw new Error('Settings view is not initialized');
         }
         return this.view;
+    }
+
+    public updateTranslations(translationService: TranslationService): void {
+        this.translationService = translationService;
+        this.getView().webContents.send('update-translations');
     }
 }

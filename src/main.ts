@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, ipcRenderer } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, ipcRenderer, nativeImage } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -8,6 +8,8 @@ import { SettingsManager } from './settings/settingsManager';
 import { ProxyService } from './services/proxyService';
 import { PresenceService } from './services/presenceService';
 import { LastFmService } from './services/lastFmService';
+import { TranslationService } from './services/translationService';
+import { ThumbarService } from './services/thumbarService';
 import path = require('path');
 
 const Store = require('electron-store');
@@ -44,6 +46,8 @@ let settingsManager: SettingsManager;
 let proxyService: ProxyService;
 let presenceService: PresenceService;
 let lastFmService: LastFmService;
+let translationService: TranslationService;
+let thumbarService: ThumbarService;
 
 // Display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
@@ -63,6 +67,20 @@ function setupUpdater() {
     });
 
     autoUpdater.checkForUpdates();
+}
+
+// Update the language when retrieved from the web page
+async function getLanguage() {
+    const langInfo = await contentView.webContents.executeJavaScript(`
+        const langEl = document.querySelector('html');
+        new Promise(resolve => {
+            resolve({
+                lang: langEl ? langEl.getAttribute('lang') : 'en',
+            });
+        })
+    `);
+
+    translationService.setLanguage(langInfo.lang);
 }
 
 // Browser window configuration
@@ -129,6 +147,7 @@ let lastTrackInfo = {
     elapsed: '',
     duration: '',
     isPlaying: false,
+    url: ''
 };
 
 async function pollTrackInfo() {
@@ -150,6 +169,7 @@ async function pollTrackInfo() {
                 const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
                 const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
                 const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
+                const urlEl = document.querySelector('.playbackSoundBadge__titleLink');
 
                 return {
                     title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
@@ -157,7 +177,8 @@ async function pollTrackInfo() {
                     artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\\(['"]?|['"]?\\)$/g, '') : '',
                     elapsed: elapsedEl ? elapsedEl.textContent.trim() : '',
                     duration: durationEl ? durationEl.textContent.trim() : '',
-                    isPlaying: true
+                    isPlaying: true,
+                    url: urlEl ? urlEl.href.split('?')[0] : ''
                 };
             })()
         `,
@@ -186,6 +207,7 @@ async function pollTrackInfo() {
                     elapsed: '',
                     duration: '',
                     isPlaying: false,
+                    url: ''
                 });
             }
         }
@@ -323,11 +345,13 @@ async function init() {
     );
 
     // Initialize services
+    translationService = new TranslationService();
     notificationManager = new NotificationManager(mainWindow);
-    settingsManager = new SettingsManager(mainWindow, store);
+    settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
-    presenceService = new PresenceService(mainWindow, store);
+    presenceService = new PresenceService(mainWindow, store, translationService);
     lastFmService = new LastFmService(contentView, store);
+    thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
@@ -341,6 +365,7 @@ async function init() {
     setupShortcuts(settingsManager.getView().webContents);
 
     setupThemeHandlers();
+    setupTranslationHandlers();
 
     // Configure session
     const session = contentView.webContents.session;
@@ -391,6 +416,15 @@ async function init() {
         }
 
         notificationManager.show("Press 'F1' to open settings");
+
+        // Get the current language from the page
+        await getLanguage();
+
+        // Update the language in the settings manager
+        settingsManager.updateTranslations(translationService);
+
+        // Set thumbar buttons for the media controls
+        thumbarService.updateThumbarButtons(mainWindow, false, contentView);
 
         // Start polling for track info with a more reasonable interval
         setInterval(pollTrackInfo, 5000); // Changed to 10 seconds
@@ -603,4 +637,29 @@ export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
         notificationManager.show(message);
     }
+}
+
+function setupTranslationHandlers() {
+    ipcMain.handle('get-translations', () => {
+        return {
+            client: translationService.translate('client'),
+            darkMode: translationService.translate('darkMode'),
+            adBlocker: translationService.translate('adBlocker'),
+            enableAdBlocker: translationService.translate('enableAdBlocker'),
+            changesAppRestart: translationService.translate('changesAppRestart'),
+            proxy: translationService.translate('proxy'),
+            proxyHost: translationService.translate('proxyHost'),
+            proxyPort: translationService.translate('proxyPort'),
+            enableProxy: translationService.translate('enableProxy'),
+            enableLastFm: translationService.translate('enableLastFm'),
+            lastFmApiKey: translationService.translate('lastFmApiKey'),
+            lastFmSecret: translationService.translate('lastFmApiSecret'),
+            createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
+            noCallbackUrl: translationService.translate('noCallbackUrl'),
+            enableRichPresence: translationService.translate('enableRichPresence'),
+            displayWhenPaused: translationService.translate('displayWhenPaused'),
+            displaySmallIcon: translationService.translate('displaySmallIcon'),
+            applyChanges: translationService.translate('applyChanges')
+        };
+    });
 }

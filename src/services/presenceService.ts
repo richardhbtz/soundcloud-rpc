@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
+import { TranslationService } from './translationService';
 
 export interface Info {
     rpc: DiscordClient;
@@ -15,12 +16,14 @@ export class PresenceService {
     private info: Info;
     private displayWhenIdling: boolean;
     private displaySCSmallIcon: boolean;
+    private translationService: TranslationService;
 
-    constructor(window: BrowserWindow, store: ElectronStore) {
+    constructor(window: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
         this.window = window;
         this.store = store;
         this.displayWhenIdling = store.get('displayWhenIdling', false) as boolean;
         this.displaySCSmallIcon = store.get('displaySCSmallIcon', false) as boolean;
+        this.translationService = translationService;
 
         this.info = {
             rpc: new DiscordClient({
@@ -40,6 +43,7 @@ export class PresenceService {
         elapsed: string;
         duration: string;
         isPlaying: boolean;
+        url: string;
     }): Promise<void> {
         try {
             if (!this.store.get('discordRichPresence')) {
@@ -58,7 +62,8 @@ export class PresenceService {
                     title: trackInfo.title
                         .replace(/.*?:\s*/, '')
                         .replace(/\n.*/, '')
-                        .trim()
+                        .trim(),
+                    url: trackInfo.url,
                 };
 
                 const [elapsedTime, totalTime] = [trackInfo.elapsed, trackInfo.duration];
@@ -88,6 +93,12 @@ export class PresenceService {
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
                     instance: false,
+                    buttons: [
+                        {
+                            label: `▶️ ${this.translationService.translate('listenOnSoundcloud')}`,
+                            url: currentTrack.url
+                        }
+                    ]
                 });
             } else if (this.displayWhenIdling && this.store.get('discordRichPresence')) {
                 this.info.rpc.user?.setActivity({
