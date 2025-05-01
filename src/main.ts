@@ -640,7 +640,9 @@ export function queueToastNotification(message: string) {
 }
 
 function setupTranslationHandlers() {
-    ipcMain.handle('get-translations', () => {
+    ipcMain.handle('get-translations', (event) => {
+        event.sender.send('update-translations');
+        
         return {
             client: translationService.translate('client'),
             darkMode: translationService.translate('darkMode'),
