@@ -593,12 +593,10 @@ export class SettingsManager {
                     document.querySelector('.setting-group:nth-child(3) h2').textContent = translations.proxy || 'Proxy';
                     document.querySelector('.setting-group:nth-child(3) span').textContent = translations.enableProxy || 'Enable Proxy';
                     
-                    document.querySelector('.setting-group:nth-child(4) h2').firstChild.textContent = translations.lastFm || 'Last.fm ';
                     document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable scrobbling';
                     document.querySelector('.setting-group:nth-child(4) .description .link').textContent = translations.createApiKeyLastFm || 'Create API Key';
                     document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
 
-                    document.querySelector('.setting-group:nth-child(5) h2').firstChild.textContent = translations.discord || 'Discord ';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
