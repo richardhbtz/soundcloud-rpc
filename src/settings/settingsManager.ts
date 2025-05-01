@@ -468,6 +468,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span data-i18n-key="displayButtons">Display buttons</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="displayButtons" ${
+                            this.store.get('displayButtons') ? 'checked' : ''
+                        }>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="setting-group">
@@ -567,6 +576,10 @@ export class SettingsManager {
             // Discord settings
             document.getElementById('discordRichPresence').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'discordRichPresence', value: e.target.checked });
+            });
+
+            document.getElementById('displayButtons').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'displayButtons', value: e.target.checked });
             });
 
             // Apply all changes

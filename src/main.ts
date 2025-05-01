@@ -31,6 +31,7 @@ const store = new Store({
         displayWhenIdling: false,
         displaySCSmallIcon: false,
         discordRichPresence: true,
+        displayButtons: false,
         theme: 'dark',
     },
     clearInvalidConfig: true,
@@ -444,6 +445,8 @@ async function init() {
         } else if (key === 'displaySCSmallIcon') {
             displaySCSmallIcon = data.value;
             presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon);
+        } else if (key === 'displayButtons') {
+            presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon, data.value);
         }
     });
 
@@ -662,6 +665,7 @@ function setupTranslationHandlers() {
             enableRichPresence: translationService.translate('enableRichPresence'),
             displayWhenPaused: translationService.translate('displayWhenPaused'),
             displaySmallIcon: translationService.translate('displaySmallIcon'),
+            displayButtons: translationService.translate('displayButtons'),
             applyChanges: translationService.translate('applyChanges')
         };
     });
