@@ -33,6 +33,7 @@ const store = new Store({
         discordRichPresence: true,
         displayButtons: false,
         theme: 'dark',
+        language: 'en'
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -55,16 +56,22 @@ let displayWhenIdling = store.get('displayWhenIdling') as boolean;
 let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
 // Update handling
-function setupUpdater() {
+function setupUpdater(translationService?: TranslationService) {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
     autoUpdater.on('update-available', () => {
-        queueToastNotification('Update Available');
+        const message = translationService 
+            ? translationService.translate('updateAvailable') 
+            : 'Update available';
+        queueToastNotification(message);
     });
 
     autoUpdater.on('update-downloaded', () => {
-        queueToastNotification('Update Completed');
+        const message = translationService 
+            ? translationService.translate('updateCompleted') 
+            : 'Update completed';
+        queueToastNotification(message);
     });
 
     autoUpdater.checkForUpdates();
@@ -81,7 +88,17 @@ async function getLanguage() {
         })
     `);
 
-    translationService.setLanguage(langInfo.lang);
+    if (langInfo.lang && store.get('language') !== langInfo.lang) {
+        store.set('language', langInfo.lang);
+        translationService.setLanguage(langInfo.lang);
+        
+        if (headerView) {
+            headerView.webContents.send('update-translations');
+        }
+        if (settingsManager) {
+            settingsManager.updateTranslations(translationService);
+        }
+    }
 }
 
 // Browser window configuration
@@ -303,7 +320,10 @@ let contentView: BrowserView | null;
 
 // Main initialization
 async function init() {
-    setupUpdater();
+    translationService = new TranslationService();
+    translationService.setLanguage(store.get('language'));
+
+    setupUpdater(translationService);
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
@@ -346,7 +366,6 @@ async function init() {
     );
 
     // Initialize services
-    translationService = new TranslationService();
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);

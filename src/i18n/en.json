@@ -23,5 +23,7 @@
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
     "applyChanges": "Apply Changes",
-    "pressF1": "Press <b>F1</b> to open settings"
+    "pressF1": "Press <b>F1</b> to open settings",
+    "updateAvailable": "Update available",
+    "updateCompleted": "Update completed"
 }
