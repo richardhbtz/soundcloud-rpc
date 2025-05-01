@@ -392,16 +392,24 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="input-group" id="proxyFields" style="display: ${this.store.get('proxyEnabled') ? 'block' : 'none'}">
-                    <input type="text" class="textInput" id="proxyHost" data-i18n-key="proxyHost" data-i18n-placeholder="proxyHost" placeholder="Proxy Host" value="${this.store.get('proxyHost') || ''}">
-                    <input type="text" class="textInput" id="proxyPort" data-i18n-key="proxyPort" data-i18n-placeholder="proxyPort" placeholder="Proxy Port" value="${this.store.get('proxyPort') || ''}">
+                <div class="input-group" id="proxyFields" style="display: ${
+                     this.store.get('proxyEnabled') ? 'block' : 'none'
+                 }">
+                    <input type="text" class="textInput" id="proxyHost" data-i18n-key="proxyHost" data-i18n-placeholder="proxyHost" placeholder="Proxy Host" value="${
+                        this.store.get('proxyHost') || ''
+                    }">
+                    <input type="text" class="textInput" id="proxyPort" data-i18n-key="proxyPort" data-i18n-placeholder="proxyPort" placeholder="Proxy Port" value="${
+                        this.store.get('proxyPort') || ''
+                    }">
                 </div>
             </div>
 
             <div class="setting-group">
                 <h2>
                     Last.fm
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">...</svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                         <path d="M10.599 17.211l-.881-2.393s-1.433 1.596-3.579 1.596c-1.9 0-3.249-1.652-3.249-4.296 0-3.385 1.708-4.596 3.388-4.596 2.418 0 3.184 1.568 3.845 3.578l.871 2.751c.87 2.672 2.508 4.818 7.238 4.818 3.386 0 5.673-1.037 5.673-3.77 0-2.209-1.258-3.358-3.595-3.906l-1.738-.381c-1.193-.274-1.546-.763-1.546-1.59 0-.934.736-1.485 1.937-1.485 1.313 0 2.024.488 2.14 1.652l2.745-.33c-.225-2.511-1.937-3.541-4.745-3.541-2.479 0-4.897.934-4.897 3.947 0 1.877.902 3.063 3.172 3.608l1.871.439c1.402.332 1.866.916 1.866 1.713 0 1.021-.992 1.441-2.869 1.441-2.779 0-3.936-1.457-4.596-3.469l-.901-2.75c-1.156-3.574-3.004-4.896-6.669-4.896C2.147 5.297 0 7.802 0 12.244c0 4.325 2.208 6.638 6.169 6.638 3.193 0 4.43-1.671 4.43-1.671z"/>
+                    </svg>
                 </h2>
                 <div class="setting-item">
                     <span data-i18n-key="enableLastFm">Enable scrobbling</span>
@@ -410,9 +418,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="input-group" id="lastFmFields" style="display: ${this.store.get('lastFmEnabled') ? 'block' : 'none'}">
-                    <input type="text" class="textInput" id="lastFmApiKey" data-i18n-key="lastFmApiKey" data-i18n-placeholder="lastFmApiKey" placeholder="Last.fm API Key" value="${this.store.get('lastFmApiKey') || ''}">
-                    <input type="password" class="textInput" id="lastFmSecret" data-i18n-key="lastFmApiSecret" data-i18n-placeholder="lastFmApiSecret" placeholder="Last.fm API Secret" value="${this.store.get('lastFmSecret') || ''}">
+                <div class="input-group" id="lastFmFields" style="display: ${
+                    this.store.get('lastFmEnabled') ? 'block' : 'none'
+                }">
+                    <input type="text" class="textInput" id="lastFmApiKey" data-i18n-key="lastFmApiKey" data-i18n-placeholder="lastFmApiKey" placeholder="Last.fm API Key" value="${
+                        this.store.get('lastFmApiKey') || ''
+                    }">
+                    <input type="password" class="textInput" id="lastFmSecret" data-i18n-key="lastFmApiSecret" data-i18n-placeholder="lastFmApiSecret" placeholder="Last.fm API Secret" value="${
+                        this.store.get('lastFmSecret') || ''
+                    }">
                 </div>
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link" data-i18n-key="createApiKeyLastFm">Create API Key</a>
@@ -423,26 +437,34 @@ export class SettingsManager {
             <div class="setting-group">
                 <h2>
                     Discord
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">...</svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                         <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.864-.608 1.249a18.707 18.707 0 0 0-5.487 0 12.505 12.505 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.369a.07.07 0 0 0-.032.027C.533 9.045-.32 13.579.099 18.057a.082.082 0 0 0 .031.056 19.911 19.911 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.464-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.105 13.184 13.184 0 0 1-1.872-.9.077.077 0 0 1-.008-.128c.126-.094.252-.192.373-.291a.075.075 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.122.099.247.197.374.291a.077.077 0 0 1-.006.128 12.509 12.509 0 0 1-1.873.899.076.076 0 0 0-.04.106c.36.698.772 1.363 1.225 1.993a.076.076 0 0 0 .084.028 19.876 19.876 0 0 0 6.002-3.03.077.077 0 0 0 .031-.056c.5-5.177-.838-9.665-3.546-13.661a.067.067 0 0 0-.033-.027zM8.02 15.331c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.955 2.418-2.156 2.418zm7.974 0c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.943 2.418-2.156 2.418z"/>
+                    </svg>
                 </h2>
                 <div class="setting-item">
                     <span data-i18n-key="enableRichPresence">Enable Rich Presence</span>
                     <label class="toggle">
-                        <input type="checkbox" id="discordRichPresence" ${this.store.get('discordRichPresence') ? 'checked' : ''}>
+                        <input type="checkbox" id="discordRichPresence" ${
+                            this.store.get('discordRichPresence') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
                     <span data-i18n-key="displayWhenPaused">Display when paused</span>
                     <label class="toggle">
-                        <input type="checkbox" id="displayWhenIdling" ${this.store.get('displayWhenIdling') ? 'checked' : ''}>
+                        <input type="checkbox" id="displayWhenIdling" ${
+                            this.store.get('displayWhenIdling') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
                     <span data-i18n-key="displaySmallIcon">Display small icon</span>
                     <label class="toggle">
-                        <input type="checkbox" id="displaySCSmallIcon" ${this.store.get('displaySCSmallIcon') ? 'checked' : ''}>
+                        <input type="checkbox" id="displaySCSmallIcon" ${
+                            this.store.get('displaySCSmallIcon') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
