@@ -22,5 +22,6 @@
     "displayWhenPaused": "Display when paused",
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
-    "applyChanges": "Apply Changes"
+    "applyChanges": "Apply Changes",
+    "pressF1": "Press <b>F1</b> to open settings"
 }

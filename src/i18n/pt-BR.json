@@ -22,5 +22,6 @@
     "displayWhenPaused": "Mostrar quando pausado",
     "displaySmallIcon": "Mostrar ícone pequeno",
     "displayButtons": "Mostrar botões",
-    "applyChanges": "Aplicar Mudanças"
+    "applyChanges": "Aplicar Mudanças",
+    "pressF1": "Pressione <b>F1</b> para abrir as configurações"
 }

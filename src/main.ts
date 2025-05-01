@@ -417,10 +417,10 @@ async function init() {
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
 
-        notificationManager.show("Press 'F1' to open settings");
-
         // Get the current language from the page
         await getLanguage();
+        
+        notificationManager.show(translationService.translate('pressF1'));
 
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
