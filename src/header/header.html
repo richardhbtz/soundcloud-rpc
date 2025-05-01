@@ -1,34 +1,27 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="header.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="header.css" />
-</head>
-
-<body>
-    <div class="custom-header">
-        <div class="title-bar" title="Double click to maximize/restore">
-        </div>
-        <div class="window-controls">
-            <div class="control-group windows-controls">
-                <div class="control minimize" id="minimize-btn" title="Minimize">
-                    <svg width="10" height="10" viewBox="0 0 20 20"></svg>
-                </div>
-                <div class="control maximize" id="maximize-btn" title="Maximize">
-                    <div class="icon-container">
-                        <svg id="maximize-icon" width="10" height="10" viewBox="0 0 20 20"
-                            style="display: inline-flex"></svg>
-                        <svg id="restore-icon" width="10" height="10" viewBox="0 0 20 20" style="display: none"></svg>
+    <body>
+        <div class="custom-header">
+            <div class="title-bar" title="Double click to maximize/restore"></div>
+            <div class="window-controls">
+                <div class="control-group windows-controls">
+                    <div class="control minimize" id="minimize-btn" title="Minimize">
+                        <svg width="10" height="10" viewBox="0 0 20 20"></svg>
                     </div>
-                </div>
-                <div class="control close" id="close-btn" title="Close">
-                    <svg width="2" height="2" viewBox="0 0 20 20"></svg>
+                    <div class="control maximize" id="maximize-btn" title="Maximize">
+                        <svg class="maximize-icon" viewBox="0 0 20 20"></svg>
+                    </div>
+                    <div class="control close" id="close-btn" title="Close">
+                        <svg width="10" height="10" viewBox="0 0 20 20"></svg>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <script src="header.js"></script>
-</body>
-
+        <script src="header.js"></script>
+    </body>
 </html>

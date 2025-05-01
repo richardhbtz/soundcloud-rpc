@@ -31,10 +31,10 @@ const store = new Store({
         displayWhenIdling: false,
         displaySCSmallIcon: false,
         discordRichPresence: true,
-        theme: 'dark'
+        theme: 'dark',
     },
     clearInvalidConfig: true,
-    encryptionKey: 'soundcloud-rpc-config'
+    encryptionKey: 'soundcloud-rpc-config',
 });
 
 let isDarkTheme = store.get('theme') !== 'light';
@@ -353,7 +353,7 @@ async function init() {
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
     presenceService = new PresenceService(mainWindow, store, translationService);
-    lastFmService = new LastFmService(mainWindow, store);
+    lastFmService = new LastFmService(contentView, store);
     thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
@@ -645,7 +645,7 @@ export function queueToastNotification(message: string) {
 function setupTranslationHandlers() {
     ipcMain.handle('get-translations', () => {
         return {
-            theme: translationService.translate('theme'),
+            client: translationService.translate('client'),
             darkMode: translationService.translate('darkMode'),
             adBlocker: translationService.translate('adBlocker'),
             enableAdBlocker: translationService.translate('enableAdBlocker'),
@@ -656,8 +656,8 @@ function setupTranslationHandlers() {
             createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
             noCallbackUrl: translationService.translate('noCallbackUrl'),
             enableRichPresence: translationService.translate('enableRichPresence'),
-            showStatusWhenPaused: translationService.translate('showStatusWhenPaused'),
-            showSoundCloudIcon: translationService.translate('showSoundCloudIcon'),
+            displayWhenPaused: translationService.translate('displayWhenPaused'),
+            displaySmallIcon: translationService.translate('displaySmallIcon'),
             applyChanges: translationService.translate('applyChanges')
         };
     });

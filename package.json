@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-rpc",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "🎵 A Soundcloud client with Discord Rich Presence support",
   "author": {
     "name": "Richard Habitzreuter",
@@ -69,7 +69,6 @@
     "electron-prompt": "^1.7.0",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.3.4",
-    "electron-window-state": "^5.0.3",
-    "jsdom": "^26.1.0"
+    "electron-window-state": "^5.0.3"
   }
 }

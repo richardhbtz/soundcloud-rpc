@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow, WebContentsView } from 'electron';
+import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
 
@@ -33,10 +33,17 @@ export class SettingsManager {
 
         // Preload content
         this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
+
+        // Listen for hide message from the panel
+        this.view.webContents.on('console-message', (_, __, message) => {
+            if (message === 'hidePanel') {
+                this.isVisible = false;
+                this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+            }
+        });
     }
 
     public toggle(): void {
-        console.log('toggle');
         if (this.isVisible) {
             this.hide();
         } else {
@@ -47,12 +54,13 @@ export class SettingsManager {
     private updateBounds(): void {
         const bounds = this.parentWindow.getBounds();
         const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
+        const HEADER_HEIGHT = 32; // Height of the window controls
 
         this.view.setBounds({
             x: bounds.width - width,
-            y: 0,
+            y: HEADER_HEIGHT,
             width,
-            height: bounds.height
+            height: bounds.height - HEADER_HEIGHT,
         });
     }
 
@@ -75,40 +83,137 @@ export class SettingsManager {
                 -webkit-font-smoothing: antialiased;
             }
             body {
-                background-color: var(--bg-primary);
+                background-color: rgba(var(--bg-primary-rgb), 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
                 color: var(--text-primary);
                 padding: 20px;
-                overflow-y: auto;
+                padding-right: 28px;
+                overflow-y: scroll !important;
                 letter-spacing: 0.01em;
+                position: relative;
+                opacity: 0;
+                transform: translateX(20px);
+                transition: 
+                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                will-change: transform, opacity;
+            }
+            body.visible {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            body.is-scrollable {
+                padding-right: 20px; /* Reduce padding when scroll is visible */
+            }
+            ::-webkit-scrollbar {
+                -webkit-appearance: none;
+                width: 8px;
+                height: 8px;
+                background-color: var(--scrollbar-bg);
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            ::-webkit-scrollbar-track {
+                background-color: transparent;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                background-color: var(--scrollbar-thumb);
+                border-radius: 4px;
+                transition: background-color 0.3s;
+                min-height: 40px;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: var(--scrollbar-thumb-hover);
+            }
+            
+            ::-webkit-scrollbar-corner {
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-button {
+                display: none;
+            }
+            .close-btn {
+                position: absolute;
+                top: 5px;
+                right: 28px; /* Default position when scroll is not visible */
+                width: 32px;
+                height: 32px;
+                border-radius: 4px;
+                border: none;
+                background: transparent;
+                color: var(--text-primary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background-color 0.2s;
+            }
+            body.is-scrollable .close-btn {
+                right: 20px; /* Adjust position when scroll is visible */
+            }
+            .close-btn:hover {
+                background-color: var(--bg-hover);
+            }
+            .close-btn svg {
+                width: 16px;
+                height: 16px;
+                fill: currentColor;
             }
             :root {
-                --bg-primary: #1a1a1a;
-                --bg-secondary: #252525;
-                --bg-hover: #303030;
+                --bg-primary: #303030;
+                --bg-primary-rgb: 48, 48, 48;
+                --bg-secondary: rgba(43, 43, 43, 0.7);
+                --bg-hover: rgba(64, 64, 64, 0.8);
                 --text-primary: #ffffff;
                 --text-secondary: rgba(255, 255, 255, 0.7);
-                --accent: #ff5500;
-                --accent-hover: #ff7744;
+                --accent: rgba(255, 255, 255, 0.9);
+                --accent-hover: #ffffff;
+                --accent-muted: rgba(255, 255, 255, 0.6);
+                --link-color: #5bb7ff;
+                --link-hover: #7cc5ff;
                 --border: rgba(255, 255, 255, 0.1);
+                --scrollbar-bg: rgba(255, 255, 255, 0.05);
+                --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+                --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
             }
             html.theme-light {
                 --bg-primary: #ffffff;
-                --bg-secondary: #f5f5f5;
-                --bg-hover: #eaeaea;
+                --bg-primary-rgb: 255, 255, 255;
+                --bg-secondary: rgba(245, 245, 245, 0.7);
+                --bg-hover: rgba(234, 234, 234, 0.8);
                 --text-primary: #333333;
                 --text-secondary: rgba(0, 0, 0, 0.7);
+                --accent: rgba(0, 0, 0, 0.9);
+                --accent-hover: #000000;
+                --accent-muted: rgba(0, 0, 0, 0.6);
+                --link-color: #0088ff;
+                --link-hover: #0066cc;
                 --border: rgba(0, 0, 0, 0.1);
+                --scrollbar-bg: rgba(0, 0, 0, 0.05);
+                --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+                --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
             }
             .settings-panel {
+                padding-top: 32px;
                 max-width: 100%;
                 display: flex;
                 flex-direction: column;
-                gap: 16px;
+                gap: 14px;
             }
             .setting-group {
                 background: var(--bg-secondary);
                 border-radius: 8px;
-                padding: 16px;
+                padding: 15px;
                 transition: background 0.2s;
             }
             .setting-group:hover {
@@ -118,7 +223,7 @@ export class SettingsManager {
                 font-size: 16px;
                 font-weight: 600;
                 color: var(--text-primary);
-                margin-bottom: 12px;
+                margin-bottom: 10px;
                 display: flex;
                 align-items: center;
                 gap: 8px;
@@ -132,8 +237,7 @@ export class SettingsManager {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 8px 0;
-                gap: 16px;
+                padding: 5px 0;
             }
             .setting-item span {
                 color: var(--text-primary);
@@ -142,8 +246,18 @@ export class SettingsManager {
             .description {
                 font-size: 12px;
                 color: var(--text-secondary);
-                margin-top: 4px;
-                margin-bottom: 8px;
+                margin-top: 10px;
+            }
+            .input-group {
+                display: flex;
+                flex-direction: column;
+                margin-top: 10px;
+            }
+            .input-group .textInput {
+                margin-bottom: 10px;
+            }
+            .input-group .textInput:last-child {
+                margin-bottom: 0;
             }
             .toggle {
                 position: relative;
@@ -182,11 +296,11 @@ export class SettingsManager {
             }
             input:checked + .slider:before {
                 transform: translateX(20px);
-                background: white;
+                background: var(--bg-primary);
             }
             .textInput {
                 width: 100%;
-                padding: 8px 12px;
+                padding: 10px 12px;
                 background: var(--bg-primary);
                 border: 1px solid var(--border);
                 border-radius: 4px;
@@ -196,13 +310,13 @@ export class SettingsManager {
             }
             .textInput:focus {
                 outline: none;
-                border-color: var(--accent);
+                border-color: var(--accent-muted);
             }
             .button {
                 width: 100%;
-                padding: 10px;
+                padding: 12px;
                 background: var(--accent);
-                color: white;
+                color: var(--bg-primary);
                 border: none;
                 border-radius: 4px;
                 font-size: 14px;
@@ -214,23 +328,40 @@ export class SettingsManager {
                 background: var(--accent-hover);
             }
             .link {
-                color: var(--accent);
+                color: var(--accent-muted);
                 text-decoration: none;
                 font-size: 12px;
             }
             .link:hover {
-                text-decoration: underline;
+                color: var(--accent);
+                text-decoration: none;
             }
-            .input-group {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                margin-top: 8px;
+            #createLastFmApiKey {
+                color: var(--link-color);
+            }
+            #createLastFmApiKey:hover {
+                color: var(--link-hover);
+            }
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            body::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            /* Enable overlay scrollbar */
+            @media screen and (min-width: 0\0) {
+                body {
+                    overflow-y: auto;
+                }
             }
         </style>
+        <button class="close-btn" id="close-settings" title="Close settings">
+            <svg viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+        </button>
         <div class="settings-panel">
             <div class="setting-group">
-                <h2>${this.translationService.translate('theme')}</h2>
+                <h2>${this.translationService.translate('client')}</h2>
                 <div class="setting-item">
                     <span>${this.translationService.translate('darkMode')}</span>
                     <label class="toggle">
@@ -261,9 +392,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="input-group" id="proxyFields" style="display: ${this.store.get('proxyEnabled') ? 'block' : 'none'}">
-                    <input type="text" class="textInput" id="proxyHost" placeholder="Proxy Host" value="${this.store.get('proxyHost') || ''}">
-                    <input type="text" class="textInput" id="proxyPort" placeholder="Proxy Port" value="${this.store.get('proxyPort') || ''}">
+                <div class="input-group" id="proxyFields" style="display: ${
+                    this.store.get('proxyEnabled') ? 'block' : 'none'
+                }">
+                    <input type="text" class="textInput" id="proxyHost" placeholder="Proxy Host" value="${
+                        this.store.get('proxyHost') || ''
+                    }">
+                    <input type="text" class="textInput" id="proxyPort" placeholder="Proxy Port" value="${
+                        this.store.get('proxyPort') || ''
+                    }">
                 </div>
             </div>
 
@@ -281,9 +418,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="input-group" id="lastFmFields" style="display: ${this.store.get('lastFmEnabled') ? 'block' : 'none'}">
-                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="Last.fm API Key" value="${this.store.get('lastFmApiKey') || ''}">
-                    <input type="password" class="textInput" id="lastFmSecret" placeholder="Last.fm API Secret" value="${this.store.get('lastFmSecret') || ''}">
+                <div class="input-group" id="lastFmFields" style="display: ${
+                    this.store.get('lastFmEnabled') ? 'block' : 'none'
+                }">
+                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="Last.fm API Key" value="${
+                        this.store.get('lastFmApiKey') || ''
+                    }">
+                    <input type="password" class="textInput" id="lastFmSecret" placeholder="Last.fm API Secret" value="${
+                        this.store.get('lastFmSecret') || ''
+                    }">
                 </div>
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link">${this.translationService.translate('createApiKeyLastFm')}</a>
@@ -301,21 +444,27 @@ export class SettingsManager {
                 <div class="setting-item">
                     <span>${this.translationService.translate('enableRichPresence')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="discordRichPresence" ${this.store.get('discordRichPresence') ? 'checked' : ''}>
+                        <input type="checkbox" id="discordRichPresence" ${
+                            this.store.get('discordRichPresence') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('showStatusWhenPaused')}</span>
+                    <span>${this.translationService.translate('displayWhenPaused')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="displayWhenIdling" ${this.store.get('displayWhenIdling') ? 'checked' : ''}>
+                        <input type="checkbox" id="displayWhenIdling" ${
+                            this.store.get('displayWhenIdling') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('showSoundCloudIcon')}</span>
+                    <span>${this.translationService.translate('displaySmallIcon')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="displaySCSmallIcon" ${this.store.get('displaySCSmallIcon') ? 'checked' : ''}>
+                        <input type="checkbox" id="displaySCSmallIcon" ${
+                            this.store.get('displaySCSmallIcon') ? 'checked' : ''
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -327,6 +476,29 @@ export class SettingsManager {
         </div>
         <script>
             ${this.getJavaScript()}
+        </script>
+        <script>
+            // Animation handling
+            document.addEventListener('DOMContentLoaded', () => {
+                // Ensure initial state is set
+                document.body.classList.remove('visible');
+            });
+
+            // Handle close button animation
+            document.getElementById('close-settings').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.body.classList.remove('visible');
+                setTimeout(() => {
+                    ipcRenderer.send('toggle-settings');
+                }, 300);
+            });
+
+            // Listen for messages
+            window.addEventListener('message', (event) => {
+                if (event.data === 'hidePanel') {
+                    console.log('hidePanel');
+                }
+            });
         </script>`;
     }
 
@@ -411,7 +583,7 @@ export class SettingsManager {
             // Request translations from the main process
             ipcRenderer.on('update-translations', () => {
                 ipcRenderer.invoke('get-translations').then((translations) => {
-                    document.querySelector('.setting-group:nth-child(1) h2').textContent = translations.theme || 'Theme';
+                    document.querySelector('.setting-group:nth-child(1) h2').textContent = translations.client || 'Client';
                     document.querySelector('.setting-group:nth-child(1) span').textContent = translations.darkMode || 'Dark Mode';
                     
                     document.querySelector('.setting-group:nth-child(2) h2').textContent = translations.adBlocker || 'Ad Blocker';
@@ -422,14 +594,14 @@ export class SettingsManager {
                     document.querySelector('.setting-group:nth-child(3) span').textContent = translations.enableProxy || 'Enable Proxy';
                     
                     document.querySelector('.setting-group:nth-child(4) h2').firstChild.textContent = translations.lastFm || 'Last.fm ';
-                    document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable Last.fm scrobbling';
+                    document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable scrobbling';
                     document.querySelector('.setting-group:nth-child(4) .description .link').textContent = translations.createApiKeyLastFm || 'Create API Key';
                     document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
 
                     document.querySelector('.setting-group:nth-child(5) h2').firstChild.textContent = translations.discord || 'Discord ';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.showStatusWhenPaused || 'Show status when paused';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.showSoundCloudIcon || 'Show SoundCloud icon';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
                     
                     document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
                 });
@@ -440,11 +612,20 @@ export class SettingsManager {
     private show(): void {
         this.isVisible = true;
         this.updateBounds();
+        this.view.webContents.executeJavaScript(`
+            // Force a reflow to ensure animation works
+            document.body.style.opacity;
+            document.body.classList.add('visible');
+        `);
     }
 
     private hide(): void {
-        this.isVisible = false;
-        this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+        this.view.webContents.executeJavaScript(`
+            document.body.classList.remove('visible');
+            setTimeout(() => {
+                window.postMessage('hidePanel', '*');
+            }, 300);
+        `);
     }
 
     public getView(): BrowserView {

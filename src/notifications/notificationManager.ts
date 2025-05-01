@@ -76,7 +76,7 @@ export class NotificationManager {
                 max-width: 90%;
                 user-select: none;
                 -webkit-user-select: none;
-                background: rgba(40, 40, 40, 0.95);
+                background: #303030;
                 backdrop-filter: blur(5px);
             }
             body.fade-out .notification {
