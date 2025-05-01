@@ -366,6 +366,7 @@ async function init() {
 
     setupThemeHandlers();
     setupTranslationHandlers();
+    setupNavigationHandlers();
 
     // Configure session
     const session = contentView.webContents.session;
@@ -655,7 +656,7 @@ function setupTranslationHandlers() {
             enableProxy: translationService.translate('enableProxy'),
             enableLastFm: translationService.translate('enableLastFm'),
             lastFmApiKey: translationService.translate('lastFmApiKey'),
-            lastFmSecret: translationService.translate('lastFmApiSecret'),
+            lastFmApiSecret: translationService.translate('lastFmApiSecret'),
             createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
             noCallbackUrl: translationService.translate('noCallbackUrl'),
             enableRichPresence: translationService.translate('enableRichPresence'),
@@ -663,5 +664,41 @@ function setupTranslationHandlers() {
             displaySmallIcon: translationService.translate('displaySmallIcon'),
             applyChanges: translationService.translate('applyChanges')
         };
+    });
+}
+
+function setupNavigationHandlers() {
+    ipcMain.handle('can-go-back', (event) => {
+        return contentView && contentView.webContents.navigationHistory.canGoBack();
+    });
+
+    ipcMain.handle('can-go-forward', (event) => {
+        return contentView && contentView.webContents.navigationHistory.canGoForward();
+    });
+
+    ipcMain.on('go-back', (event) => {
+        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+            contentView.webContents.navigationHistory.goBack();
+            event.sender.send('navigation-occurred');
+        }
+    });
+
+    ipcMain.on('go-forward', (event) => {
+        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+            contentView.webContents.navigationHistory.goForward();
+            event.sender.send('navigation-occurred');
+        }
+    });
+
+    contentView.webContents.on('did-navigate', () => {
+        if (headerView) {
+            headerView.webContents.send('navigation-occurred');
+        }
+    });
+
+    contentView.webContents.on('did-navigate-in-page', () => {
+        if (headerView) {
+            headerView.webContents.send('navigation-occurred');
+        }
     });
 }

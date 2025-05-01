@@ -53,7 +53,8 @@ body {
 }
 
 .windows-controls .control,
-.theme-toggle {
+.theme-toggle,
+.navigation-controls .control {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -64,7 +65,8 @@ body {
 }
 
 .windows-controls .control svg,
-.theme-toggle svg {
+.theme-toggle svg,
+.navigation-controls .control svg {
     transition: color 0.3s;
     width: 10px;
     height: 10px;
@@ -127,12 +129,14 @@ html.theme-light .custom-header {
 }
 
 html.theme-light .windows-controls .control svg,
-html.theme-light .theme-toggle svg {
+html.theme-light .theme-toggle svg,
+html.theme-light .navigation-controls .control svg {
     filter: invert(0%);
 }
 
 html.theme-light .windows-controls .control:hover,
-html.theme-light .theme-toggle:hover {
+html.theme-light .theme-toggle:hover,
+html.theme-light .navigation-controls .control:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -160,7 +164,8 @@ html.theme-light:root {
 }
 
 .windows-controls .control:hover,
-.theme-toggle:hover {
+.theme-toggle:hover,
+.navigation-controls .control:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -170,4 +175,24 @@ html.theme-light:root {
 
 .windows-controls .close:hover svg {
     color: #ffffff;
+}
+
+.navigation-controls {
+    display: flex;
+    -webkit-app-region: no-drag;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+}
+
+#back-btn.disabled,
+#forward-btn.disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+#back-btn.disabled:hover,
+#forward-btn.disabled:hover {
+    background-color: transparent !important;
 }
