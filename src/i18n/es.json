@@ -3,5 +3,19 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "play": "Reproducir",
-    "pause": "Pausar"
+    "pause": "Pausar",
+    "theme": "Tema",
+    "darkMode": "Modo Oscuro",
+    "adBlocker": "AdBlocker",
+    "enableAdBlocker": "Activar AdBlocker",
+    "changesAppRestart": "Los cambios requieren reiniciar la aplicación",
+    "proxy": "Proxy",
+    "enableProxy": "Activar Proxy",
+    "enableLastFm": "Activar scrobbling con Last.fm",
+    "createApiKeyLastFm": "Crear API Key",
+    "noCallbackUrl": "No se necesita URL de callback",
+    "enableRichPresence": "Activar Rich Presence",
+    "showStatusWhenPaused": "Mostrar estado cuando está pausado",
+    "showSoundCloudIcon": "Mostrar ícono de SoundCloud",
+    "applyChanges": "Aplicar Cambios"
 }

@@ -1,82 +1,77 @@
-const Store = require('electron-store');
-
-import { app, BrowserWindow, dialog, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, ipcRenderer, nativeImage } from 'electron';
 import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
-
-import { ActivityType } from 'discord-api-types/v10';
-import { Client as DiscordClient } from '@xhayper/discord-rpc';
-
-import {
-    authenticateLastFm,
-    scrobbleTrack,
-    updateNowPlaying,
-    shouldScrobble,
-    timeStringToSeconds,
-} from './lastfm/lastfm';
-
-import { setupLastFmConfig } from './lastfm/lastfm-auth';
-import type { ScrobbleState } from './lastfm/lastfm';
-
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
-
-import path from 'path';
+import { SettingsManager } from './settings/settingsManager';
+import { ProxyService } from './services/proxyService';
+import { PresenceService } from './services/presenceService';
+import { LastFmService } from './services/lastFmService';
 import { TranslationService } from './services/translationService';
+import { ThumbarService } from './services/thumbarService';
+import path = require('path');
 
+const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
-const localShortcuts = require('electron-localshortcut');
-const prompt = require('electron-prompt');
-const clientId = '1090770350251458592';
-const store = new Store();
 
-export interface Info {
-    rpc: DiscordClient;
-    ready: boolean;
-    autoReconnect: boolean;
-}
+// Store configuration
+const store = new Store({
+    defaults: {
+        adBlocker: false,
+        proxyEnabled: false,
+        proxyHost: '',
+        proxyPort: '',
+        proxyData: { user: '', password: '' },
+        lastFmEnabled: false,
+        lastFmApiKey: '',
+        lastFmSecret: '',
+        lastFmSessionKey: '',
+        displayWhenIdling: false,
+        displaySCSmallIcon: false,
+        discordRichPresence: true,
+        theme: 'dark'
+    },
+    clearInvalidConfig: true,
+    encryptionKey: 'soundcloud-rpc-config'
+});
 
-const info: Info = {
-    rpc: new DiscordClient({
-        clientId,
-    }),
-    ready: false,
-    autoReconnect: true,
-};
+let isDarkTheme = store.get('theme') !== 'light';
 
-info.rpc.login().catch(console.error);
-
+// Global variables
 let mainWindow: BrowserWindow | null;
-let blocker: ElectronBlocker;
-let currentScrobbleState: ScrobbleState | null = null;
 let notificationManager: NotificationManager;
-let translationService = new TranslationService();
+let settingsManager: SettingsManager;
+let proxyService: ProxyService;
+let presenceService: PresenceService;
+let lastFmService: LastFmService;
+let translationService: TranslationService;
+let thumbarService: ThumbarService;
 
-let displayWhenIdling = false; // Whether to display a status message when music is paused
-let displaySCSmallIcon = false; // Whether to display the small SoundCloud logo
+// Display settings
+let displayWhenIdling = store.get('displayWhenIdling') as boolean;
+let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
+// Update handling
 function setupUpdater() {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
     autoUpdater.on('update-available', () => {
-        injectToastNotification('Update Available');
+        queueToastNotification('Update Available');
     });
 
     autoUpdater.on('update-downloaded', () => {
-        injectToastNotification('Update Completed');
+        queueToastNotification('Update Completed');
     });
 
     autoUpdater.checkForUpdates();
 }
 
 // Update the language when retrieved from the web page
-async function getLanguage(win: BrowserWindow | null) {
-    if (!win) return;
-
-    const langInfo = await win.webContents.executeJavaScript(`
+async function getLanguage() {
+    const langInfo = await contentView.webContents.executeJavaScript(`
         const langEl = document.querySelector('html');
         new Promise(resolve => {
             resolve({
@@ -88,97 +83,326 @@ async function getLanguage(win: BrowserWindow | null) {
     translationService.setLanguage(langInfo.lang);
 }
 
-// Set thumbar buttons for the media controls
-function updateThumbarButtons(win: BrowserWindow | null, isPlaying: any) {
-    if (!win) return;
-
-    const backwardIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/backward.ico'));
-    const playIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/play.ico'));
-    const pauseIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/pause.ico'));
-    const forwardIcon = nativeImage.createFromPath(path.join(__dirname, '../assets/icons/forward.ico'));
-
-    win.setThumbarButtons([
-        {
-            tooltip: translationService.translate('previous'),
-            icon: backwardIcon,
-            click: () => {
-                mainWindow.webContents.executeJavaScript(`
-                    document.querySelector('.skipControl__previous')?.click();
-                  `);
-            }
+// Browser window configuration
+function createBrowserWindow(windowState: any): BrowserWindow {
+    const window = new BrowserWindow({
+        width: windowState.width,
+        height: windowState.height,
+        x: windowState.x,
+        y: windowState.y,
+        frame: process.platform === 'darwin',
+        titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
+        trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 10 } : undefined,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+            webSecurity: true,
+            javascript: true,
+            images: true,
+            plugins: true,
+            experimentalFeatures: false,
+            devTools: false,
         },
-        {
-            tooltip: isPlaying ? translationService.translate('pause') : translationService.translate('play'),
-            icon: isPlaying ? pauseIcon : playIcon,
-            click: () => {
-                isPlaying = !isPlaying;
-                updateThumbarButtons(win, isPlaying);
-                mainWindow.webContents.executeJavaScript(`
-                    document.querySelector('.playControl')?.click();
-                  `);
-            }
-        },
-        {
-            tooltip: translationService.translate('next'),
-            icon: forwardIcon,
-            click: () => {
-                mainWindow.webContents.executeJavaScript(`
-                    document.querySelector('.skipControl__next')?.click();
-                  `);
-            }
+        backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
+    });
+
+    const userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
+
+    window.webContents.setUserAgent(userAgent);
+
+    const session = window.webContents.session;
+    session.webRequest.onBeforeSendHeaders((details, callback) => {
+        if (details.url.includes('google') || details.url.includes('icloud') || details.url.includes('apple')) {
+            callback({ requestHeaders: details.requestHeaders });
+            return;
         }
-    ]);
+
+        const headers = {
+            ...details.requestHeaders,
+            'Accept-Language': 'en-US,en;q=0.9',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': userAgent,
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-User': '?1',
+            'Sec-Fetch-Dest': 'document',
+        };
+        callback({ requestHeaders: headers });
+    });
+
+    return window;
 }
 
+// Track info polling
+let lastTrackInfo = {
+    title: '',
+    author: '',
+    artwork: '',
+    elapsed: '',
+    duration: '',
+    isPlaying: false,
+    url: ''
+};
+
+async function pollTrackInfo() {
+    if (!contentView) return;
+
+    try {
+        // Use direct DOM queries instead of parsing the entire HTML
+        const result = await contentView.webContents.executeJavaScript(
+            `
+            (function() {
+                const playButton = document.querySelector('.playControls__play');
+                const isPlaying = playButton ? playButton.classList.contains('playing') : false;
+                
+                if (!isPlaying) {
+                    return { isPlaying: false };
+                }
+
+                const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
+                const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
+                const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
+                const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
+                const urlEl = document.querySelector('.playbackSoundBadge__titleLink');
+
+                return {
+                    title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
+                    author: authorEl ? authorEl.textContent.trim() : '',
+                    artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\\(['"]?|['"]?\\)$/g, '') : '',
+                    elapsed: elapsedEl ? elapsedEl.textContent.trim() : '',
+                    duration: durationEl ? durationEl.textContent.trim() : '',
+                    isPlaying: true,
+                    url: urlEl ? urlEl.href.split('?')[0] : ''
+                };
+            })()
+        `,
+            true
+        );
+
+        // Only update if there are actual changes
+        const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
+
+        if (hasChanges) {
+            lastTrackInfo = result;
+
+            if (result.isPlaying && result.title && result.author) {
+                await lastFmService.updateTrackInfo({
+                    title: result.title,
+                    author: result.author,
+                    duration: result.duration,
+                });
+
+                await presenceService.updatePresence(result);
+            } else if (!result.isPlaying) {
+                await presenceService.updatePresence({
+                    title: '',
+                    author: '',
+                    artwork: '',
+                    elapsed: '',
+                    duration: '',
+                    isPlaying: false,
+                    url: ''
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error during track info update:', error);
+    }
+}
+
+function setupWindowControls() {
+    if (!mainWindow) return;
+
+    const HEADER_HEIGHT = 32;
+
+    ipcMain.on('minimize-window', () => {
+        if (mainWindow) mainWindow.minimize();
+    });
+
+    ipcMain.on('maximize-window', () => {
+        if (mainWindow) {
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            } else {
+                mainWindow.maximize();
+            }
+        }
+    });
+
+    function adjustContentViews() {
+        if (!mainWindow || !contentView || !headerView) return;
+
+        const { width, height } = mainWindow.getContentBounds();
+
+        headerView.setBounds({
+            x: 0,
+            y: 0,
+            width,
+            height: HEADER_HEIGHT,
+        });
+
+        contentView.setBounds({
+            x: 0,
+            y: HEADER_HEIGHT,
+            width,
+            height: height - HEADER_HEIGHT,
+        });
+    }
+
+    ipcMain.on('title-bar-double-click', () => {
+        if (mainWindow) {
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            } else {
+                mainWindow.maximize();
+            }
+        }
+    });
+
+    mainWindow.on('maximize', () => {
+        adjustContentViews();
+    });
+
+    mainWindow.on('unmaximize', () => {
+        adjustContentViews();
+    });
+
+    mainWindow.on('resize', () => {
+        adjustContentViews();
+    });
+
+    ipcMain.on('close-window', () => {
+        if (mainWindow) mainWindow.close();
+    });
+
+    ipcMain.on('toggle-theme', () => {
+        isDarkTheme = !isDarkTheme;
+        if (headerView) {
+            headerView.webContents.send('theme-changed', isDarkTheme);
+        }
+        applyThemeToContent(isDarkTheme);
+    });
+
+    // Handle is-maximized requests
+    ipcMain.handle('is-maximized', () => {
+        return mainWindow ? mainWindow.isMaximized() : false;
+    });
+
+    adjustContentViews();
+}
+
+let headerView: BrowserView | null;
+let contentView: BrowserView | null;
+
+// Main initialization
 async function init() {
     setupUpdater();
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
 
-    let windowState = windowStateManager({ defaultWidth: 800, defaultHeight: 800 });
-
-    mainWindow = new BrowserWindow({
-        width: windowState.width,
-        height: windowState.height,
-        x: windowState.x,
-        y: windowState.y,
-        webPreferences: {
-            nodeIntegration: false,
-        },
-    });
-
-    notificationManager = new NotificationManager(mainWindow);
+    const windowState = windowStateManager({ defaultWidth: 800, defaultHeight: 800 });
+    mainWindow = createBrowserWindow(windowState);
 
     windowState.manage(mainWindow);
 
-    mainWindow.webContents.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    headerView = new BrowserView({
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+        },
+    });
+
+    mainWindow.addBrowserView(headerView);
+    headerView.setBounds({ x: 0, y: 0, width: mainWindow.getBounds().width, height: 32 });
+    headerView.setAutoResize({ width: true, height: false });
+    headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
+
+    contentView = new BrowserView({
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+    });
+
+    mainWindow.addBrowserView(contentView);
+    contentView.setBounds({
+        x: 0,
+        y: 32,
+        width: mainWindow.getBounds().width,
+        height: mainWindow.getBounds().height - 32,
+    });
+    contentView.setAutoResize({ width: true, height: true });
+
+    contentView.webContents.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     );
 
-    // Setup proxy
-    if (store.get('proxyEnabled')) {
-        const { protocol, host } = store.get('proxyData');
+    // Get the current language from the page
+    //await getLanguage();
 
-        await mainWindow.webContents.session.setProxy({
-            proxyRules: `${protocol}//${host}`,
-        });
-    }
+    // Initialize services
+    translationService = new TranslationService();
+    notificationManager = new NotificationManager(mainWindow);
+    settingsManager = new SettingsManager(mainWindow, store, translationService);
+    proxyService = new ProxyService(mainWindow, store, queueToastNotification);
+    presenceService = new PresenceService(mainWindow, store, translationService);
+    lastFmService = new LastFmService(mainWindow, store);
+    thumbarService = new ThumbarService(translationService);
 
-    // Load the SoundCloud website
-    mainWindow.loadURL('https://soundcloud.com/discover');
+    // Add settings toggle handler
+    ipcMain.on('toggle-settings', () => {
+        settingsManager.toggle();
+    });
 
-    const executeJS = (script: string) => mainWindow.webContents.executeJavaScript(script);
+    setupWindowControls();
 
-    // Wait for the page to fully load
-    mainWindow.webContents.on('did-finish-load', async () => {
-        const apikey = store.get('lastFmApiKey');
-        const secret = store.get('lastFmSecret');
+    setupShortcuts(contentView.webContents);
+    setupShortcuts(mainWindow.webContents);
+    setupShortcuts(settingsManager.getView().webContents);
 
-        if (apikey && secret && mainWindow.webContents.getURL().startsWith('https://soundcloud.com/')) {
-            await authenticateLastFm(mainWindow, store);
-            injectToastNotification('Last.fm authenticated');
+    setupThemeHandlers();
+    setupTranslationHandlers();
+
+    // Configure session
+    const session = contentView.webContents.session;
+    const userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    session.webRequest.onBeforeSendHeaders((details, callback) => {
+        if (details.url.includes('google')) {
+            callback({ requestHeaders: details.requestHeaders });
+            return;
         }
+        const headers = {
+            ...details.requestHeaders,
+            'Accept-Language': 'en-US,en;q=0.9',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': userAgent,
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-User': '?1',
+            'Sec-Fetch-Dest': 'document',
+        };
+        callback({ requestHeaders: headers });
+    });
+
+    // Apply initial settings
+    await proxyService.apply();
+    contentView.webContents.loadURL('https://soundcloud.com/discover');
+
+    // Setup event handlers
+    contentView.webContents.on('did-finish-load', async () => {
+        await lastFmService.authenticate();
 
         if (store.get('adBlocker')) {
             const blocker = await ElectronBlocker.fromLists(
@@ -189,317 +413,252 @@ async function init() {
                     path: 'engine.bin',
                     read: async (...args) => readFileSync(...args),
                     write: async (...args) => writeFileSync(...args),
-                },
-            );
-            blocker.enableBlockingInSession(mainWindow.webContents.session);
-        }
-
-        await getLanguage(mainWindow);
-
-        const isPlaying = await executeJS(`
-            document.querySelector('.playControls__play').classList.contains('playing')
-        `);
-
-        updateThumbarButtons(mainWindow, isPlaying);
-
-        setInterval(async () => {
-            try {
-                const isPlaying = await executeJS(`
-                    document.querySelector('.playControls__play').classList.contains('playing')
-                `);
-
-                if (isPlaying) {
-                    const trackInfo = await executeJS(`
-                    new Promise(resolve => {
-                        const titleEl = document.querySelector('.playbackSoundBadge__titleLink');
-                        const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
-                        resolve({
-                            title: titleEl?.innerText ?? '',
-                            author: authorEl?.innerText ?? '',
-                            url: titleEl?.href ?? ''
-                        });
-                    });
-                `);
-                    if (!trackInfo.title || !trackInfo.author) {
-                        console.log('Incomplete track info:', trackInfo);
-                        return;
-                    }
-
-                    const currentTrack = {
-                        author: trackInfo.author as string,
-                        title: trackInfo.title
-                            .replace(/.*?:\s*/, '') // Remove everything up to and including the first colon.
-                            .replace(/\n.*/, '') // Remove everything after the first newline.
-                            .trim() as string, // Clean up any leading/trailing spaces.
-                        url: trackInfo.url as string
-                    };
-
-                    const artworkUrl = await executeJS(`
-                    new Promise(resolve => {
-                        const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
-                        resolve(artworkEl ? artworkEl.style.backgroundImage.slice(5, -2) : '');
-                    });
-                `);
-
-                    const [elapsedTime, totalTime] = await Promise.all([
-                        executeJS(
-                            `document.querySelector('.playbackTimeline__timePassed span:last-child')?.innerText ?? ''`,
-                        ),
-                        executeJS(
-                            `document.querySelector('.playbackTimeline__duration span:last-child')?.innerText ?? ''`,
-                        ),
-                    ]); //;
-
-                    await updateNowPlaying(currentTrack, store);
-
-                    const parseTime = (time: string): number => {
-                        const parts = time.split(':').map(Number);
-                        return parts.reduce((acc, part) => 60 * acc + part, 0) * 1000;
-                    };
-
-                    const elapsedMilliseconds = parseTime(elapsedTime);
-                    const totalMilliseconds = parseTime(totalTime);
-
-                    if (
-                        !currentScrobbleState ||
-                        currentScrobbleState.artist !== currentTrack.author ||
-                        currentScrobbleState.title !== currentTrack.title
-                    ) {
-                        // Scrobble previous track if it wasn't scrobbled and met criteria
-                        if (
-                            currentScrobbleState &&
-                            !currentScrobbleState.scrobbled &&
-                            shouldScrobble(currentScrobbleState)
-                        ) {
-                            await scrobbleTrack(
-                                {
-                                    author: currentScrobbleState.artist,
-                                    title: currentScrobbleState.title,
-                                },
-                                store,
-                            );
-                        }
-
-                        // Start tracking new track
-                        currentScrobbleState = {
-                            artist: currentTrack.author,
-                            title: currentTrack.title,
-                            startTime: Date.now(),
-                            duration: timeStringToSeconds(trackInfo.duration),
-                            scrobbled: false,
-                        };
-                    } else if (
-                        currentScrobbleState &&
-                        !currentScrobbleState.scrobbled &&
-                        shouldScrobble(currentScrobbleState)
-                    ) {
-                        // Scrobble current track if it meets criteria
-                        await scrobbleTrack(
-                            {
-                                author: currentScrobbleState.artist,
-                                title: currentScrobbleState.title,
-                            },
-                            store,
-                        );
-                        currentScrobbleState.scrobbled = true;
-                    }
-
-                    if (!info.rpc.isConnected) {
-                        if (await !info.rpc.login().catch(console.error)) {
-                            return;
-                        }
-                    }
-
-                    info.rpc.user?.setActivity({
-                        type: ActivityType.Listening,
-                        details: `${shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
-                        state: `${shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
-                        largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
-                        startTimestamp: Date.now() - elapsedMilliseconds,
-                        endTimestamp: Date.now() + (totalMilliseconds - elapsedMilliseconds),
-                        smallImageKey: displaySCSmallIcon ? 'soundcloud-logo' : '',
-                        smallImageText: displaySCSmallIcon ? 'SoundCloud' : '',
-                        instance: false,
-                        buttons: [
-                            {
-                                label: `▶️ ${translationService.translate('listenOnSoundcloud')}`,
-                                url: currentTrack.url
-                            }
-                        ]
-                    });
-                } else if (displayWhenIdling) {
-                    info.rpc.user?.setActivity({
-                        details: 'Listening to SoundCloud',
-                        state: 'Paused',
-                        largeImageKey: 'idling',
-                        largeImageText: 'Paused',
-                        smallImageKey: 'soundcloud-logo',
-                        smallImageText: 'SoundCloud',
-                        instance: false,
-                    });
-                } else {
-                    info.rpc.user?.clearActivity();
                 }
-            } catch (error) {
-                console.error('Error during RPC update:', error);
-            }
-        }, 5000);
+            );
+            blocker.enableBlockingInSession(contentView.webContents.session);
+        }
+
+        notificationManager.show("Press 'F1' to open settings");
+
+        // Get the current language from the page
+        await getLanguage();
+
+        // Update the language in the settings manager
+        settingsManager.updateTranslations(translationService);
+
+        // Set thumbar buttons for the media controls
+        thumbarService.updateThumbarButtons(mainWindow, false, contentView);
+
+        // Start polling for track info with a more reasonable interval
+        setInterval(pollTrackInfo, 5000); // Changed to 10 seconds
     });
 
-    // Emitted when the window is closed.
-    mainWindow.on('close', function () {
-        store.set('bounds', mainWindow.getBounds());
-        store.set('maximazed', mainWindow.isMaximized());
-    });
+    // Register settings related events
+    ipcMain.on('setting-changed', async (_event, data) => {
+        const key = proxyService.transformKey(data.key);
+        store.set(key, data.value);
 
-    mainWindow.on('closed', function () {
-        mainWindow = null;
-    });
+        console.log(key);
 
-
-    // Register F2 shortcut for toggling the adblocker
-    localShortcuts.register(mainWindow, 'F2', () => toggleAdBlocker());
-
-    localShortcuts.register(mainWindow, 'F12', () => {
-        mainWindow.webContents.openDevTools({ mode: 'detach' });
-    });
-
-    // Register F3 shortcut to show the proxy window
-    localShortcuts.register(mainWindow, 'F3', async () => toggleProxy());
-
-    // Register F4 shortcut to connecting to last.fm api
-    localShortcuts.register(mainWindow, 'F4', async () => {
-        const apikey = store.get('lastFmApiKey');
-        const secret = store.get('lastFmSecret');
-        if (!apikey || !secret) {
-            await setupLastFmConfig(mainWindow, store);
-        } else {
-            await authenticateLastFm(mainWindow, store);
-            injectToastNotification('Last.fm authenticated');
+        if (key === 'displayWhenIdling') {
+            displayWhenIdling = data.value;
+            presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon);
+        } else if (key === 'displaySCSmallIcon') {
+            displaySCSmallIcon = data.value;
+            presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon);
         }
     });
 
-    localShortcuts.register(mainWindow, 'F6', async () => {
-        store.delete('lastFmApiKey');
-        store.delete('lastFmSecret');
-        mainWindow.webContents.reload();
+    // Handle applying all changes
+    ipcMain.on('apply-changes', async () => {
+        if (store.get('proxyEnabled')) {
+            await proxyService.apply();
+        }
+
+        if (store.get('lastFmEnabled')) {
+            await lastFmService.authenticate();
+        }
+
+        if (store.get('adBlocker')) {
+            mainWindow.webContents.reload();
+        }
+
+        if (store.get('discordRichPresence')) {
+            await presenceService.reconnect();
+        } else {
+            presenceService.clearActivity();
+        }
     });
-
-    let zoomLevel = mainWindow.webContents.getZoomLevel();
-
-    // Zoom In (Ctrl + +)
-    localShortcuts.register(mainWindow, 'CmdOrCtrl+=', () => {
-        zoomLevel = Math.min(zoomLevel + 1, 9); // Limit zoom level to 9
-        mainWindow.webContents.setZoomLevel(zoomLevel);
-    });
-
-    // Zoom Out (Ctrl + -)
-    localShortcuts.register(mainWindow, 'CmdOrCtrl+-', () => {
-        zoomLevel = Math.max(zoomLevel - 1, -9); // Limit zoom level to -9
-        mainWindow.webContents.setZoomLevel(zoomLevel);
-    });
-
-    // Reset Zoom (Ctrl + 0)
-    localShortcuts.register(mainWindow, 'CmdOrCtrl+0', () => {
-        zoomLevel = 0; // Reset zoom level to default
-        mainWindow.webContents.setZoomLevel(zoomLevel);
-    });
-
-    localShortcuts.register(mainWindow, ['CmdOrCtrl+B', 'CmdOrCtrl+P'], () => mainWindow.webContents.goBack());
-    localShortcuts.register(mainWindow, ['CmdOrCtrl+F', 'CmdOrCtrl+N'], () => mainWindow.webContents.goForward());
 }
 
-// When Electron has finished initializing, create the main window
+function setupThemeHandlers() {
+    // Load initial theme from store
+    isDarkTheme = store.get('theme', 'dark') === 'dark';
+
+    // Send initial theme to all views
+    if (headerView) {
+        headerView.webContents.send('theme-changed', isDarkTheme);
+    }
+    if (settingsManager) {
+        settingsManager.getView().webContents.send('theme-changed', isDarkTheme);
+    }
+    applyThemeToContent(isDarkTheme);
+
+    // Listen for theme changes from settings or header
+    ipcMain.on('setting-changed', (_, data) => {
+        if (data.key === 'theme') {
+            isDarkTheme = data.value === 'dark';
+            store.set('theme', data.value);
+
+            // Update all views
+            if (headerView) {
+                headerView.webContents.send('theme-changed', isDarkTheme);
+            }
+            if (settingsManager) {
+                settingsManager.getView().webContents.send('theme-changed', isDarkTheme);
+            }
+            applyThemeToContent(isDarkTheme);
+        }
+    });
+}
+
+function applyThemeToContent(isDark: boolean) {
+    if (!contentView) return;
+
+    const themeScript = `
+        (function() {
+            try {
+                document.documentElement.classList.toggle('theme-light', !${isDark});
+                document.documentElement.classList.toggle('theme-dark', ${isDark});
+                document.body.classList.toggle('theme-light', !${isDark});
+                document.body.classList.toggle('theme-dark', ${isDark});
+                
+                if (${isDark}) {
+                    document.documentElement.style.setProperty('--background-base', '#121212');
+                    document.documentElement.style.setProperty('--background-surface', '#212121');
+                    document.documentElement.style.setProperty('--text-base', '#ffffff');
+                } else {
+                    document.documentElement.style.setProperty('--background-base', '#ffffff');
+                    document.documentElement.style.setProperty('--background-surface', '#f2f2f2');
+                    document.documentElement.style.setProperty('--text-base', '#333333');
+                }
+                
+                const style = document.createElement('style');
+                style.id = 'custom-scrollbar-style';
+                style.textContent = \`
+                    ::-webkit-scrollbar-button {
+                        display: none;
+                    }
+                    
+                    ::-webkit-scrollbar {
+                        width: 8px;
+                        height: 8px;
+                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+                    }
+                    
+                    ::-webkit-scrollbar-track {
+                        background-color: transparent;
+                    }
+                    
+                    ::-webkit-scrollbar-thumb {
+                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+                        border-radius: 4px;
+                        transition: background-color 0.3s;
+                    }
+                    
+                    ::-webkit-scrollbar-thumb:hover {
+                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+                    }
+                    
+                    ::-webkit-scrollbar-corner {
+                        background-color: transparent;
+                    }
+                \`;
+                
+                const existingStyle = document.getElementById('custom-scrollbar-style');
+                if (existingStyle) {
+                    existingStyle.remove();
+                }
+                document.head.appendChild(style);
+            } catch(e) {
+                console.error('Error applying theme:', e);
+            }
+        })();
+    `;
+
+    contentView.webContents.executeJavaScript(themeScript).catch(console.error);
+}
+
+function setupShortcuts(contents: WebContents) {
+    if (!mainWindow || !contentView) return;
+
+    contents.on('before-input-event', (event, input) => {
+        if (input.key === 'F1' && !input.alt && !input.control && !input.meta && !input.shift) {
+            settingsManager.toggle();
+            event.preventDefault();
+        }
+
+        if (input.key === '=' && input.control && !input.alt && !input.meta && !input.shift) {
+            const zoomLevel = contents.getZoomLevel();
+            contents.setZoomLevel(Math.min(zoomLevel + 1, 9));
+            event.preventDefault();
+        }
+
+        if (input.key === '-' && input.control && !input.alt && !input.meta && !input.shift) {
+            const zoomLevel = contents.getZoomLevel();
+            contents.setZoomLevel(Math.max(zoomLevel - 1, -9));
+            event.preventDefault();
+        }
+
+        if (input.key === '0' && input.control && !input.alt && !input.meta && !input.shift) {
+            contents.setZoomLevel(0);
+            event.preventDefault();
+        }
+
+        if ((input.key === 'b' || input.key === 'p') && input.control && !input.alt && !input.meta && !input.shift) {
+            if (contents.canGoBack()) {
+                contents.goBack();
+            }
+            event.preventDefault();
+        }
+
+        if ((input.key === 'f' || input.key === 'n') && input.control && !input.alt && !input.meta && !input.shift) {
+            if (contents.canGoForward()) {
+                contents.goForward();
+            }
+            event.preventDefault();
+        }
+    });
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (contents) {
+            contents.sendInputEvent({
+                type: input.type === 'keyDown' ? 'keyDown' : 'keyUp',
+                keyCode: input.key,
+                modifiers: [],
+            });
+        }
+    });
+}
+
+// App lifecycle handlers
 app.on('ready', init);
 
-// Quit the app when all windows are closed, unless running on macOS (where it's typical to leave apps running)
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
         app.quit();
     }
 });
 
-// When the app is activated, create the main window if it doesn't already exist
 app.on('activate', function () {
     if (mainWindow === null) {
         init();
     }
 });
 
-//Function to toggle the adblocker
-function toggleAdBlocker() {
-    const adBlockEnabled = store.get('adBlocker');
-    store.set('adBlocker', !adBlockEnabled);
-
-    if (adBlockEnabled) {
-        if (blocker) blocker.disableBlockingInSession(mainWindow.webContents.session);
-    }
-
-    if (mainWindow) {
-        mainWindow.reload();
-        injectToastNotification(adBlockEnabled ? 'Adblocker disabled' : 'Adblocker enabled');
-    }
-}
-
-// Handle proxy authorization
-app.on('login', async (_event, _webContents, _request, authInfo, callback) => {
-    if (authInfo.isProxy) {
-        if (!store.get('proxyEnabled')) {
-            return callback('', '');
-        }
-
-        const { user, password } = store.get('proxyData');
-
-        callback(user, password);
-    }
-});
-
-function shortenString(str: string): string {
-    return str.length > 128 ? str.substring(0, 128) + '...' : str;
-}
-
-// Function to toggle proxy
-async function toggleProxy() {
-    const proxyUri = await prompt({
-        title: 'Setup Proxy',
-        label: "Enter 'off' to disable the proxy",
-        value: 'http://user:password@ip:port',
-        inputAttrs: {
-            type: 'uri',
-        },
-        type: 'input',
-    });
-
-    if (proxyUri === null) return;
-
-    if (proxyUri == 'off') {
-        store.set('proxyEnabled', false);
-
-        dialog.showMessageBoxSync(mainWindow, { message: 'The application needs to restart to work properly' });
-        app.quit();
-    } else {
-        try {
-            const url = new URL(proxyUri);
-            store.set('proxyEnabled', true);
-            store.set('proxyData', {
-                protocol: url.protocol,
-                host: url.host,
-                user: url.username,
-                password: url.password,
-            });
-            dialog.showMessageBoxSync(mainWindow, { message: 'The application needs to restart to work properly' });
-            app.quit();
-        } catch (e) {
-            store.set('proxyEnabled', false);
-            mainWindow.reload();
-            injectToastNotification('Failed to setup proxy.');
-        }
-    }
-}
-
-// Function to inject toast notification into the main page
-export function injectToastNotification(message: string) {
+export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
         notificationManager.show(message);
     }
+}
+
+function setupTranslationHandlers() {
+    ipcMain.handle('get-translations', () => {
+        return {
+            theme: translationService.translate('theme'),
+            darkMode: translationService.translate('darkMode'),
+            adBlocker: translationService.translate('adBlocker'),
+            enableAdBlocker: translationService.translate('enableAdBlocker'),
+            changesAppRestart: translationService.translate('changesAppRestart'),
+            proxy: translationService.translate('proxy'),
+            enableProxy: translationService.translate('enableProxy'),
+            enableLastFm: translationService.translate('enableLastFm'),
+            createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
+            noCallbackUrl: translationService.translate('noCallbackUrl'),
+            enableRichPresence: translationService.translate('enableRichPresence'),
+            showStatusWhenPaused: translationService.translate('showStatusWhenPaused'),
+            showSoundCloudIcon: translationService.translate('showSoundCloudIcon'),
+            applyChanges: translationService.translate('applyChanges')
+        };
+    });
 }
