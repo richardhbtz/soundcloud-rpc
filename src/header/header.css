@@ -65,8 +65,7 @@ body {
 }
 
 .windows-controls .control svg,
-.theme-toggle svg,
-.navigation-controls .control svg {
+.theme-toggle svg {
     transition: color 0.3s;
     width: 10px;
     height: 10px;
@@ -74,7 +73,6 @@ body {
     color: #ffffff;
     filter: invert(100%);
 }
-
 
 .icon-container {
     display: flex;
@@ -184,6 +182,15 @@ html.theme-light:root {
     left: 0;
     top: 0;
     height: 100%;
+}
+
+.navigation-controls .control svg {
+    transition: color 0.3s;
+    width: 15px;
+    height: 15px;
+    display: block;
+    color: #ffffff;
+    filter: invert(100%);
 }
 
 #back-btn.disabled,

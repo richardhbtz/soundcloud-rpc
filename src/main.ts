@@ -50,6 +50,7 @@ let presenceService: PresenceService;
 let lastFmService: LastFmService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
+let maxWindowListeners = 20; // Default value for max listeners
 
 // Display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
@@ -153,6 +154,8 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         };
         callback({ requestHeaders: headers });
     });
+
+    window.setMaxListeners(maxWindowListeners);
 
     return window;
 }
@@ -493,6 +496,65 @@ async function init() {
             presenceService.clearActivity();
         }
     });
+
+    // Handle language changes
+    ipcMain.on('language-changed', async (_, newLanguage) => {
+        translationService.setLanguage(newLanguage);
+        
+        if (headerView && !headerView.webContents.isDestroyed()) {
+            headerView.webContents.send('update-translations');
+        }
+        
+        if (contentView && !contentView.webContents.isDestroyed()) {
+            contentView.webContents.executeJavaScript(`
+                document.documentElement.lang = "${newLanguage}";
+            `).catch(console.error);
+        }
+
+        queueToastNotification(translationService.translate('languageChanged'));
+    });
+
+    // Handle language changes for SoundCloud
+    ipcMain.on('change-soundcloud-language', (_, language) => {
+        if (!contentView || contentView.webContents.isDestroyed()) return;
+        
+        contentView.webContents.executeJavaScript(`
+            (function() {
+                try {
+                    const localeSelector = document.querySelector('.localeSelector');
+                    if (localeSelector) {
+                        localeSelector.click();
+                        
+                        setTimeout(() => {
+                            const languageButton = document.querySelector('[data-testid="language-pick-${language}"]');
+                            if (languageButton) {
+                                languageButton.click();
+                                return true;
+                            } else {
+                                window.location.reload();
+                                return true;
+                            }
+                        }, 300);
+                    } else {
+                        window.location.reload();
+                        return true;
+                    }
+                } catch(e) {
+                    return false;
+                }
+            })()
+        `).then(success => {
+            if (success) {          
+                translationService.setLanguage(language);
+                
+                if (headerView && !headerView.webContents.isDestroyed()) {
+                    headerView.webContents.send('update-translations');
+                }
+                
+                settingsManager.updateTranslations(translationService);
+            }
+        }).catch(console.error);
+    });
 }
 
 function setupThemeHandlers() {
@@ -673,6 +735,7 @@ function setupTranslationHandlers() {
         return {
             client: translationService.translate('client'),
             darkMode: translationService.translate('darkMode'),
+            language: translationService.translate('language'),
             adBlocker: translationService.translate('adBlocker'),
             enableAdBlocker: translationService.translate('enableAdBlocker'),
             changesAppRestart: translationService.translate('changesAppRestart'),
@@ -726,6 +789,12 @@ function setupNavigationHandlers() {
     contentView.webContents.on('did-navigate-in-page', () => {
         if (headerView) {
             headerView.webContents.send('navigation-occurred');
+        }
+    });
+
+    ipcMain.on('toggle-settings-window', () => {
+        if (settingsManager) {
+            settingsManager.toggle();
         }
     });
 }

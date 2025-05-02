@@ -6,6 +6,8 @@
     "pause": "Pausar",
     "client": "Cliente",
     "darkMode": "Modo Escuro",
+    "language": "Idioma",
+    "languageChanged": "Idioma alterado com sucesso!",
     "adBlocker": "AdBlocker",
     "enableAdBlocker": "Ativar AdBlocker",
     "changesAppRestart": "É necessário reiniciar o app para aplicar as mudanças",

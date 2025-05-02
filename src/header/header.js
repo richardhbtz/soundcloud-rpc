@@ -71,6 +71,10 @@ function initializeIcons() {
             // Forward icon
             const forwardBtn = document.querySelector('#forward-btn svg');
             setSvgContent(forwardBtn, loadSvgContent('forward.svg'));
+
+            // Settings icon
+            const settingsBtn = document.querySelector('#settings-btn svg');
+            setSvgContent(settingsBtn, loadSvgContent('settings.svg'));
         }
     } catch (error) {
         console.error('Error initializing icons:', error);
@@ -168,3 +172,7 @@ function updateNavigationButtons() {
         }
     });
 }
+
+document.getElementById('settings-btn')?.addEventListener('click', () => {
+    ipcRenderer.send('toggle-settings-window');
+});

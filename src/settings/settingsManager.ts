@@ -67,6 +67,7 @@ export class SettingsManager {
     private getHtml(): string {
         const theme = this.store.get('theme', 'dark');
         return `
+        <meta charset="UTF-8">
         <style>
             @font-face {
                 font-family: 'SC-Font';
@@ -369,6 +370,16 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span data-i18n-key="language">Language</span>
+                    <label class="select">
+                        <select id="languageSelect" class="textInput" style="outline: none;">
+                            <option value="en" ${this.store.get('language') === 'en' ? 'selected' : ''}>English (US)</option>
+                            <option value="es" ${this.store.get('language') === 'es' ? 'selected' : ''}>Español</option>
+                            <option value="pt-BR" ${this.store.get('language') === 'pt-BR' ? 'selected' : ''}>Português</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
             <div class="setting-group">
@@ -507,6 +518,18 @@ export class SettingsManager {
                 if (event.data === 'hidePanel') {
                     console.log('hidePanel');
                 }
+            });
+
+            // Listen for language changes
+            document.getElementById('languageSelect').addEventListener('change', (e) => {
+                let newLanguage = e.target.value;
+                ipcRenderer.send('setting-changed', { key: 'language', value: newLanguage });
+                
+                setTimeout(() => {
+                    ipcRenderer.send('language-changed', newLanguage);
+                    
+                    ipcRenderer.send('change-soundcloud-language', newLanguage.replace(/-/g, '_'));
+                }, 100);
             });
         </script>`;
     }
