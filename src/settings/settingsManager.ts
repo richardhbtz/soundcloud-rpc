@@ -374,9 +374,9 @@ export class SettingsManager {
                     <span data-i18n-key="language">Language</span>
                     <label class="select">
                         <select id="languageSelect" class="textInput" style="outline: none;">
-                            <option value="en" ${this.store.get('language') === 'en' ? 'selected' : ''}>English (US)</option>
-                            <option value="es" ${this.store.get('language') === 'es' ? 'selected' : ''}>Español</option>
-                            <option value="pt-BR" ${this.store.get('language') === 'pt-BR' ? 'selected' : ''}>Português</option>
+                            <option value="en" ${this.store.get('language') === 'en' ? 'selected disabled' : ''}>English (US)</option>
+                            <option value="es" ${this.store.get('language') === 'es' ? 'selected disabled ' : ''}>Español</option>
+                            <option value="pt-BR" ${this.store.get('language') === 'pt-BR' ? 'selected disabled' : ''}>Português</option>
                         </select>
                     </label>
                 </div>
@@ -523,6 +523,10 @@ export class SettingsManager {
             // Listen for language changes
             document.getElementById('languageSelect').addEventListener('change', (e) => {
                 let newLanguage = e.target.value;
+                const children = e.target.options;
+                for (let i = 0; i < children.length; i++) {
+                    children[i].disabled = children[i].value === newLanguage;
+                }
                 ipcRenderer.send('setting-changed', { key: 'language', value: newLanguage });
                 
                 setTimeout(() => {

@@ -531,7 +531,6 @@ async function init() {
                                 languageButton.click();
                                 return true;
                             } else {
-                                window.location.reload();
                                 return true;
                             }
                         }, 300);
