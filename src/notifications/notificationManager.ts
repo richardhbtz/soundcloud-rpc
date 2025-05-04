@@ -46,6 +46,7 @@ export class NotificationManager {
         });
 
         const html = `
+        <meta charset="UTF-8">
         <style>
             body {
                 margin: 0;

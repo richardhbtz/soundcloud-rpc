@@ -63,6 +63,18 @@ function initializeIcons() {
             // Close icon
             const closeBtn = document.querySelector('#close-btn svg');
             setSvgContent(closeBtn, loadSvgContent('close.svg'));
+
+            // Back icon
+            const backBtn = document.querySelector('#back-btn svg');
+            setSvgContent(backBtn, loadSvgContent('back.svg'));
+
+            // Forward icon
+            const forwardBtn = document.querySelector('#forward-btn svg');
+            setSvgContent(forwardBtn, loadSvgContent('forward.svg'));
+
+            // Settings icon
+            const settingsBtn = document.querySelector('#settings-btn svg');
+            setSvgContent(settingsBtn, loadSvgContent('settings.svg'));
         }
     } catch (error) {
         console.error('Error initializing icons:', error);
@@ -116,5 +128,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateWindowControls();
             }
         });
+
+        // Update navigation buttons state
+        updateNavigationButtons();
     }, 100);
+});
+
+ipcRenderer.on('navigation-occurred', () => {
+    updateNavigationButtons();
+});
+
+// Navigation buttons event listeners
+document.getElementById('back-btn')?.addEventListener('click', () => {
+    ipcRenderer.invoke('can-go-back').then(canGoBack => {
+        if (canGoBack) {
+            ipcRenderer.send('go-back');
+        }
+    });
+});
+
+document.getElementById('forward-btn')?.addEventListener('click', () => {
+    ipcRenderer.invoke('can-go-forward').then(canGoForward => {
+        if (canGoForward) {
+            ipcRenderer.send('go-forward');
+        }
+    });
+});
+
+function updateNavigationButtons() {
+    Promise.all([
+        ipcRenderer.invoke('can-go-back'),
+        ipcRenderer.invoke('can-go-forward')
+    ]).then(([canGoBack, canGoForward]) => {
+        const backBtn = document.getElementById('back-btn');
+        const forwardBtn = document.getElementById('forward-btn');
+        
+        if (backBtn) {
+            backBtn.classList.toggle('disabled', !canGoBack);
+        }
+        
+        if (forwardBtn) {
+            forwardBtn.classList.toggle('disabled', !canGoForward);
+        }
+    });
+}
+
+document.getElementById('settings-btn')?.addEventListener('click', () => {
+    ipcRenderer.send('toggle-settings-window');
 });

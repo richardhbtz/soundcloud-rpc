@@ -33,6 +33,7 @@ const store = new Store({
         discordRichPresence: true,
         displayButtons: false,
         theme: 'dark',
+        language: 'en'
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -49,22 +50,29 @@ let presenceService: PresenceService;
 let lastFmService: LastFmService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
+let maxWindowListeners = 20; // Default value for max listeners
 
 // Display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
 let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
 // Update handling
-function setupUpdater() {
+function setupUpdater(translationService?: TranslationService) {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
     autoUpdater.on('update-available', () => {
-        queueToastNotification('Update Available');
+        const message = translationService 
+            ? translationService.translate('updateAvailable') 
+            : 'Update available';
+        queueToastNotification(message);
     });
 
     autoUpdater.on('update-downloaded', () => {
-        queueToastNotification('Update Completed');
+        const message = translationService 
+            ? translationService.translate('updateCompleted') 
+            : 'Update completed';
+        queueToastNotification(message);
     });
 
     autoUpdater.checkForUpdates();
@@ -81,7 +89,17 @@ async function getLanguage() {
         })
     `);
 
-    translationService.setLanguage(langInfo.lang);
+    if (langInfo.lang && store.get('language') !== langInfo.lang) {
+        store.set('language', langInfo.lang);
+        translationService.setLanguage(langInfo.lang);
+        
+        if (headerView) {
+            headerView.webContents.send('update-translations');
+        }
+        if (settingsManager) {
+            settingsManager.updateTranslations(translationService);
+        }
+    }
 }
 
 // Browser window configuration
@@ -136,6 +154,8 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         };
         callback({ requestHeaders: headers });
     });
+
+    window.setMaxListeners(maxWindowListeners);
 
     return window;
 }
@@ -200,6 +220,8 @@ async function pollTrackInfo() {
                 });
 
                 await presenceService.updatePresence(result);
+
+                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
             } else if (!result.isPlaying) {
                 await presenceService.updatePresence({
                     title: '',
@@ -210,6 +232,8 @@ async function pollTrackInfo() {
                     isPlaying: false,
                     url: ''
                 });
+
+                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
             }
         }
     } catch (error) {
@@ -303,7 +327,10 @@ let contentView: BrowserView | null;
 
 // Main initialization
 async function init() {
-    setupUpdater();
+    translationService = new TranslationService();
+    translationService.setLanguage(store.get('language'));
+
+    setupUpdater(translationService);
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
@@ -346,7 +373,6 @@ async function init() {
     );
 
     // Initialize services
-    translationService = new TranslationService();
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
@@ -367,6 +393,7 @@ async function init() {
 
     setupThemeHandlers();
     setupTranslationHandlers();
+    setupNavigationHandlers();
 
     // Configure session
     const session = contentView.webContents.session;
@@ -416,10 +443,10 @@ async function init() {
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
 
-        notificationManager.show("Press 'F1' to open settings");
-
         // Get the current language from the page
         await getLanguage();
+        
+        notificationManager.show(translationService.translate('pressF1'));
 
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
@@ -468,6 +495,64 @@ async function init() {
         } else {
             presenceService.clearActivity();
         }
+    });
+
+    // Handle language changes
+    ipcMain.on('language-changed', async (_, newLanguage) => {
+        translationService.setLanguage(newLanguage);
+        
+        if (headerView && !headerView.webContents.isDestroyed()) {
+            headerView.webContents.send('update-translations');
+        }
+        
+        if (contentView && !contentView.webContents.isDestroyed()) {
+            contentView.webContents.executeJavaScript(`
+                document.documentElement.lang = "${newLanguage}";
+            `).catch(console.error);
+        }
+
+        queueToastNotification(translationService.translate('languageChanged'));
+    });
+
+    // Handle language changes for SoundCloud
+    ipcMain.on('change-soundcloud-language', (_, language) => {
+        if (!contentView || contentView.webContents.isDestroyed()) return;
+        
+        contentView.webContents.executeJavaScript(`
+            (function() {
+                try {
+                    const localeSelector = document.querySelector('.localeSelector');
+                    if (localeSelector) {
+                        localeSelector.click();
+                        
+                        setTimeout(() => {
+                            const languageButton = document.querySelector('[data-testid="language-pick-${language}"]');
+                            if (languageButton) {
+                                languageButton.click();
+                                return true;
+                            } else {
+                                return true;
+                            }
+                        }, 300);
+                    } else {
+                        window.location.reload();
+                        return true;
+                    }
+                } catch(e) {
+                    return false;
+                }
+            })()
+        `).then(success => {
+            if (success) {          
+                translationService.setLanguage(language);
+                
+                if (headerView && !headerView.webContents.isDestroyed()) {
+                    headerView.webContents.send('update-translations');
+                }
+                
+                settingsManager.updateTranslations(translationService);
+            }
+        }).catch(console.error);
     });
 }
 
@@ -643,10 +728,13 @@ export function queueToastNotification(message: string) {
 }
 
 function setupTranslationHandlers() {
-    ipcMain.handle('get-translations', () => {
+    ipcMain.handle('get-translations', (event) => {
+        event.sender.send('update-translations');
+        
         return {
             client: translationService.translate('client'),
             darkMode: translationService.translate('darkMode'),
+            language: translationService.translate('language'),
             adBlocker: translationService.translate('adBlocker'),
             enableAdBlocker: translationService.translate('enableAdBlocker'),
             changesAppRestart: translationService.translate('changesAppRestart'),
@@ -656,7 +744,7 @@ function setupTranslationHandlers() {
             enableProxy: translationService.translate('enableProxy'),
             enableLastFm: translationService.translate('enableLastFm'),
             lastFmApiKey: translationService.translate('lastFmApiKey'),
-            lastFmSecret: translationService.translate('lastFmApiSecret'),
+            lastFmApiSecret: translationService.translate('lastFmApiSecret'),
             createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
             noCallbackUrl: translationService.translate('noCallbackUrl'),
             enableRichPresence: translationService.translate('enableRichPresence'),
@@ -665,5 +753,47 @@ function setupTranslationHandlers() {
             displayButtons: translationService.translate('displayButtons'),
             applyChanges: translationService.translate('applyChanges')
         };
+    });
+}
+
+function setupNavigationHandlers() {
+    ipcMain.handle('can-go-back', (event) => {
+        return contentView && contentView.webContents.navigationHistory.canGoBack();
+    });
+
+    ipcMain.handle('can-go-forward', (event) => {
+        return contentView && contentView.webContents.navigationHistory.canGoForward();
+    });
+
+    ipcMain.on('go-back', (event) => {
+        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+            contentView.webContents.navigationHistory.goBack();
+            event.sender.send('navigation-occurred');
+        }
+    });
+
+    ipcMain.on('go-forward', (event) => {
+        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+            contentView.webContents.navigationHistory.goForward();
+            event.sender.send('navigation-occurred');
+        }
+    });
+
+    contentView.webContents.on('did-navigate', () => {
+        if (headerView) {
+            headerView.webContents.send('navigation-occurred');
+        }
+    });
+
+    contentView.webContents.on('did-navigate-in-page', () => {
+        if (headerView) {
+            headerView.webContents.send('navigation-occurred');
+        }
+    });
+
+    ipcMain.on('toggle-settings-window', () => {
+        if (settingsManager) {
+            settingsManager.toggle();
+        }
     });
 }

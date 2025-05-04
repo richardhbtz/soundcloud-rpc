@@ -6,6 +6,8 @@
     "pause": "Pausar",
     "client": "Cliente",
     "darkMode": "Modo Escuro",
+    "language": "Idioma",
+    "languageChanged": "Idioma alterado com sucesso!",
     "adBlocker": "AdBlocker",
     "enableAdBlocker": "Ativar AdBlocker",
     "changesAppRestart": "É necessário reiniciar o app para aplicar as mudanças",
@@ -22,5 +24,8 @@
     "displayWhenPaused": "Mostrar quando pausado",
     "displaySmallIcon": "Mostrar ícone pequeno",
     "displayButtons": "Mostrar botões",
-    "applyChanges": "Aplicar Mudanças"
+    "applyChanges": "Aplicar Mudanças",
+    "pressF1": "Pressione <b>F1</b> para abrir as configurações",
+    "updateAvailable": "Atualização disponível",
+    "updateCompleted": "Atualização concluída"
 }

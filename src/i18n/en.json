@@ -6,6 +6,8 @@
     "pause": "Pause",
     "client": "Client",
     "darkMode": "Dark Mode",
+    "language": "Language",
+    "languageChanged": "Language changed successfully!",
     "adBlocker": "AdBlocker",
     "enableAdBlocker": "Enable AdBlocker",
     "changesAppRestart": "Changes require app restart",
@@ -22,5 +24,8 @@
     "displayWhenPaused": "Display when paused",
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
-    "applyChanges": "Apply Changes"
+    "applyChanges": "Apply Changes",
+    "pressF1": "Press <b>F1</b> to open settings",
+    "updateAvailable": "Update available",
+    "updateCompleted": "Update completed"
 }
