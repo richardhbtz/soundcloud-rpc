@@ -10,6 +10,7 @@ import { PresenceService } from './services/presenceService';
 import { LastFmService } from './services/lastFmService';
 import { TranslationService } from './services/translationService';
 import { ThumbarService } from './services/thumbarService';
+import { audioMonitorScript } from './services/audioMonitorService';
 import path = require('path');
 
 const Store = require('electron-store');
@@ -49,6 +50,8 @@ let presenceService: PresenceService;
 let lastFmService: LastFmService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
+const devMode = process.argv.includes('--dev')
+
 
 // Display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
@@ -103,7 +106,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             images: true,
             plugins: true,
             experimentalFeatures: false,
-            devTools: false,
+            devTools: devMode
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
@@ -151,71 +154,6 @@ let lastTrackInfo = {
     url: ''
 };
 
-async function pollTrackInfo() {
-    if (!contentView) return;
-
-    try {
-        // Use direct DOM queries instead of parsing the entire HTML
-        const result = await contentView.webContents.executeJavaScript(
-            `
-            (function() {
-                const playButton = document.querySelector('.playControls__play');
-                const isPlaying = playButton ? playButton.classList.contains('playing') : false;
-                
-                if (!isPlaying) {
-                    return { isPlaying: false };
-                }
-
-                const authorEl = document.querySelector('.playbackSoundBadge__lightLink');
-                const artworkEl = document.querySelector('.playbackSoundBadge__avatar .image__lightOutline span');
-                const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
-                const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
-                const urlEl = document.querySelector('.playbackSoundBadge__titleLink');
-
-                return {
-                    title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
-                    author: authorEl ? authorEl.textContent.trim() : '',
-                    artwork: artworkEl ? artworkEl.style.backgroundImage.replace(/^url\\(['"]?|['"]?\\)$/g, '') : '',
-                    elapsed: elapsedEl ? elapsedEl.textContent.trim() : '',
-                    duration: durationEl ? durationEl.textContent.trim() : '',
-                    isPlaying: true,
-                    url: urlEl ? urlEl.href.split('?')[0] : ''
-                };
-            })()
-        `,
-            true
-        );
-
-        // Only update if there are actual changes
-        const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
-
-        if (hasChanges) {
-            lastTrackInfo = result;
-
-            if (result.isPlaying && result.title && result.author) {
-                await lastFmService.updateTrackInfo({
-                    title: result.title,
-                    author: result.author,
-                    duration: result.duration,
-                });
-
-                await presenceService.updatePresence(result);
-            } else if (!result.isPlaying) {
-                await presenceService.updatePresence({
-                    title: '',
-                    author: '',
-                    artwork: '',
-                    elapsed: '',
-                    duration: '',
-                    isPlaying: false,
-                    url: ''
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Error during track info update:', error);
-    }
-}
 
 function setupWindowControls() {
     if (!mainWindow) return;
@@ -329,6 +267,8 @@ async function init() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            devTools: devMode,
+            preload: path.join(__dirname, 'preload.js')
         },
     });
 
@@ -367,6 +307,7 @@ async function init() {
 
     setupThemeHandlers();
     setupTranslationHandlers();
+    setupAudioHandler();
 
     // Configure session
     const session = contentView.webContents.session;
@@ -424,11 +365,8 @@ async function init() {
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
 
-        // Set thumbar buttons for the media controls
-        thumbarService.updateThumbarButtons(mainWindow, false, contentView);
-
-        // Start polling for track info with a more reasonable interval
-        setInterval(pollTrackInfo, 5000); // Changed to 10 seconds
+        // Set blank thumbbar buttons
+        mainWindow.setThumbarButtons([])
     });
 
     // Register settings related events
@@ -583,6 +521,10 @@ function setupShortcuts(contents: WebContents) {
             contents.setZoomLevel(Math.min(zoomLevel + 1, 9));
             event.preventDefault();
         }
+        if (input.key == "F12" && !input.alt && !input.control && !input.meta && !input.shift && devMode)  {
+            contents.openDevTools();
+            event.preventDefault();
+        }
 
         if (input.key === '-' && input.control && !input.alt && !input.meta && !input.shift) {
             const zoomLevel = contents.getZoomLevel();
@@ -665,5 +607,40 @@ function setupTranslationHandlers() {
             displayButtons: translationService.translate('displayButtons'),
             applyChanges: translationService.translate('applyChanges')
         };
+    });
+}
+
+
+// Inject audio event script into SoundCloud DOM
+function setupAudioHandler() {
+  contentView.webContents.on('did-finish-load', async () => {
+    // Inject the track monitoring script
+    try {
+      await contentView.webContents.executeJavaScript(audioMonitorScript);
+      console.log('Audio monitoring script injected successfully');
+    } catch (error) {
+      console.error('Failed to inject audio monitoring script:', error);
+    }
+  });
+
+  ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }) => {
+        console.debug(`Track update received: ${reason}`);
+    
+        // Only update if there are actual changes
+        const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
+        if (hasChanges) {
+            lastTrackInfo = result;
+            if (result.isPlaying && result.title && result.author && result.title !== lastTrackInfo.title && result.author !== lastTrackInfo.author) {
+                await lastFmService.updateTrackInfo({
+                    title: result.title,
+                    author: result.author,
+                    duration: result.duration,
+                });
+
+                await presenceService.updatePresence(result);
+            }
+
+            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
+        }
     });
 }

@@ -10,7 +10,7 @@
   "scripts": {
     "lint": "eslint -c .eslintrc --ext .ts ./src",
     "copy-header": "cpx \"src/header/**/*\" tsc/header",
-    "dev": "tsc && npm run copy-header && electron ./tsc/main.js",
+    "dev": "tsc && npm run copy-header && electron ./tsc/main.js --dev",
     "build": "tsc && npm run copy-header && electron-builder --dir",
     "build-win": "tsc && npm run copy-header && electron-builder -w nsis",
     "build-win-ptb": "tsc && electron-builder -w portable",
