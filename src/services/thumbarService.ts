@@ -16,27 +16,30 @@ export class ThumbarService {
         const playIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/play.ico'));
         const pauseIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/pause.ico'));
         const forwardIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/forward.ico'));
-
-        win.setThumbarButtons([
-            {
+        const flags = ['nobackground']
+        const buttons = [
+             {
                 tooltip: this.translationService.translate('previous'),
                 icon: backwardIcon,
                 click: () => {
                     mainWindow.webContents.executeJavaScript(`
                         document.querySelector('.skipControl__previous')?.click();
                     `);
-                }
+                },
+                flags: flags
             },
             {
                 tooltip: isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play'),
                 icon: isPlaying ? pauseIcon : playIcon,
                 click: () => {
                     isPlaying = !isPlaying;
-                    this.updateThumbarButtons(win, isPlaying, mainWindow);
                     mainWindow.webContents.executeJavaScript(`
                         document.querySelector('.playControl')?.click();
                     `);
-                }
+                    buttons[1].tooltip = isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play')
+                },
+                flags: flags
+
             },
             {
                 tooltip: this.translationService.translate('next'),
@@ -45,8 +48,11 @@ export class ThumbarService {
                     mainWindow.webContents.executeJavaScript(`
                         document.querySelector('.skipControl__next')?.click();
                     `);
-                }
+                },
+                flags: flags
+
             }
-        ]);
+        ]
+        win.setThumbarButtons(buttons);
     }
 }
