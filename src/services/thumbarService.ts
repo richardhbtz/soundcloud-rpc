@@ -1,7 +1,7 @@
-import { BrowserView, BrowserWindow, nativeImage } from 'electron';
+import { BrowserView, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import * as path from 'path';
 import { TranslationService } from './translationService';
-
+import { RESOURCES_PATH } from '../main';
 export class ThumbarService {
     private translationService: TranslationService;
 
@@ -11,12 +11,10 @@ export class ThumbarService {
 
     public updateThumbarButtons(win: BrowserWindow | null, isPlaying: boolean, mainWindow: BrowserView | null): void {
         if (!win || !mainWindow) return;
-
-        const backwardIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/backward.ico'));
-        const playIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/play.ico'));
-        const pauseIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/pause.ico'));
-        const forwardIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/forward.ico'));
-        const flags = ['nobackground']
+        const backwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/backward.ico'));
+        const playIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/play.ico'));
+        const pauseIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/pause.ico'));
+        const forwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/forward.ico'));
         const buttons = [
              {
                 tooltip: this.translationService.translate('previous'),
@@ -26,7 +24,6 @@ export class ThumbarService {
                         document.querySelector('.skipControl__previous')?.click();
                     `);
                 },
-                flags: flags
             },
             {
                 tooltip: isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play'),
@@ -38,7 +35,6 @@ export class ThumbarService {
                     `);
                     buttons[1].tooltip = isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play')
                 },
-                flags: flags
 
             },
             {
@@ -49,7 +45,6 @@ export class ThumbarService {
                         document.querySelector('.skipControl__next')?.click();
                     `);
                 },
-                flags: flags
 
             }
         ]
