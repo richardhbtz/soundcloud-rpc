@@ -28,6 +28,12 @@
     "appId": "com.richardhbtz.soundcloud-rpc",
     "productName": "SoundCloud",
     "asar": true,
+    "extraResources": [
+      {
+        "from": "assets/icons",
+        "to": "assets/icons"
+      }
+    ],
     "files": [
       "tsc/**/*"
     ],
