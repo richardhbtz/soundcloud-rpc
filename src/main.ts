@@ -12,10 +12,16 @@ import { TranslationService } from './services/translationService';
 import { ThumbarService } from './services/thumbarService';
 import { audioMonitorScript } from './services/audioMonitorService';
 import path = require('path');
+import { platform } from 'os';
 
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 const windowStateManager = require('electron-window-state');
+
+export const RESOURCES_PATH = app.isPackaged
+    ? path.join(process.resourcesPath, 'assets')
+    : path.join(__dirname, '../assets');
+console.log(`Resources path: ${RESOURCES_PATH}`);
 
 // Store configuration
 const store = new Store({
@@ -292,7 +298,8 @@ async function init() {
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
     presenceService = new PresenceService(mainWindow, store, translationService);
     lastFmService = new LastFmService(contentView, store);
-    thumbarService = new ThumbarService(translationService);
+    if (platform() === 'win32')
+        thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
@@ -365,8 +372,6 @@ async function init() {
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
 
-        // Set blank thumbbar buttons
-        mainWindow.setThumbarButtons([])
     });
 
     // Register settings related events
@@ -630,17 +635,21 @@ function setupAudioHandler() {
         const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
         if (hasChanges) {
             lastTrackInfo = result;
-            if (result.isPlaying && result.title && result.author && result.title !== lastTrackInfo.title && result.author !== lastTrackInfo.author) {
+            if (result.isPlaying
+                && result.title && result.author
+                && result.title !== lastTrackInfo.title
+                && result.duration && result.duration !== lastTrackInfo.duration
+                && result.author !== lastTrackInfo.author) {
                 await lastFmService.updateTrackInfo({
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
                 });
 
-                await presenceService.updatePresence(result);
             }
-
-            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
+            await presenceService.updatePresence(result);
+            if (thumbarService)
+                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
         }
     });
 }
