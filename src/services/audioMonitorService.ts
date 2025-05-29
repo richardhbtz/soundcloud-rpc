@@ -8,6 +8,9 @@ export const audioMonitorScript = `
   
   // Track current playback state
   let isCurrentlyPlaying = false;
+  let currentTrackTitle = '';
+  let currentTrackAuthor = '';
+  let currentTrackUrl = '';
   
   function getTrackInfo() {
     const playButton = document.querySelector('.playControls__play');
@@ -33,9 +36,15 @@ export const audioMonitorScript = `
   function notifyPlaybackStateChange() {
     const trackInfo = getTrackInfo();
     const stateChanged = trackInfo.isPlaying !== isCurrentlyPlaying;
-    
-    if (stateChanged || !window.__initialStateSent) {
+    const trackChanged = 
+      trackInfo.title !== currentTrackTitle || 
+      trackInfo.author !== currentTrackAuthor ||
+      trackInfo.url !== currentTrackUrl;
+    if (stateChanged || trackChanged || !window.__initialStateSent) {
       isCurrentlyPlaying = trackInfo.isPlaying;
+      currentTrackTitle = trackInfo.title;
+      currentTrackAuthor = trackInfo.author;
+      currentTrackUrl = trackInfo.url;
       window.__initialStateSent = true;
       
     window.soundcloudAPI.sendTrackUpdate(trackInfo, 'playback-state-change');
