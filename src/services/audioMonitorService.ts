@@ -11,6 +11,7 @@ export const audioMonitorScript = `
   let currentTrackTitle = '';
   let currentTrackAuthor = '';
   let currentTrackUrl = '';
+  let currentTrackElapsed = '';
   
   function getTrackInfo() {
     const playButton = document.querySelector('.playControls__play');
@@ -40,11 +41,13 @@ export const audioMonitorScript = `
       trackInfo.title !== currentTrackTitle || 
       trackInfo.author !== currentTrackAuthor ||
       trackInfo.url !== currentTrackUrl;
-    if (stateChanged || trackChanged || !window.__initialStateSent) {
+    const elapsedChanged = trackInfo.elapsed !== currentTrackElapsed;
+    if (stateChanged || trackChanged || elapsedChanged || !window.__initialStateSent) {
       isCurrentlyPlaying = trackInfo.isPlaying;
       currentTrackTitle = trackInfo.title;
       currentTrackAuthor = trackInfo.author;
       currentTrackUrl = trackInfo.url;
+      currentTrackElapsed = trackInfo.elapsed;
       window.__initialStateSent = true;
       
     window.soundcloudAPI.sendTrackUpdate(trackInfo, 'playback-state-change');
@@ -101,6 +104,37 @@ export const audioMonitorScript = `
         console.debug('Next track button clicked');
         // Wait a bit longer for track to change
         setTimeout(notifyPlaybackStateChange, 300);
+      });
+    }
+
+    monitorTimelineSeeking();
+  }
+
+  function monitorTimelineSeeking() {
+    const timelineElement = document.querySelector('.playbackTimeline.is-scrubbable.has-sound');
+    
+    if (timelineElement && !timelineElement.__seekMonitored) {
+      timelineElement.__seekMonitored = true;
+      
+      const timelineObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.attributeName === 'class') {
+            const isDragging = timelineElement.classList.contains('is-dragging');
+            
+            if (!isDragging && timelineElement.__wasDragging) {
+              // Dragging ended - update the presence with new position
+              console.debug('Seek completed - updating time position');
+              setTimeout(notifyPlaybackStateChange, 50);
+            }
+            
+            timelineElement.__wasDragging = isDragging;
+          }
+        }
+      });
+      
+      timelineObserver.observe(timelineElement, {
+        attributes: true,
+        attributeFilter: ['class']
       });
     }
   }
