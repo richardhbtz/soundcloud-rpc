@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { ActivityType } from 'discord-api-types/v10';
-import { Client as DiscordClient, SetActivity } from '@xhayper/discord-rpc';
+import { Client as DiscordClient, SetActivity, StatusDisplayType } from '@xhayper/discord-rpc';
 import { TranslationService } from './translationService';
 
 export interface Info {
@@ -97,8 +97,9 @@ export class PresenceService {
                     }
                 }
 
-                const activity: SetActivity = {
+                const activity: SetActivity & { name?: string; statusDisplayType?: number } = {
                     type: ActivityType.Listening,
+                    name: trackInfo.author,
                     details: `${this.shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
                     state: `${this.shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
@@ -106,6 +107,7 @@ export class PresenceService {
                     endTimestamp: Date.now() + Math.max(0, totalMilliseconds - elapsedMilliseconds),
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
+                    statusDisplayType: StatusDisplayType.NAME,
                     instance: false,
                 };
 
