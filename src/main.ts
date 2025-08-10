@@ -635,18 +635,15 @@ function setupAudioHandler() {
         const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
         if (hasChanges) {
             lastTrackInfo = result;
-            if (result.isPlaying
-                && result.title && result.author
-                && result.title !== lastTrackInfo.title
-                && result.duration && result.duration !== lastTrackInfo.duration
-                && result.author !== lastTrackInfo.author) {
+
+            if (result.isPlaying && result.title && result.author && result.duration) {
                 await lastFmService.updateTrackInfo({
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
                 });
-
             }
+
             await presenceService.updatePresence(result);
             if (thumbarService)
                 thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
