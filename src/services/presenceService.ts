@@ -71,13 +71,25 @@ export class PresenceService {
                 const [elapsedTime, totalTime] = [trackInfo.elapsed, trackInfo.duration];
                 const artworkUrl = trackInfo.artwork;
 
-                const parseTime = (time: string): number => {
-                    const parts = time.split(':').map(Number);
-                    return parts.reduce((acc, part) => 60 * acc + part, 0) * 1000;
+                const parseTimeToMs = (time: string): number => {
+                    if (!time) return 0;
+                    const isNegative = time.trim().startsWith('-');
+                    const raw = isNegative ? time.trim().slice(1) : time.trim();
+                    const parts = raw.split(':').map((p) => Number(p));
+                    // Support H:MM:SS or MM:SS
+                    let seconds = 0;
+                    for (const part of parts) {
+                        seconds = seconds * 60 + (isNaN(part) ? 0 : part);
+                    }
+                    const ms = seconds * 1000;
+                    return isNegative ? -ms : ms;
                 };
 
-                const elapsedMilliseconds = parseTime(elapsedTime);
-                const totalMilliseconds = parseTime(totalTime);
+                const elapsedMilliseconds = Math.max(0, parseTimeToMs(elapsedTime));
+                const parsedTotal = parseTimeToMs(totalTime);
+                const totalMilliseconds = parsedTotal < 0
+                    ? elapsedMilliseconds + Math.abs(parsedTotal) // total time = elapsed + remaining
+                    : parsedTotal;
 
                 if (!this.info.rpc.isConnected) {
                     if (await !this.info.rpc.login().catch(console.error)) {
@@ -91,7 +103,7 @@ export class PresenceService {
                     state: `${this.shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
                     startTimestamp: Date.now() - elapsedMilliseconds,
-                    endTimestamp: Date.now() + (totalMilliseconds - elapsedMilliseconds),
+                    endTimestamp: Date.now() + Math.max(0, totalMilliseconds - elapsedMilliseconds),
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
                     instance: false,

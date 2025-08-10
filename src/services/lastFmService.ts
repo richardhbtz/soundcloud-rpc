@@ -14,8 +14,15 @@ export interface ScrobbleState {
 function timeStringToSeconds(timeStr: string | undefined): number {
     if (!timeStr || typeof timeStr !== 'string') return 240; // Default to 4 minutes if no duration
     try {
-        const [minutes, seconds] = timeStr.split(':').map(Number);
-        return minutes * 60 + (seconds || 0);
+        const isNegative = timeStr.trim().startsWith('-');
+        const raw = isNegative ? timeStr.trim().slice(1) : timeStr.trim();
+        const parts = raw.split(':').map((p) => Number(p));
+        let seconds = 0;
+        for (const part of parts) {
+            seconds = seconds * 60 + (isNaN(part) ? 0 : part);
+        }
+        // Use absolute value for track duration
+        return Math.max(1, Math.abs(seconds));
     } catch (error) {
         console.error('Error parsing time string:', error);
         return 240; // Default to 4 minutes on error
