@@ -10,6 +10,7 @@
     "paths": {
       "*": ["node_modules/*"]
     },
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "strict": true,                           

@@ -12,15 +12,25 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
+        uses: actions-marketplace-validations/njzydark_action-electron-builder-pnpm@pnpm
         with:
           github_token: ${{ secrets.github_token }}
+          package_manager: 'pnpm'
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
