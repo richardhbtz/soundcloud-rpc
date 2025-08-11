@@ -21,7 +21,8 @@
     "enableRichPresence": "Ativar Rich Presence",
     "displayWhenPaused": "Mostrar quando pausado",
     "displaySmallIcon": "Mostrar ícone pequeno",
-    "displayButtons": "Mostrar botões",
+    "displayButtons": "Exibir botões",
     "useArtistInStatusLine": "Usar nome do artista em vez do nome do aplicativo",
-    "applyChanges": "Aplicar Mudanças"
+    "applyChanges": "Aplicar Alterações",
+    "minimizeToTray": "Minimizar para a Bandeja"
 }

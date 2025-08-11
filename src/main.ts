@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, Tray, nativeImage } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -41,6 +41,7 @@ const store = new Store({
         displayButtons: false,
         statusDisplayType: 1,
         theme: 'dark',
+        minimizeToTray: false,
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -57,8 +58,25 @@ let presenceService: PresenceService;
 let lastFmService: LastFmService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
+let tray: Tray | null = null;
+let isQuitting = false;
 const devMode = process.argv.includes('--dev')
 
+// Add missing property to app
+declare global {
+    namespace NodeJS {
+        interface Global {
+            app: any;
+        }
+    }
+}
+
+// Extend app with custom property
+Object.defineProperty(app, 'isQuitting', {
+    value: false,
+    writable: true,
+    configurable: true
+});
 
 // Display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
@@ -78,6 +96,70 @@ function setupUpdater() {
     });
 
     autoUpdater.checkForUpdates();
+}
+
+// Tray setup
+function setupTray() {
+    if (tray) {
+        tray.destroy();
+        tray = null;
+    }
+
+    // Create tray icon
+    const iconPath = path.join(RESOURCES_PATH, 'icons', process.platform === 'win32' ? 'soundcloud-win.ico' : 'soundcloud.png');
+    const icon = nativeImage.createFromPath(iconPath);
+    
+    // Resize icon for tray (16x16 is standard for most systems)
+    const trayIcon = icon.resize({ width: 16, height: 16 });
+    
+    tray = new Tray(trayIcon);
+    tray.setToolTip('SoundCloud RPC');
+
+    // Create tray menu
+    const contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'SoundCloud',
+            click: () => {
+                if (mainWindow) {
+                    mainWindow.show();
+                    mainWindow.focus();
+                }
+            }
+        },
+        {
+            label: 'Settings',
+            click: () => {
+                if (settingsManager) {
+                    settingsManager.toggle();
+                }
+            }
+        },
+        { type: 'separator' },
+        {
+            label: 'Quit',
+            click: () => {
+                app.quit();
+            }
+        }
+    ]);
+
+    tray.setContextMenu(contextMenu);
+
+    // Handle tray icon click (show window)
+    tray.on('click', () => {
+        if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
+
+    // Handle tray icon double-click (show window)
+    tray.on('double-click', () => {
+        if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
 }
 
 // Update the language when retrieved from the web page
@@ -225,7 +307,14 @@ function setupWindowControls() {
     });
 
     ipcMain.on('close-window', () => {
-        if (mainWindow) mainWindow.close();
+        if (mainWindow) {
+            const minimizeToTray = store.get('minimizeToTray', true);
+            if (minimizeToTray) {
+                mainWindow.hide();
+            } else {
+                mainWindow.close();
+            }
+        }
     });
 
     ipcMain.on('toggle-theme', () => {
@@ -241,6 +330,11 @@ function setupWindowControls() {
         return mainWindow ? mainWindow.isMaximized() : false;
     });
 
+    // Handle minimize to tray setting
+    ipcMain.handle('get-minimize-to-tray', () => {
+        return store.get('minimizeToTray', true);
+    });
+
     adjustContentViews();
 }
 
@@ -250,6 +344,7 @@ let contentView: BrowserView;
 // Main initialization
 async function init() {
     setupUpdater();
+    setupTray(); // Call setupTray here
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
@@ -258,6 +353,23 @@ async function init() {
     mainWindow = createBrowserWindow(windowState);
 
     windowState.manage(mainWindow);
+
+    // Handle window close event for minimize to tray
+    mainWindow.on('close', (event) => {
+        const minimizeToTray = store.get('minimizeToTray', true);
+        if (minimizeToTray && !isQuitting) {
+            event.preventDefault();
+            mainWindow.hide();
+        }
+    });
+
+    // Handle window minimize event
+    mainWindow.on('minimize', () => {
+        const minimizeToTray = store.get('minimizeToTray', true);
+        if (minimizeToTray) {
+            mainWindow.hide();
+        }
+    });
 
     headerView = new BrowserView({
         webPreferences: {
@@ -393,6 +505,16 @@ async function init() {
             presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon, data.value);
         } else if (key === 'statusDisplayType') {
             presenceService.setStatusDisplayType(data.value as number);
+        } else if (key === 'minimizeToTray') {
+            // Update tray behavior when setting changes
+            if (data.value === false && tray) {
+                // If minimize to tray is disabled, destroy the tray
+                tray.destroy();
+                tray = null;
+            } else if (data.value === true && !tray) {
+                // If minimize to tray is enabled, create the tray
+                setupTray();
+            }
         }
     });
 
@@ -588,6 +710,21 @@ app.on('activate', function () {
     }
 });
 
+app.on('before-quit', () => {
+    isQuitting = true;
+    if (tray) {
+        tray.destroy();
+        tray = null;
+    }
+});
+
+app.on('will-quit', () => {
+    if (tray) {
+        tray.destroy();
+        tray = null;
+    }
+});
+
 export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
         notificationManager.show(message);
@@ -616,7 +753,8 @@ function setupTranslationHandlers() {
             displaySmallIcon: translationService.translate('displaySmallIcon'),
             displayButtons: translationService.translate('displayButtons'),
             useArtistInStatusLine: translationService.translate('useArtistInStatusLine'),
-            applyChanges: translationService.translate('applyChanges')
+            applyChanges: translationService.translate('applyChanges'),
+            minimizeToTray: translationService.translate('minimizeToTray')
         };
     });
 }

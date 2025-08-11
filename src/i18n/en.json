@@ -23,5 +23,6 @@
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
     "useArtistInStatusLine": "Use artist name instead of application name",
-    "applyChanges": "Apply Changes"
+    "applyChanges": "Apply Changes",
+    "minimizeToTray": "Minimize to Tray"
 }

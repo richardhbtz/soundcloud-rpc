@@ -22,6 +22,7 @@
     "displayWhenPaused": "Mostrar cuando está pausado",
     "displaySmallIcon": "Mostrar ícono pequeño",
     "displayButtons": "Mostrar botones",
-    "useArtistInStatusLine": "Usar el nombre del artista en lugar del nombre de la aplicación",
-    "applyChanges": "Aplicar Cambios"
+    "useArtistInStatusLine": "Usar nombre del artista en lugar del nombre de la aplicación",
+    "applyChanges": "Aplicar Cambios",
+    "minimizeToTray": "Minimizar a la Bandeja"
 }

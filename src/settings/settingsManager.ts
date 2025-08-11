@@ -369,6 +369,13 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('minimizeToTray')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="minimizeToTray" ${this.store.get('minimizeToTray', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="setting-group">
@@ -570,6 +577,10 @@ export class SettingsManager {
                 document.documentElement.classList.toggle('theme-dark', isDark);
             });
 
+            document.getElementById('minimizeToTray').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
+            });
+
             document.getElementById('displayWhenIdling').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'displayWhenIdling', value: e.target.checked });
             });
@@ -612,14 +623,16 @@ export class SettingsManager {
             ipcRenderer.on('update-translations', () => {
                 ipcRenderer.invoke('get-translations').then((translations) => {
                     document.querySelector('.setting-group:nth-child(1) h2').textContent = translations.client || 'Client';
-                    document.querySelector('.setting-group:nth-child(1) span').textContent = translations.darkMode || 'Dark Mode';
+                    document.querySelector('.setting-group:nth-child(1) .setting-item:nth-child(1) span').textContent = translations.darkMode || 'Dark Mode';
                     
+                    document.querySelector('.setting-group:nth-child(1) .setting-item:nth-child(2) span').textContent = translations.minimizeToTray || 'Minimize to Tray';
+
                     document.querySelector('.setting-group:nth-child(2) h2').textContent = translations.adBlocker || 'Ad Blocker';
-                    document.querySelector('.setting-group:nth-child(2) span').textContent = translations.enableAdBlocker || 'Enable Ad Blocker';
+                    document.querySelector('.setting-group:nth-child(2) .setting-item span').textContent = translations.enableAdBlocker || 'Enable Ad Blocker';
                     document.querySelector('.setting-group:nth-child(2) .description').textContent = translations.changesAppRestart || 'Changes require app restart';
 
                     document.querySelector('.setting-group:nth-child(3) h2').textContent = translations.proxy || 'Proxy';
-                    document.querySelector('.setting-group:nth-child(3) span').textContent = translations.enableProxy || 'Enable Proxy';
+                    document.querySelector('.setting-group:nth-child(3) .setting-item span').textContent = translations.enableProxy || 'Enable Proxy';
                     document.getElementById('proxyHost').placeholder = translations.proxyHost || 'Proxy Host';
                     document.getElementById('proxyPort').placeholder = translations.proxyPort || 'Proxy Port';
                     
@@ -629,11 +642,11 @@ export class SettingsManager {
                     document.getElementById('lastFmSecret').placeholder = translations.lastFmSecret || 'Last.fm API Secret';
                     document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
 
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(5) span').textContent = translations.displayButtons || 'Display buttons';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(6) span').textContent = translations.useArtistInStatusLine || 'Use artist name in status line';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(1) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.displayWhenPaused || 'Display when paused';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displaySmallIcon || 'Display small icon';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displayButtons || 'Display buttons';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(5) span').textContent = translations.useArtistInStatusLine || 'Use artist name in status line';
                     
                     document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
                 });
