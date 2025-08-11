@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow } from 'electron';
+import { BrowserView } from 'electron';
 import type ElectronStore = require('electron-store');
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';

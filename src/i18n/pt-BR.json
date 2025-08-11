@@ -22,5 +22,6 @@
     "displayWhenPaused": "Mostrar quando pausado",
     "displaySmallIcon": "Mostrar ícone pequeno",
     "displayButtons": "Mostrar botões",
+    "useArtistInStatusLine": "Usar nome do artista em vez do nome do aplicativo",
     "applyChanges": "Aplicar Mudanças"
 }

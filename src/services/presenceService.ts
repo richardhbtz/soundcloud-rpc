@@ -1,7 +1,6 @@
-import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { ActivityType } from 'discord-api-types/v10';
-import { Client as DiscordClient, SetActivity, StatusDisplayType } from '@xhayper/discord-rpc';
+import { Client as DiscordClient, SetActivity } from '@xhayper/discord-rpc';
 import { TranslationService } from './translationService';
 
 export interface Info {
@@ -11,21 +10,21 @@ export interface Info {
 }
 
 export class PresenceService {
-    private window: BrowserWindow;
     private store: ElectronStore;
     private info: Info;
     private displayWhenIdling: boolean;
     private displaySCSmallIcon: boolean;
     private displayButtons: boolean;
+    private statusDisplayType: number;
     private translationService: TranslationService;
 
-    constructor(window: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
-        this.window = window;
+    constructor(store: ElectronStore, translationService: TranslationService) {
         this.store = store;
         this.displayWhenIdling = store.get('displayWhenIdling', false) as boolean;
         this.displaySCSmallIcon = store.get('displaySCSmallIcon', false) as boolean;
         this.displayButtons = store.get('displayButtons', false) as boolean;
         this.translationService = translationService;
+        this.statusDisplayType = (store.get('statusDisplayType') as number) ?? 1; // default STATE
 
         this.info = {
             rpc: new DiscordClient({
@@ -107,7 +106,7 @@ export class PresenceService {
                     endTimestamp: Date.now() + Math.max(0, totalMilliseconds - elapsedMilliseconds),
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
-                    statusDisplayType: StatusDisplayType.NAME,
+                    statusDisplayType: this.statusDisplayType,
                     instance: false,
                 };
 
@@ -145,6 +144,10 @@ export class PresenceService {
         if (displayButtons !== undefined) {
             this.displayButtons = displayButtons;
         }
+    }
+
+    public setStatusDisplayType(statusDisplayType: number): void {
+        this.statusDisplayType = statusDisplayType;
     }
 
     public async reconnect(): Promise<void> {

@@ -1,5 +1,5 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, ipcRenderer, nativeImage } from 'electron';
-import { ElectronBlocker, fullLists } from '@cliqz/adblocker-electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents } from 'electron';
+import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
@@ -39,6 +39,7 @@ const store = new Store({
         displaySCSmallIcon: false,
         discordRichPresence: true,
         displayButtons: false,
+        statusDisplayType: 1,
         theme: 'dark',
     },
     clearInvalidConfig: true,
@@ -48,7 +49,7 @@ const store = new Store({
 let isDarkTheme = store.get('theme') !== 'light';
 
 // Global variables
-let mainWindow: BrowserWindow | null;
+let mainWindow: BrowserWindow;
 let notificationManager: NotificationManager;
 let settingsManager: SettingsManager;
 let proxyService: ProxyService;
@@ -81,6 +82,7 @@ function setupUpdater() {
 
 // Update the language when retrieved from the web page
 async function getLanguage() {
+    if (!contentView) return;
     const langInfo = await contentView.webContents.executeJavaScript(`
         const langEl = document.querySelector('html');
         new Promise(resolve => {
@@ -243,7 +245,7 @@ function setupWindowControls() {
 }
 
 let headerView: BrowserView | null;
-let contentView: BrowserView | null;
+let contentView: BrowserView;
 
 // Main initialization
 async function init() {
@@ -296,7 +298,7 @@ async function init() {
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
-    presenceService = new PresenceService(mainWindow, store, translationService);
+    presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(contentView, store);
     if (platform() === 'win32')
         thumbarService = new ThumbarService(translationService);
@@ -389,6 +391,8 @@ async function init() {
             presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon);
         } else if (key === 'displayButtons') {
             presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon, data.value);
+        } else if (key === 'statusDisplayType') {
+            presenceService.setStatusDisplayType(data.value as number);
         }
     });
 
@@ -407,7 +411,8 @@ async function init() {
         }
 
         if (store.get('discordRichPresence')) {
-            await presenceService.reconnect();
+            // Refresh presence using the current track info instead of reconnecting
+            await presenceService.updatePresence(lastTrackInfo as any);
         } else {
             presenceService.clearActivity();
         }
@@ -557,7 +562,7 @@ function setupShortcuts(contents: WebContents) {
         }
     });
 
-    mainWindow.webContents.on('before-input-event', (event, input) => {
+    mainWindow.webContents.on('before-input-event', (_, input) => {
         if (contents) {
             contents.sendInputEvent({
                 type: input.type === 'keyDown' ? 'keyDown' : 'keyUp',
@@ -610,6 +615,7 @@ function setupTranslationHandlers() {
             displayWhenPaused: translationService.translate('displayWhenPaused'),
             displaySmallIcon: translationService.translate('displaySmallIcon'),
             displayButtons: translationService.translate('displayButtons'),
+            useArtistInStatusLine: translationService.translate('useArtistInStatusLine'),
             applyChanges: translationService.translate('applyChanges')
         };
     });

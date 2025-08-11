@@ -477,6 +477,15 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('useArtistInStatusLine')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="useArtistInStatusLineToggle" ${
+                            (this.store.get('statusDisplayType') as number) === 1 ? 'checked' : ''
+                        }>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="setting-group">
@@ -582,6 +591,12 @@ export class SettingsManager {
                 ipcRenderer.send('setting-changed', { key: 'displayButtons', value: e.target.checked });
             });
 
+            // Toggle status display type (STATE uses artist, NAME uses app name)
+            document.getElementById('useArtistInStatusLineToggle').addEventListener('change', (e) => {
+                const useState = e.target.checked; // true -> STATE (1), false -> NAME (0)
+                ipcRenderer.send('setting-changed', { key: 'statusDisplayType', value: useState ? 1 : 0 });
+            });
+
             // Apply all changes
             document.getElementById('applyChanges').addEventListener('click', () => {
                 ipcRenderer.send('apply-changes');
@@ -618,6 +633,7 @@ export class SettingsManager {
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displayWhenPaused || 'Display when paused';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displaySmallIcon || 'Display small icon';
                     document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(5) span').textContent = translations.displayButtons || 'Display buttons';
+                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(6) span').textContent = translations.useArtistInStatusLine || 'Use artist name in status line';
                     
                     document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
                 });

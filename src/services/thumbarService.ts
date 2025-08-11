@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow, ipcMain, nativeImage } from 'electron';
+import { BrowserView, BrowserWindow, nativeImage } from 'electron';
 import * as path from 'path';
 import { TranslationService } from './translationService';
 import { RESOURCES_PATH } from '../main';
