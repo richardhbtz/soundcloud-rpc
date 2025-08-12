@@ -10,6 +10,7 @@ import { PresenceService } from './services/presenceService';
 import { LastFmService } from './services/lastFmService';
 import { TranslationService } from './services/translationService';
 import { ThumbarService } from './services/thumbarService';
+import { WebhookService } from './services/webhookService';
 import { audioMonitorScript } from './services/audioMonitorService';
 import path = require('path');
 import { platform } from 'os';
@@ -35,6 +36,9 @@ const store = new Store({
         lastFmApiKey: '',
         lastFmSecret: '',
         lastFmSessionKey: '',
+        webhookEnabled: false,
+        webhookUrl: '',
+        webhookTriggerPercentage: 50,
         displayWhenIdling: false,
         displaySCSmallIcon: false,
         discordRichPresence: true,
@@ -56,6 +60,7 @@ let settingsManager: SettingsManager;
 let proxyService: ProxyService;
 let presenceService: PresenceService;
 let lastFmService: LastFmService;
+let webhookService: WebhookService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
 let tray: Tray | null = null;
@@ -412,6 +417,7 @@ async function init() {
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
     presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(contentView, store);
+    webhookService = new WebhookService(store);
     if (platform() === 'win32')
         thumbarService = new ThumbarService(translationService);
 
@@ -515,6 +521,12 @@ async function init() {
                 // If minimize to tray is enabled, create the tray
                 setupTray();
             }
+        } else if (key === 'webhookEnabled') {
+            webhookService.setEnabled(data.value);
+        } else if (key === 'webhookUrl') {
+            webhookService.setWebhookUrl(data.value);
+        } else if (key === 'webhookTriggerPercentage') {
+            webhookService.setTriggerPercentage(data.value);
         }
     });
 
@@ -785,6 +797,14 @@ function setupAudioHandler() {
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
+                });
+
+                await webhookService.updateTrackInfo({
+                    title: result.title,
+                    author: result.author,
+                    duration: result.duration,
+                    url: result.url,
+                    artwork: result.artwork,
                 });
             }
 

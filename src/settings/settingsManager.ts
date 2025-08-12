@@ -443,6 +443,39 @@ export class SettingsManager {
 
             <div class="setting-group">
                 <h2>
+                    Webhooks
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M10.59 13.41c.41.39.41 1.03 0 1.42-.39.39-1.03.39-1.42 0a5.003 5.003 0 0 1 0-7.07l3.54-3.54a5.003 5.003 0 0 1 7.07 0 5.003 5.003 0 0 1 0 7.07l-1.49 1.49c.01-.82-.12-1.64-.4-2.42l.47-.48a2.982 2.982 0 0 0 0-4.24 2.982 2.982 0 0 0-4.24 0l-3.53 3.53a2.982 2.982 0 0 0 0 4.24zm2.82-4.24c.39-.39 1.03-.39 1.42 0a5.003 5.003 0 0 1 0 7.07l-3.54 3.54a5.003 5.003 0 0 1-7.07 0 5.003 5.003 0 0 1 0-7.07l1.49-1.49c-.01.82.12 1.64.4 2.42l-.47.48a2.982 2.982 0 0 0 0 4.24 2.982 2.982 0 0 0 4.24 0l3.53-3.53a2.982 2.982 0 0 0 0-4.24z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableWebhooks')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="webhookEnabled" ${this.store.get('webhookEnabled') ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="input-group" id="webhookFields" style="display: ${
+                    this.store.get('webhookEnabled') ? 'block' : 'none'
+                }">
+                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" value="${
+                        this.store.get('webhookUrl') || ''
+                    }">
+                    <div class="setting-item">
+                        <span>${this.translationService.translate('webhookTrigger')}</span>
+                        <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
+                            this.store.get('webhookTriggerPercentage') || 50
+                        }">
+                        <span style="margin-left: 5px;">%</span>
+                    </div>
+                </div>
+                <div class="description">
+                    ${this.translationService.translate('webhookDescription')}
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h2>
                     Discord
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.864-.608 1.249a18.707 18.707 0 0 0-5.487 0 12.505 12.505 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.369a.07.07 0 0 0-.032.027C.533 9.045-.32 13.579.099 18.057a.082.082 0 0 0 .031.056 19.911 19.911 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.464-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.105 13.184 13.184 0 0 1-1.872-.9.077.077 0 0 1-.008-.128c.126-.094.252-.192.373-.291a.075.075 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.122.099.247.197.374.291a.077.077 0 0 1-.006.128 12.509 12.509 0 0 1-1.873.899.076.076 0 0 0-.04.106c.36.698.772 1.363 1.225 1.993a.076.076 0 0 0 .084.028 19.876 19.876 0 0 0 6.002-3.03.077.077 0 0 0 .031-.056c.5-5.177-.838-9.665-3.546-13.661a.067.067 0 0 0-.033-.027zM8.02 15.331c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.955 2.418-2.156 2.418zm7.974 0c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.943 2.418-2.156 2.418z"/>
@@ -567,6 +600,30 @@ export class SettingsManager {
             document.getElementById('createLastFmApiKey').addEventListener('click', (e) => {
                 e.preventDefault();
                 shell.openExternal('https://www.last.fm/api/account/create');
+            });
+
+            // Toggle visibility of webhook fields
+            document.getElementById('webhookEnabled').addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                document.getElementById('webhookFields').style.display = isEnabled ? 'block' : 'none';
+                ipcRenderer.send('setting-changed', { key: 'webhookEnabled', value: isEnabled });
+            });
+
+            // Handle webhook URL changes
+            document.getElementById('webhookUrl').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'webhookUrl', value: e.target.value });
+            });
+
+            // Handle webhook trigger percentage changes
+            document.getElementById('webhookTriggerPercentage').addEventListener('input', (e) => {
+                let value = parseInt(e.target.value);
+                // Clamp value between 0 and 100
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                if (isNaN(value)) value = 50; // Default fallback
+                
+                e.target.value = value; // Update the input field
+                ipcRenderer.send('setting-changed', { key: 'webhookTriggerPercentage', value: value });
             });
 
             // Basic settings

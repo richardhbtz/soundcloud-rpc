@@ -61,7 +61,6 @@ export class PresenceService {
                 const currentTrack = {
                     author: trackInfo.author,
                     title: trackInfo.title
-                        .replace(/.*?:\s*/, '')
                         .replace(/\n.*/, '')
                         .trim(),
                     url: trackInfo.url,

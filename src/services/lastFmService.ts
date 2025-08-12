@@ -2,6 +2,7 @@ import { BrowserView } from 'electron';
 import type ElectronStore = require('electron-store');
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';
+import { normalizeTrackInfo } from '../utils/trackParser';
 
 export interface ScrobbleState {
     artist: string;
@@ -227,12 +228,10 @@ export class LastFmService {
             return;
         }
 
+        const normalizedTrack = normalizeTrackInfo(trackInfo.title, trackInfo.author);
         const currentTrack = {
-            author: trackInfo.author,
-            title: trackInfo.title
-                .replace(/.*?:\s*/, '')
-                .replace(/\n.*/, '')
-                .trim()
+            author: normalizedTrack.artist,
+            title: normalizedTrack.track
         };
 
         await this.updateNowPlaying(currentTrack);
