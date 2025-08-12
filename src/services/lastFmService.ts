@@ -230,7 +230,6 @@ export class LastFmService {
         const currentTrack = {
             author: trackInfo.author,
             title: trackInfo.title
-                .replace(/.*?:\s*/, '')
                 .replace(/\n.*/, '')
                 .trim()
         };
