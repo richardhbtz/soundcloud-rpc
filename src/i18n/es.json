@@ -28,5 +28,8 @@
     "displayButtons": "Mostrar botones",
     "useArtistInStatusLine": "Usar nombre del artista en lugar del nombre de la aplicación",
     "applyChanges": "Aplicar Cambios",
-    "minimizeToTray": "Minimizar a la Bandeja"
+    "minimizeToTray": "Minimizar a la Bandeja",
+    "enableTrackParser": "Activar Analizador de Pistas",
+    "trackParserDescription": "Analizar títulos de pistas para extraer nombres de artistas y pistas automáticamente",
+    "showWebhookExample": "Mostrar Ejemplo de Datos"
 }

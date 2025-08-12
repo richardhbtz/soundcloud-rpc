@@ -46,6 +46,7 @@ const store = new Store({
         statusDisplayType: 1,
         theme: 'dark',
         minimizeToTray: false,
+        trackParserEnabled: true,
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',

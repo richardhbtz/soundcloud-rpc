@@ -353,6 +353,51 @@ export class SettingsManager {
                     overflow-y: auto;
                 }
             }
+
+            /* Webhook example styles */
+            .webhook-example-container {
+                margin-top: 8px;
+            }
+            .example-toggle {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                padding: 8px 0;
+                font-size: 12px;
+                color: var(--accent);
+                user-select: none;
+            }
+            .example-toggle:hover {
+                color: var(--accent-hover);
+            }
+            .example-toggle-text {
+                margin-right: 6px;
+            }
+            .example-toggle-icon {
+                width: 16px;
+                height: 16px;
+                fill: currentColor;
+                transition: transform 0.2s ease;
+                transform: rotate(-90deg);
+            }
+            .example-toggle.expanded .example-toggle-icon {
+                transform: rotate(0deg);
+            }
+            .example-content {
+                margin-top: 8px;
+                padding: 12px;
+                background: var(--bg-secondary);
+                border-radius: 6px;
+                border: 1px solid var(--border);
+            }
+            .example-json {
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 11px;
+                color: var(--text-primary);
+                margin: 0;
+                white-space: pre-wrap;
+                line-height: 1.4;
+            }
         </style>
         <button class="close-btn" id="close-settings" title="Close settings">
             <svg viewBox="0 0 24 24">
@@ -376,6 +421,14 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableTrackParser')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="trackParserEnabled" ${this.store.get('trackParserEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="description">${this.translationService.translate('trackParserDescription')}</div>
             </div>
 
             <div class="setting-group">
@@ -471,6 +524,26 @@ export class SettingsManager {
                 </div>
                 <div class="description">
                     ${this.translationService.translate('webhookDescription')}
+                </div>
+                <div class="webhook-example-container" id="webhookFields2" style="display: ${
+                    this.store.get('webhookEnabled') ? 'block' : 'none'
+                }">
+                    <div class="example-toggle" id="webhookExampleToggle">
+                        <span class="example-toggle-text">${this.translationService.translate('showWebhookExample')}</span>
+                        <svg class="example-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <div class="example-content" id="webhookExampleContent" style="display: none;">
+                        <pre class="example-json">{
+  "timestamp": "2025-08-12T14:30:45.123Z",
+  "artist": "Artist Name",
+  "track": "Track Title", 
+  "duration": 240,
+  "trackArt": "https://example.com/artwork.jpg",
+  "originUrl": "https://soundcloud.com/track-url"
+}</pre>
+                    </div>
                 </div>
             </div>
 
@@ -606,6 +679,7 @@ export class SettingsManager {
             document.getElementById('webhookEnabled').addEventListener('change', (e) => {
                 const isEnabled = e.target.checked;
                 document.getElementById('webhookFields').style.display = isEnabled ? 'block' : 'none';
+                document.getElementById('webhookFields2').style.display = isEnabled ? 'block' : 'none';
                 ipcRenderer.send('setting-changed', { key: 'webhookEnabled', value: isEnabled });
             });
 
@@ -626,6 +700,21 @@ export class SettingsManager {
                 ipcRenderer.send('setting-changed', { key: 'webhookTriggerPercentage', value: value });
             });
 
+            // Handle webhook example toggle
+            document.getElementById('webhookExampleToggle').addEventListener('click', (e) => {
+                const toggle = e.currentTarget;
+                const content = document.getElementById('webhookExampleContent');
+                const isExpanded = content.style.display === 'block';
+                
+                if (isExpanded) {
+                    content.style.display = 'none';
+                    toggle.classList.remove('expanded');
+                } else {
+                    content.style.display = 'block';
+                    toggle.classList.add('expanded');
+                }
+            });
+
             // Basic settings
             document.getElementById('darkMode').addEventListener('change', (e) => {
                 const isDark = e.target.checked;
@@ -636,6 +725,10 @@ export class SettingsManager {
 
             document.getElementById('minimizeToTray').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
+            });
+
+            document.getElementById('trackParserEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
             });
 
             document.getElementById('displayWhenIdling').addEventListener('change', (e) => {

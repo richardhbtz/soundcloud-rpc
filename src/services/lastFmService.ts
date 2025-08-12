@@ -228,7 +228,11 @@ export class LastFmService {
             return;
         }
 
-        const normalizedTrack = normalizeTrackInfo(trackInfo.title, trackInfo.author);
+        const normalizedTrack = normalizeTrackInfo(
+            trackInfo.title, 
+            trackInfo.author, 
+            this.store.get('trackParserEnabled', true) as boolean
+        );
         const currentTrack = {
             author: normalizedTrack.artist,
             title: normalizedTrack.track

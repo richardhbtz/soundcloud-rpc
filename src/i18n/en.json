@@ -28,5 +28,8 @@
     "displayButtons": "Display buttons",
     "useArtistInStatusLine": "Use artist name instead of application name",
     "applyChanges": "Apply Changes",
-    "minimizeToTray": "Minimize to Tray"
+    "minimizeToTray": "Minimize to Tray",
+    "enableTrackParser": "Enable Track Parser",
+    "trackParserDescription": "Parse track titles to extract artist and track names automatically",
+    "showWebhookExample": "Show Example Payload"
 }

@@ -51,14 +51,13 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
 export function normalizeTrackInfo(
     titleFromPage: string,
     authorFromPage: string,
-    useParsedTitle: boolean = true
+    useTrackParser: boolean = true
 ): { artist: string; track: string } {
-    if (!useParsedTitle || !titleFromPage) {
+    if (!useTrackParser || !titleFromPage) {
         // Fallback to original behavior
         return {
             artist: authorFromPage || 'Unknown Artist',
             track: titleFromPage
-                .replace(/.*?:\s*/, '')
                 .replace(/\n.*/, '')
                 .trim() || 'Unknown Track'
         };
