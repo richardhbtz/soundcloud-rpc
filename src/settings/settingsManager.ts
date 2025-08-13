@@ -298,6 +298,21 @@ export class SettingsManager {
                 transform: translateX(20px);
                 background: var(--bg-primary);
             }
+            .input-with-unit {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .input-with-unit .textInput {
+                width: 80px;
+                margin: 0;
+            }
+            .unit-symbol {
+                color: var(--text-secondary);
+                font-size: 14px;
+                font-weight: 500;
+                flex-shrink: 0;
+            }
             .textInput {
                 width: 100%;
                 padding: 10px 12px;
@@ -523,10 +538,12 @@ export class SettingsManager {
                     }">
                     <div class="setting-item">
                         <span>${this.translationService.translate('webhookTrigger')}</span>
-                        <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
-                            this.store.get('webhookTriggerPercentage') || 50
-                        }">
-                        <span style="margin-left: 5px;">%</span>
+                        <div class="input-with-unit">
+                            <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
+                                this.store.get('webhookTriggerPercentage') || 50
+                            }">
+                            <span class="unit-symbol">%</span>
+                        </div>
                     </div>
                 </div>
                 <div class="description">
