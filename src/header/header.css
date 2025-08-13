@@ -27,14 +27,76 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+.navigation-controls {
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    -webkit-app-region: no-drag;
+}
+
+.navigation-controls.hidden {
+    display: none;
+}
+
+.nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 24px;
+    margin-right: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.nav-button:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-button.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.nav-button.disabled:hover {
+    background-color: transparent;
+}
+
+.nav-button svg {
+    color: #ffffff;
+    transition: color 0.3s;
+}
+
+/* Refresh button animations */
+.nav-button.refreshing .refresh-icon {
+    animation: spin 1s linear infinite;
+    will-change: transform; 
+}
+
+.nav-button.refreshing .cancel-icon {
+    display: block !important;
+}
+
+.nav-button.refreshing .refresh-icon {
+    display: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .title-bar {
     display: flex;
     align-items: center;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    max-width: calc(100% - 140px);
+    max-width: calc(100% - 220px);
     cursor: default;
+    flex: 1;
 }
 
 .window-controls {
@@ -124,6 +186,14 @@ body.platform-win32 .windows-controls {
 html.theme-light .custom-header {
     background-color: #ffffff;
     color: #333333;
+}
+
+html.theme-light .nav-button svg {
+    color: #333333;
+}
+
+html.theme-light .nav-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 html.theme-light .windows-controls .control svg,

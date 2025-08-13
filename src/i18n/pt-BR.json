@@ -18,11 +18,19 @@
     "lastFmApiSecret": "API Secret do Last.fm",
     "createApiKeyLastFm": "Criar API Key",
     "noCallbackUrl": "Nenhuma URL de callback necessária",
+    "enableWebhooks": "Ativar Webhooks",
+    "webhookUrl": "URL do Webhook",
+    "webhookTrigger": "Disparar em",
+    "webhookDescription": "Enviar dados da faixa para uma URL de webhook quando a reprodução atingir a porcentagem especificada",
     "enableRichPresence": "Ativar Rich Presence",
     "displayWhenPaused": "Mostrar quando pausado",
     "displaySmallIcon": "Mostrar ícone pequeno",
     "displayButtons": "Exibir botões",
     "useArtistInStatusLine": "Usar nome do artista em vez do nome do aplicativo",
     "applyChanges": "Aplicar Alterações",
-    "minimizeToTray": "Minimizar para a Bandeja"
+    "minimizeToTray": "Minimizar para a Bandeja",
+    "enableNavigationControls": "Ativar Controles de Navegação",
+    "enableTrackParser": "Ativar Analisador de Faixas",
+    "trackParserDescription": "Analisar títulos de faixas para extrair nomes de artistas e faixas automaticamente",
+    "showWebhookExample": "Mostrar Exemplo de Dados"
 }

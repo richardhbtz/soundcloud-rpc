@@ -18,11 +18,19 @@
     "lastFmApiSecret": "Last.fm API Secret",
     "createApiKeyLastFm": "Create API Key",
     "noCallbackUrl": "No callback URL needed",
+    "enableWebhooks": "Enable Webhooks",
+    "webhookUrl": "Webhook URL",
+    "webhookTrigger": "Trigger at",
+    "webhookDescription": "Send track data to a webhook URL when playback reaches the specified percentage",
     "enableRichPresence": "Enable Rich Presence",
     "displayWhenPaused": "Display when paused",
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
     "useArtistInStatusLine": "Use artist name instead of application name",
     "applyChanges": "Apply Changes",
-    "minimizeToTray": "Minimize to Tray"
+    "minimizeToTray": "Minimize to Tray",
+    "enableNavigationControls": "Enable Navigation Controls",
+    "enableTrackParser": "Enable Track Parser",
+    "trackParserDescription": "Parse track titles to extract artist and track names automatically",
+    "showWebhookExample": "Show Example Payload"
 }

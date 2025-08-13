@@ -298,6 +298,21 @@ export class SettingsManager {
                 transform: translateX(20px);
                 background: var(--bg-primary);
             }
+            .input-with-unit {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .input-with-unit .textInput {
+                width: 80px;
+                margin: 0;
+            }
+            .unit-symbol {
+                color: var(--text-secondary);
+                font-size: 14px;
+                font-weight: 500;
+                flex-shrink: 0;
+            }
             .textInput {
                 width: 100%;
                 padding: 10px 12px;
@@ -353,6 +368,51 @@ export class SettingsManager {
                     overflow-y: auto;
                 }
             }
+
+            /* Webhook example styles */
+            .webhook-example-container {
+                margin-top: 8px;
+            }
+            .example-toggle {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                padding: 8px 0;
+                font-size: 12px;
+                color: var(--accent);
+                user-select: none;
+            }
+            .example-toggle:hover {
+                color: var(--accent-hover);
+            }
+            .example-toggle-text {
+                margin-right: 6px;
+            }
+            .example-toggle-icon {
+                width: 16px;
+                height: 16px;
+                fill: currentColor;
+                transition: transform 0.2s ease;
+                transform: rotate(-90deg);
+            }
+            .example-toggle.expanded .example-toggle-icon {
+                transform: rotate(0deg);
+            }
+            .example-content {
+                margin-top: 8px;
+                padding: 12px;
+                background: var(--bg-secondary);
+                border-radius: 6px;
+                border: 1px solid var(--border);
+            }
+            .example-json {
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 11px;
+                color: var(--text-primary);
+                margin: 0;
+                white-space: pre-wrap;
+                line-height: 1.4;
+            }
         </style>
         <button class="close-btn" id="close-settings" title="Close settings">
             <svg viewBox="0 0 24 24">
@@ -376,6 +436,21 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableNavigationControls')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="navigationControlsEnabled" ${this.store.get('navigationControlsEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableTrackParser')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="trackParserEnabled" ${this.store.get('trackParserEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="description">${this.translationService.translate('trackParserDescription')}</div>
             </div>
 
             <div class="setting-group">
@@ -438,6 +513,61 @@ export class SettingsManager {
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link">${this.translationService.translate('createApiKeyLastFm')}</a>
                     - ${this.translationService.translate('noCallbackUrl')}
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h2>
+                    Webhooks
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M10.59 13.41c.41.39.41 1.03 0 1.42-.39.39-1.03.39-1.42 0a5.003 5.003 0 0 1 0-7.07l3.54-3.54a5.003 5.003 0 0 1 7.07 0 5.003 5.003 0 0 1 0 7.07l-1.49 1.49c.01-.82-.12-1.64-.4-2.42l.47-.48a2.982 2.982 0 0 0 0-4.24 2.982 2.982 0 0 0-4.24 0l-3.53 3.53a2.982 2.982 0 0 0 0 4.24zm2.82-4.24c.39-.39 1.03-.39 1.42 0a5.003 5.003 0 0 1 0 7.07l-3.54 3.54a5.003 5.003 0 0 1-7.07 0 5.003 5.003 0 0 1 0-7.07l1.49-1.49c-.01.82.12 1.64.4 2.42l-.47.48a2.982 2.982 0 0 0 0 4.24 2.982 2.982 0 0 0 4.24 0l3.53-3.53a2.982 2.982 0 0 0 0-4.24z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableWebhooks')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="webhookEnabled" ${this.store.get('webhookEnabled') ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="input-group" id="webhookFields" style="display: ${
+                    this.store.get('webhookEnabled') ? 'block' : 'none'
+                }">
+                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" value="${
+                        this.store.get('webhookUrl') || ''
+                    }">
+                    <div class="setting-item">
+                        <span>${this.translationService.translate('webhookTrigger')}</span>
+                        <div class="input-with-unit">
+                            <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
+                                this.store.get('webhookTriggerPercentage') || 50
+                            }">
+                            <span class="unit-symbol">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="description">
+                    ${this.translationService.translate('webhookDescription')}
+                </div>
+                <div class="webhook-example-container" id="webhookFields2" style="display: ${
+                    this.store.get('webhookEnabled') ? 'block' : 'none'
+                }">
+                    <div class="example-toggle" id="webhookExampleToggle">
+                        <span class="example-toggle-text">${this.translationService.translate('showWebhookExample')}</span>
+                        <svg class="example-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <div class="example-content" id="webhookExampleContent" style="display: none;">
+                        <pre class="example-json">{
+  "timestamp": "2025-08-12T14:30:45.123Z",
+  "artist": "Artist Name",
+  "track": "Track Title", 
+  "duration": 240,
+  "trackArt": "https://example.com/artwork.jpg",
+  "originUrl": "https://soundcloud.com/track-url"
+}</pre>
+                    </div>
                 </div>
             </div>
 
@@ -569,6 +699,46 @@ export class SettingsManager {
                 shell.openExternal('https://www.last.fm/api/account/create');
             });
 
+            // Toggle visibility of webhook fields
+            document.getElementById('webhookEnabled').addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                document.getElementById('webhookFields').style.display = isEnabled ? 'block' : 'none';
+                document.getElementById('webhookFields2').style.display = isEnabled ? 'block' : 'none';
+                ipcRenderer.send('setting-changed', { key: 'webhookEnabled', value: isEnabled });
+            });
+
+            // Handle webhook URL changes
+            document.getElementById('webhookUrl').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'webhookUrl', value: e.target.value });
+            });
+
+            // Handle webhook trigger percentage changes
+            document.getElementById('webhookTriggerPercentage').addEventListener('input', (e) => {
+                let value = parseInt(e.target.value);
+                // Clamp value between 0 and 100
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                if (isNaN(value)) value = 50; // Default fallback
+                
+                e.target.value = value; // Update the input field
+                ipcRenderer.send('setting-changed', { key: 'webhookTriggerPercentage', value: value });
+            });
+
+            // Handle webhook example toggle
+            document.getElementById('webhookExampleToggle').addEventListener('click', (e) => {
+                const toggle = e.currentTarget;
+                const content = document.getElementById('webhookExampleContent');
+                const isExpanded = content.style.display === 'block';
+                
+                if (isExpanded) {
+                    content.style.display = 'none';
+                    toggle.classList.remove('expanded');
+                } else {
+                    content.style.display = 'block';
+                    toggle.classList.add('expanded');
+                }
+            });
+
             // Basic settings
             document.getElementById('darkMode').addEventListener('change', (e) => {
                 const isDark = e.target.checked;
@@ -579,6 +749,14 @@ export class SettingsManager {
 
             document.getElementById('minimizeToTray').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
+            });
+
+            document.getElementById('navigationControlsEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'navigationControlsEnabled', value: e.target.checked });
+            });
+
+            document.getElementById('trackParserEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
             });
 
             document.getElementById('displayWhenIdling').addEventListener('change', (e) => {
