@@ -3,6 +3,9 @@ export interface ParsedTrackInfo {
     track: string;
 }
 
+// Characters: - (hyphen U+002D), – (en dash U+2013), — (em dash U+2014), ― (horizontal bar U+2015)
+const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]\s+|[\u002D\u2013\u2014\u2015])/;
+
 export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
     if (!title || typeof title !== 'string') {
         return { artist: null, track: '' };
@@ -12,32 +15,16 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
         .replace(/\n.*/, '')
         .trim();
 
-    // Define dash separators (hyphen, en dash, em dash, horizontal bar)
-    const dashSeparators = [
-        ' - ', // hyphen with spaces
-        ' \u2013 ', // en dash with spaces
-        ' \u2014 ', // em dash with spaces
-        ' \u2015 ', // horizontal bar with spaces
-        '-', // hyphen without spaces (fallback)
-        '\u2013', // en dash without spaces (fallback)
-        '\u2014', // em dash without spaces (fallback)
-        '\u2015' // horizontal bar without spaces (fallback)
-    ];
-
-    // Try to find a separator and split
-    for (const separator of dashSeparators) {
-        const index = cleanTitle.indexOf(separator);
-        if (index > 0) {
-            const potentialArtist = cleanTitle.substring(0, index).trim();
-            const potentialTrack = cleanTitle.substring(index + separator.length).trim();
-            
-            // Only split if both parts are meaningful (not empty and not too short)
-            if (potentialArtist.length > 0 && potentialTrack.length > 0) {
-                return {
-                    artist: potentialArtist,
-                    track: potentialTrack
-                };
-            }
+    const match = cleanTitle.match(SEPARATOR_REGEX);
+    if (match && match.index && match.index > 0) {
+        const potentialArtist = cleanTitle.substring(0, match.index).trim();
+        const potentialTrack = cleanTitle.substring(match.index + match[0].length).trim();
+        
+        if (potentialArtist.length > 0 && potentialTrack.length > 0) {
+            return {
+                artist: potentialArtist,
+                track: potentialTrack
+            };
         }
     }
 
@@ -70,3 +57,36 @@ export function normalizeTrackInfo(
         track: parsed.track || 'Unknown Track'
     };
 }
+
+// Test function to validate regex parsing
+/*
+function testTrackParser() {
+    const testCases = [
+        "Artist Name - Song Title",
+        "Artist Name-Song Title",
+        "Artist Name — Song Title",  // em dash with spaces
+        "Artist Name—Song Title",    // em dash without spaces
+        "Artist Name – Song Title",  // en dash with spaces
+        "Artist Name–Song Title",    // en dash without spaces
+        "Artist Name ― Song Title",  // horizontal bar with spaces
+        "Artist Name―Song Title",    // horizontal bar without spaces
+        "Just a Song Title",         // no separator
+        "- No Artist",               // separator at start
+        "No Song -",                 // separator at end
+        "Multiple - Dashes - Here",  // multiple separators
+        "",                          // empty string
+        "Artist\nWith\nNewlines - Song Title"  // with newlines
+    ];
+
+    console.log("=== Track Parser Test Results ===");
+    testCases.forEach((testCase, index) => {
+        const result = parseSoundCloudTitle(testCase);
+        console.log(`${index + 1}. "${testCase}"`);
+        console.log(`   -> Artist: "${result.artist}", Track: "${result.track}"`);
+        console.log("");
+    });
+}
+
+testTrackParser();
+*/
+
