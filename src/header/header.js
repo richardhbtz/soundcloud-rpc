@@ -5,6 +5,34 @@ const path = require('path');
 
 let isMaximized = false;
 let isDarkTheme = true;
+let canGoBack = false;
+let canGoForward = false;
+let isRefreshing = false;
+let navButtons = null;
+
+function updateNavigationState(state = {}) {
+    if (!navButtons) {
+        navButtons = {
+            back: document.getElementById('back-btn'),
+            forward: document.getElementById('forward-btn'),
+            refresh: document.getElementById('refresh-btn')
+        };
+    }
+
+    if ('canGoBack' in state) canGoBack = state.canGoBack;
+    if ('canGoForward' in state) canGoForward = state.canGoForward;
+    
+    if ('refreshing' in state) {
+        isRefreshing = state.refreshing;
+        if (navButtons.refresh) {
+            navButtons.refresh.classList.toggle('refreshing', isRefreshing);
+            navButtons.refresh.title = isRefreshing ? 'Cancel Refresh' : 'Refresh Page';
+        }
+    }
+
+    if (navButtons.back) navButtons.back.classList.toggle('disabled', !canGoBack);
+    if (navButtons.forward) navButtons.forward.classList.toggle('disabled', !canGoForward);
+}
 
 // Helper function to update window controls
 function updateWindowControls() {
@@ -72,6 +100,29 @@ function initializeIcons() {
 // Set platform class on body
 document.body.classList.add(`platform-${process.platform}`);
 
+// Navigation event delegation
+document.querySelector('.navigation-controls')?.addEventListener('click', (e) => {
+    const { id } = e.target.closest('.nav-button') || {};
+    
+    switch (id) {
+        case 'back-btn':
+            if (canGoBack) ipcRenderer.send('navigate-back');
+            break;
+        case 'forward-btn':
+            if (canGoForward) ipcRenderer.send('navigate-forward');
+            break;
+        case 'refresh-btn':
+            if (isRefreshing) {
+                ipcRenderer.send('cancel-refresh');
+                updateNavigationState({ refreshing: false });
+            } else {
+                ipcRenderer.send('refresh-page');
+                updateNavigationState({ refreshing: true });
+            }
+            break;
+    }
+});
+
 // Window control event listeners for Windows
 document.getElementById('minimize-btn')?.addEventListener('click', () => {
     ipcRenderer.send('minimize-window');
@@ -104,9 +155,31 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
     }
 });
 
-// Initialize icons when the document is loaded
+// Listen for navigation state changes
+ipcRenderer.on('navigation-state-changed', (_, state) => {
+    updateNavigationState(state);
+});
+
+// Listen for refresh state changes
+ipcRenderer.on('refresh-state-changed', (_, refreshing) => {
+    updateNavigationState({ refreshing });
+});
+
+// Listen for navigation controls toggle
+ipcRenderer.on('navigation-controls-toggle', (_, enabled) => {
+    const navControls = document.querySelector('.navigation-controls');
+    if (navControls) {
+        navControls.classList.toggle('hidden', !enabled);
+        if (!enabled) {
+            navButtons = null;
+        }
+    }
+});
+
+// Initialize icons and navigation state when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initializeIcons();
+    updateNavigationState();
     
     // Check window state periodically
     setInterval(() => {

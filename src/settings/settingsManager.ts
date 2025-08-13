@@ -422,6 +422,13 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
+                    <span>${this.translationService.translate('enableNavigationControls')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="navigationControlsEnabled" ${this.store.get('navigationControlsEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
                     <span>${this.translationService.translate('enableTrackParser')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="trackParserEnabled" ${this.store.get('trackParserEnabled', true) ? 'checked' : ''}>
@@ -725,6 +732,10 @@ export class SettingsManager {
 
             document.getElementById('minimizeToTray').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
+            });
+
+            document.getElementById('navigationControlsEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'navigationControlsEnabled', value: e.target.checked });
             });
 
             document.getElementById('trackParserEnabled').addEventListener('change', (e) => {

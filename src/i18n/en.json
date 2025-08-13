@@ -29,6 +29,7 @@
     "useArtistInStatusLine": "Use artist name instead of application name",
     "applyChanges": "Apply Changes",
     "minimizeToTray": "Minimize to Tray",
+    "enableNavigationControls": "Enable Navigation Controls",
     "enableTrackParser": "Enable Track Parser",
     "trackParserDescription": "Parse track titles to extract artist and track names automatically",
     "showWebhookExample": "Show Example Payload"

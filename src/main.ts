@@ -46,6 +46,7 @@ const store = new Store({
         statusDisplayType: 1,
         theme: 'dark',
         minimizeToTray: false,
+        navigationControlsEnabled: false,
         trackParserEnabled: true,
     },
     clearInvalidConfig: true,
@@ -323,9 +324,40 @@ function setupWindowControls() {
         }
     });
 
+    // Navigation handlers
+    ipcMain.on('navigate-back', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+            contentView.webContents.navigationHistory.goBack();
+        }
+    });
+
+    ipcMain.on('navigate-forward', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+            contentView.webContents.navigationHistory.goForward();
+        }
+    });
+
+    ipcMain.on('refresh-page', () => {
+        if (contentView) {
+            if (headerView && headerView.webContents) {
+                headerView.webContents.send('refresh-state-changed', true);
+            }
+            contentView.webContents.reload();
+        }
+    });
+
+    ipcMain.on('cancel-refresh', () => {
+        if (contentView) {
+            contentView.webContents.stop();
+            if (headerView && headerView.webContents) {
+                headerView.webContents.send('refresh-state-changed', false);
+            }
+        }
+    });
+
     ipcMain.on('toggle-theme', () => {
         isDarkTheme = !isDarkTheme;
-        if (headerView) {
+        if (headerView && headerView.webContents) {
             headerView.webContents.send('theme-changed', isDarkTheme);
         }
         applyThemeToContent(isDarkTheme);
@@ -467,6 +499,47 @@ async function init() {
     await proxyService.apply();
     contentView.webContents.loadURL('https://soundcloud.com/discover');
 
+    // Function to update navigation state in header
+    function updateNavigationState() {
+        if (headerView && headerView.webContents && contentView) {
+            const state = {
+                canGoBack: contentView.webContents.navigationHistory.canGoBack(),
+                canGoForward: contentView.webContents.navigationHistory.canGoForward()
+            };
+            headerView.webContents.send('navigation-state-changed', state);
+        }
+    }
+
+    // Listen for navigation events to update button states 
+    contentView.webContents.on('did-navigate', () => {
+        updateNavigationState();
+    });
+
+    contentView.webContents.on('did-navigate-in-page', () => {
+        updateNavigationState();
+    });
+
+    // Listen for page load events to manage refresh state 
+    contentView.webContents.on('did-start-loading', () => {
+        if (headerView && headerView.webContents) {
+            headerView.webContents.send('refresh-state-changed', true);
+        }
+    });
+
+    contentView.webContents.on('did-stop-loading', () => {
+        if (headerView && headerView.webContents) {
+            headerView.webContents.send('refresh-state-changed', false);
+        }
+        updateNavigationState();
+    });
+
+    contentView.webContents.on('did-fail-load', () => {
+        if (headerView && headerView.webContents) {
+            headerView.webContents.send('refresh-state-changed', false);
+        }
+        updateNavigationState();
+    });
+
     // Setup event handlers
     contentView.webContents.on('did-finish-load', async () => {
         await lastFmService.authenticate();
@@ -493,6 +566,22 @@ async function init() {
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
 
+        // Update navigation state after page load
+        updateNavigationState();
+
+        // Initialize navigation controls visibility
+        const navigationEnabled = store.get('navigationControlsEnabled', true);
+        if (headerView && headerView.webContents) {
+            headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
+        }
+
+        // Inject audio monitoring script
+        try {
+            await contentView.webContents.executeJavaScript(audioMonitorScript);
+            console.log('Audio monitoring script injected successfully');
+        } catch (error) {
+            console.error('Failed to inject audio monitoring script:', error);
+        }
     });
 
     // Register settings related events
@@ -528,6 +617,10 @@ async function init() {
             webhookService.setWebhookUrl(data.value);
         } else if (key === 'webhookTriggerPercentage') {
             webhookService.setTriggerPercentage(data.value);
+        } else if (key === 'navigationControlsEnabled') {
+            if (headerView && headerView.webContents) {
+                headerView.webContents.send('navigation-controls-toggle', data.value);
+            }
         }
     });
 
@@ -559,7 +652,7 @@ function setupThemeHandlers() {
     isDarkTheme = store.get('theme', 'dark') === 'dark';
 
     // Send initial theme to all views
-    if (headerView) {
+    if (headerView && headerView.webContents) {
         headerView.webContents.send('theme-changed', isDarkTheme);
     }
     if (settingsManager) {
@@ -574,7 +667,7 @@ function setupThemeHandlers() {
             store.set('theme', data.value);
 
             // Update all views
-            if (headerView) {
+            if (headerView && headerView.webContents) {
                 headerView.webContents.send('theme-changed', isDarkTheme);
             }
             if (settingsManager) {
@@ -773,18 +866,8 @@ function setupTranslationHandlers() {
 }
 
 
-// Inject audio event script into SoundCloud DOM
+// Setup audio event handler for track updates
 function setupAudioHandler() {
-  contentView.webContents.on('did-finish-load', async () => {
-    // Inject the track monitoring script
-    try {
-      await contentView.webContents.executeJavaScript(audioMonitorScript);
-      console.log('Audio monitoring script injected successfully');
-    } catch (error) {
-      console.error('Failed to inject audio monitoring script:', error);
-    }
-  });
-
   ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }) => {
         console.debug(`Track update received: ${reason}`);
     
