@@ -55,7 +55,7 @@ Press `F1` to open the application menu, which provides access to various settin
 - [@xhayper/discord-rpc](https://www.npmjs.com/package/@xhayper/discord-rpc) - Discord Rich Presence integration
 - [Electron](https://www.electronjs.org/) - Framework for building cross-platform desktop applications
 - [electron-builder](https://www.electron.build/) - Tool for packaging and distributing Electron applications
-- [@cliqz/adblocker-electron](https://www.npmjs.com/package/@cliqz/adblocker-electron) - Ad blocking functionality
+- [@ghostery/adblocker-electron](https://www.npmjs.com/package/@ghostery/adblocker-electron) - Ad blocking functionality
 - [electron-store](https://www.npmjs.com/package/electron-store) - Data persistence
 - [electron-updater](https://www.npmjs.com/package/electron-updater) - Auto-update functionality
 
