@@ -2,6 +2,7 @@ import type ElectronStore = require('electron-store');
 import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient, SetActivity } from '@xhayper/discord-rpc';
 import { TranslationService } from './translationService';
+import { normalizeTrackInfo } from '../utils/trackParser';
 
 export interface Info {
     rpc: DiscordClient;
@@ -58,11 +59,15 @@ export class PresenceService {
                     return;
                 }
 
+                const normalizedTrack = normalizeTrackInfo(
+                    trackInfo.title, 
+                    trackInfo.author, 
+                    this.store.get('trackParserEnabled', true) as boolean
+                );
+
                 const currentTrack = {
-                    author: trackInfo.author,
-                    title: trackInfo.title
-                        .replace(/\n.*/, '')
-                        .trim(),
+                    author: normalizedTrack.artist,
+                    title: normalizedTrack.track,
                     url: trackInfo.url,
                 };
 
@@ -97,9 +102,9 @@ export class PresenceService {
 
                 const activity: SetActivity & { name?: string; statusDisplayType?: number } = {
                     type: ActivityType.Listening,
-                    name: trackInfo.author,
+                    name: currentTrack.author,
                     details: `${this.shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
-                    state: `${this.shortenString(trackInfo.author)}${trackInfo.author.length < 2 ? '⠀⠀' : ''}`,
+                    state: `${this.shortenString(currentTrack.author)}${currentTrack.author.length < 2 ? '⠀⠀' : ''}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
                     startTimestamp: Date.now() - elapsedMilliseconds,
                     endTimestamp: Date.now() + Math.max(0, totalMilliseconds - elapsedMilliseconds),
@@ -164,4 +169,4 @@ export class PresenceService {
     private shortenString(str: string): string {
         return str.length > 128 ? str.substring(0, 128) + '...' : str;
     }
-} 
+}
