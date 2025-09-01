@@ -11,6 +11,7 @@ import { LastFmService } from './services/lastFmService';
 import { TranslationService } from './services/translationService';
 import { ThumbarService } from './services/thumbarService';
 import { WebhookService } from './services/webhookService';
+import { ThemeService } from './services/themeService';
 import { audioMonitorScript } from './services/audioMonitorService';
 import path = require('path');
 import { platform } from 'os';
@@ -65,6 +66,7 @@ let lastFmService: LastFmService;
 let webhookService: WebhookService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
+let themeService: ThemeService;
 let tray: Tray | null = null;
 let isQuitting = false;
 const devMode = process.argv.includes('--dev')
@@ -445,6 +447,7 @@ async function init() {
 
     // Initialize services
     translationService = new TranslationService();
+    themeService = new ThemeService(store);
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
@@ -621,6 +624,14 @@ async function init() {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('navigation-controls-toggle', data.value);
             }
+        } else if (key === 'customTheme') {
+            if (data.value === 'none') {
+                themeService.removeCustomTheme();
+            } else {
+                themeService.applyCustomTheme(data.value);
+            }
+            // Re-apply the theme to all content
+            applyThemeToContent(isDarkTheme);
         }
     });
 
@@ -681,6 +692,8 @@ function setupThemeHandlers() {
 function applyThemeToContent(isDark: boolean) {
     if (!contentView) return;
 
+    const customThemeCSS = themeService.getCurrentCustomThemeCSS();
+
     const themeScript = `
         (function() {
             try {
@@ -736,6 +749,28 @@ function applyThemeToContent(isDark: boolean) {
                     existingStyle.remove();
                 }
                 document.head.appendChild(style);
+
+                // Apply custom theme CSS if available
+                const customThemeCSS = \`${customThemeCSS || ''}\`;
+                if (customThemeCSS.trim()) {
+                    const customStyle = document.createElement('style');
+                    customStyle.id = 'custom-theme-style';
+                    customStyle.textContent = customThemeCSS;
+                    
+                    const existingCustomStyle = document.getElementById('custom-theme-style');
+                    if (existingCustomStyle) {
+                        existingCustomStyle.remove();
+                    }
+                    document.head.appendChild(customStyle);
+                    console.log('Applied custom theme CSS');
+                } else {
+                    // Remove custom theme if none is selected
+                    const existingCustomStyle = document.getElementById('custom-theme-style');
+                    if (existingCustomStyle) {
+                        existingCustomStyle.remove();
+                        console.log('Removed custom theme CSS');
+                    }
+                }
             } catch(e) {
                 console.error('Error applying theme:', e);
             }
@@ -860,7 +895,13 @@ function setupTranslationHandlers() {
             displayButtons: translationService.translate('displayButtons'),
             useArtistInStatusLine: translationService.translate('useArtistInStatusLine'),
             applyChanges: translationService.translate('applyChanges'),
-            minimizeToTray: translationService.translate('minimizeToTray')
+            minimizeToTray: translationService.translate('minimizeToTray'),
+            customThemes: translationService.translate('customThemes'),
+            selectCustomTheme: translationService.translate('selectCustomTheme'),
+            noTheme: translationService.translate('noTheme'),
+            openThemesFolder: translationService.translate('openThemesFolder'),
+            refreshThemes: translationService.translate('refreshThemes'),
+            customThemeDescription: translationService.translate('customThemeDescription')
         };
     });
 }

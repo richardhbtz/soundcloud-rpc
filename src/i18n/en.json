@@ -32,5 +32,11 @@
     "enableNavigationControls": "Enable Navigation Controls",
     "enableTrackParser": "Enable Track Parser",
     "trackParserDescription": "Parse track titles to extract artist and track names automatically",
-    "showWebhookExample": "Show Example Payload"
+    "showWebhookExample": "Show Example Payload",
+    "customThemes": "Custom Themes",
+    "selectCustomTheme": "Select Custom Theme",
+    "noTheme": "No Theme",
+    "openThemesFolder": "Open Themes Folder",
+    "refreshThemes": "Refresh Themes",
+    "customThemeDescription": "Place .css files in the themes folder to customize the SoundCloud UI"
 }

@@ -32,5 +32,11 @@
     "enableNavigationControls": "Ativar Controles de Navegação",
     "enableTrackParser": "Ativar Analisador de Faixas",
     "trackParserDescription": "Analisar títulos de faixas para extrair nomes de artistas e faixas automaticamente",
-    "showWebhookExample": "Mostrar Exemplo de Dados"
+    "showWebhookExample": "Mostrar Exemplo de Dados",
+    "customThemes": "Temas Personalizados",
+    "selectCustomTheme": "Selecionar Tema Personalizado",
+    "noTheme": "Sem Tema",
+    "openThemesFolder": "Abrir Pasta de Temas",
+    "refreshThemes": "Atualizar Temas",
+    "customThemeDescription": "Coloque arquivos .css na pasta de temas para personalizar a interface do SoundCloud"
 }

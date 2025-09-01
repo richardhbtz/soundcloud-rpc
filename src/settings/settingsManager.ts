@@ -413,6 +413,42 @@ export class SettingsManager {
                 white-space: pre-wrap;
                 line-height: 1.4;
             }
+            /* Custom Theme Styles */
+            .theme-selector {
+                min-width: 150px;
+                padding: 8px 12px;
+                background: var(--bg-primary);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                color: var(--text-primary);
+                font-size: 14px;
+                cursor: pointer;
+                transition: border-color 0.2s;
+            }
+            .theme-selector:focus {
+                outline: none;
+                border-color: var(--accent-muted);
+            }
+            .theme-controls {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .theme-button {
+                flex: 1;
+                padding: 10px 12px;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                color: var(--text-primary);
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .theme-button:hover {
+                background: var(--bg-hover);
+                border-color: var(--accent-muted);
+            }
         </style>
         <button class="close-btn" id="close-settings" title="Close settings">
             <svg viewBox="0 0 24 24">
@@ -626,6 +662,27 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
+                <h2>
+                    ${this.translationService.translate('customThemes')}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
+                        <path d="M12 7c-2.757 0-5 2.243-5 5s2.243 5 5 5 5-2.243 5-5-2.243-5-5-5z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('selectCustomTheme')}</span>
+                    <select id="customThemeSelector" class="theme-selector">
+                        <option value="none">${this.translationService.translate('noTheme')}</option>
+                    </select>
+                </div>
+                <div class="theme-controls">
+                    <button id="openThemesFolder" class="theme-button">${this.translationService.translate('openThemesFolder')}</button>
+                    <button id="refreshThemes" class="theme-button">${this.translationService.translate('refreshThemes')}</button>
+                </div>
+                <div class="description">${this.translationService.translate('customThemeDescription')}</div>
+            </div>
+
+            <div class="setting-group">
                 <button class="button" id="applyChanges">${this.translationService.translate('applyChanges')}</button>
             </div>
         </div>
@@ -660,6 +717,67 @@ export class SettingsManager {
     private getJavaScript(): string {
         return `
             const { ipcRenderer, shell } = require('electron');
+
+            // Load custom themes on initialization
+            async function loadCustomThemes() {
+                try {
+                    const themes = await ipcRenderer.invoke('get-custom-themes');
+                    const currentTheme = await ipcRenderer.invoke('get-current-custom-theme');
+                    const selector = document.getElementById('customThemeSelector');
+                    
+                    // Clear existing options except "No Theme"
+                    while (selector.children.length > 1) {
+                        selector.removeChild(selector.lastChild);
+                    }
+                    
+                    // Add theme options
+                    themes.forEach(theme => {
+                        const option = document.createElement('option');
+                        option.value = theme.name;
+                        option.textContent = theme.name;
+                        selector.appendChild(option);
+                    });
+                    
+                    // Set current theme
+                    selector.value = currentTheme || 'none';
+                } catch (error) {
+                    console.error('Failed to load custom themes:', error);
+                }
+            }
+
+            // Initialize themes on page load
+            document.addEventListener('DOMContentLoaded', loadCustomThemes);
+
+            // Custom theme selector
+            document.getElementById('customThemeSelector').addEventListener('change', async (e) => {
+                const themeName = e.target.value;
+                try {
+                    await ipcRenderer.invoke('apply-custom-theme', themeName);
+                    ipcRenderer.send('setting-changed', { key: 'customTheme', value: themeName });
+                } catch (error) {
+                    console.error('Failed to apply custom theme:', error);
+                }
+            });
+
+            // Open themes folder
+            document.getElementById('openThemesFolder').addEventListener('click', async () => {
+                try {
+                    const themesPath = await ipcRenderer.invoke('get-themes-folder-path');
+                    shell.openPath(themesPath);
+                } catch (error) {
+                    console.error('Failed to open themes folder:', error);
+                }
+            });
+
+            // Refresh themes
+            document.getElementById('refreshThemes').addEventListener('click', async () => {
+                try {
+                    await ipcRenderer.invoke('refresh-custom-themes');
+                    await loadCustomThemes();
+                } catch (error) {
+                    console.error('Failed to refresh themes:', error);
+                }
+            });
 
             // Toggle visibility of Proxy fields
             document.getElementById('proxyEnabled').addEventListener('change', (e) => {
