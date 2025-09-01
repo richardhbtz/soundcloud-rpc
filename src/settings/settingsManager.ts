@@ -449,6 +449,271 @@ export class SettingsManager {
                 background: var(--bg-hover);
                 border-color: var(--accent-muted);
             }
+
+            /* Rich Presence Preview Styles */
+            .preview-container {
+                margin-top: 12px;
+                animation: slideIn 0.3s ease;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .preview-panel {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .preview-header-inline {
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .preview-title-inline {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--accent);
+            }
+
+            .discord-preview {
+                font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                background: var(--bg-primary);
+                border-radius: 8px;
+                padding: 16px;
+                border: 1px solid var(--border);
+            }
+
+            .user-info-preview {
+                display: flex;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+
+            .user-avatar-preview {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: var(--bg-secondary);
+                margin-right: 12px;
+                position: relative;
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="gray"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>');
+                background-size: 20px;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+
+            .status-indicator-preview {
+                position: absolute;
+                bottom: -2px;
+                right: -2px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #43b581;
+                border: 2px solid var(--bg-primary);
+            }
+
+            .user-details-preview {
+                flex: 1;
+            }
+
+            .username-preview {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin-bottom: 2px;
+            }
+
+            .user-tag-preview {
+                font-size: 14px;
+                color: var(--text-secondary);
+            }
+
+            .activity-section-preview {
+                margin-top: 8px;
+            }
+
+            .activity-header-preview {
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: var(--text-secondary);
+                margin-bottom: 8px;
+                letter-spacing: 0.025em;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .activity-content-preview {
+                display: inline-block;
+                width: 100%;
+                animation: fadeInPreview 0.3s ease;
+            }
+
+            .activity-row-preview {
+                display: flex;
+                width: 100%;
+                vertical-align: top;
+            }
+
+            .activity-image-preview {
+                width: 60px;
+                height: 60px;
+                border-radius: 8px;
+                background: var(--bg-secondary);
+                position: relative;
+                overflow: hidden;
+                display: inline-block;
+                vertical-align: top;
+                margin-right: 12px;
+            }
+
+            .activity-image-preview img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 8px;
+            }
+
+            .small-icon-preview {
+                position: absolute;
+                bottom: -4px;
+                right: -4px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: var(--bg-primary);
+                border: 2px solid var(--bg-primary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .soundcloud-icon-preview {
+                width: 16px;
+                height: 16px;
+                fill: #ff5500;
+            }
+
+            .activity-details-preview {
+                display: inline-block;
+                vertical-align: top;
+                width: calc(100% - 72px);
+                min-width: 0;
+            }
+
+            @keyframes fadeInPreview {
+                from {
+                    opacity: 0;
+                    transform: translateY(5px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .activity-name-preview {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin-bottom: 2px;
+                word-wrap: break-word;
+            }
+
+            .activity-details-text-preview {
+                font-size: 14px;
+                color: var(--text-primary);
+                margin-bottom: 1px;
+                word-wrap: break-word;
+            }
+
+            .activity-state-preview {
+                font-size: 14px;
+                color: var(--text-primary);
+                margin-bottom: 4px;
+                word-wrap: break-word;
+            }
+
+            .progress-bar-container-preview {
+                margin: 8px 0;
+            }
+
+            .progress-bar-preview {
+                width: 100%;
+                height: 4px;
+                background: var(--bg-secondary);
+                border-radius: 2px;
+                overflow: hidden;
+                position: relative;
+            }
+
+            .progress-bar-fill-preview {
+                height: 100%;
+                background: #5865f2;
+                border-radius: 2px;
+                transition: width 0.3s ease;
+                width: 0%;
+            }
+
+            .time-display-preview {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-top: 4px;
+            }
+
+            .activity-buttons-preview {
+                display: flex;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            .activity-button-preview {
+                flex: 1;
+                padding: 8px 16px;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                color: var(--text-primary);
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                text-decoration: none;
+                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+            }
+
+            .activity-button-preview:hover {
+                background: var(--bg-hover);
+                border-color: var(--accent-muted);
+            }
+
+            .no-activity-preview {
+                text-align: center;
+                color: var(--text-secondary);
+                font-size: 14px;
+                padding: 24px 16px;
+                font-style: italic;
+            }
         </style>
         <button class="close-btn" id="close-settings" title="Close settings">
             <svg viewBox="0 0 24 24">
@@ -658,6 +923,34 @@ export class SettingsManager {
                         }>
                         <span class="slider"></span>
                     </label>
+                </div>
+                <div class="setting-item">
+                    <span>${this.translationService.translate('enableRichPresencePreview')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="richPresencePreviewEnabled" ${
+                            this.store.get('richPresencePreviewEnabled', false) ? 'checked' : ''
+                        }>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="description">${this.translationService.translate('richPresencePreviewDescription')}</div>
+                
+                <!-- Rich Presence Preview -->
+                <div class="preview-container" id="presencePreviewContainer" style="display: ${
+                    this.store.get('richPresencePreviewEnabled', false) ? 'block' : 'none'
+                }">
+                    <div class="preview-panel">
+                        <div class="preview-header-inline">
+                            <span class="preview-title-inline">Rich Presence Preview</span>
+                        </div>
+                        <div class="discord-preview">
+                            <div class="activity-section-preview" id="activitySectionPreview">
+                                <div class="no-activity-preview" id="noActivityPreview">
+                                    No activity to show
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -877,6 +1170,16 @@ export class SettingsManager {
                 ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
             });
 
+            // Rich Presence Preview
+            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                const container = document.getElementById('presencePreviewContainer');
+                if (container) {
+                    container.style.display = isEnabled ? 'block' : 'none';
+                }
+                ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
+            });
+
             document.getElementById('displayWhenIdling').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'displayWhenIdling', value: e.target.checked });
             });
@@ -902,6 +1205,366 @@ export class SettingsManager {
             document.getElementById('useArtistInStatusLineToggle').addEventListener('change', (e) => {
                 const useState = e.target.checked; // true -> STATE (1), false -> NAME (0)
                 ipcRenderer.send('setting-changed', { key: 'statusDisplayType', value: useState ? 1 : 0 });
+            });
+
+            // Rich Presence Preview toggle
+            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                document.getElementById('presencePreviewContainer').style.display = isEnabled ? 'block' : 'none';
+                ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
+            });
+
+            // Rich Presence Preview
+            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                document.getElementById('presencePreviewContainer').style.display = isEnabled ? 'block' : 'none';
+                ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
+            });
+
+            // Rich Presence Preview Update Functions
+            let currentTrack = null;
+            let progressInterval = null;
+
+            function parseTimeToMs(time) {
+                if (!time) return 0;
+                const isNegative = time.trim().startsWith('-');
+                const raw = isNegative ? time.trim().slice(1) : time.trim();
+                const parts = raw.split(':').map(p => Number(p));
+                let seconds = 0;
+                for (const part of parts) {
+                    seconds = seconds * 60 + (isNaN(part) ? 0 : part);
+                }
+                const ms = seconds * 1000;
+                return isNegative ? -ms : ms;
+            }
+
+            function formatTime(ms) {
+                const totalSeconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
+            }
+
+            function updatePreview(trackInfo) {
+                currentTrack = trackInfo;
+                const activitySection = document.getElementById('activitySectionPreview');
+                const noActivity = document.getElementById('noActivityPreview');
+
+                // Get current settings
+                const displayWhenIdling = document.getElementById('displayWhenIdling').checked;
+                const displaySCSmallIcon = document.getElementById('displaySCSmallIcon').checked;
+                const displayButtons = document.getElementById('displayButtons').checked;
+
+                if (!trackInfo || (!trackInfo.isPlaying && !displayWhenIdling)) {
+                    noActivity.style.display = 'block';
+                    const existingContent = activitySection.querySelector('.activity-content-preview');
+                    if (existingContent) {
+                        existingContent.remove();
+                    }
+                    clearInterval(progressInterval);
+                    return;
+                }
+
+                noActivity.style.display = 'none';
+
+                // Remove existing activity content
+                const existingContent = activitySection.querySelector('.activity-content-preview');
+                if (existingContent) {
+                    existingContent.remove();
+                }
+
+                // Create activity content
+                const activityContent = document.createElement('div');
+                activityContent.className = 'activity-content-preview';
+
+                if (trackInfo.isPlaying) {
+                    activityContent.innerHTML = \`
+                        <div class="activity-header-preview">
+                            Listening to <strong>SoundCloud</strong>
+                        </div>
+                        <div class="activity-row-preview">
+                            <div class="activity-image-preview">
+                                <img src="\${trackInfo.artwork ? trackInfo.artwork.replace('50x50.', '300x300.') : ''}" alt="Track artwork" onerror="this.style.display='none'">
+                                \${displaySCSmallIcon ? \`
+                                    <div class="small-icon-preview">
+                                        <img src="https://cdn.discordapp.com/app-assets/1090770350251458592/1090771481627197580.png?size=160" alt="SoundCloud" style="width: 16px; height: 16px; border-radius: 50%;">
+                                    </div>
+                                \` : ''}
+                            </div>
+                            <div class="activity-details-preview">
+                                <div class="activity-name-preview">\${trackInfo.title || 'Unknown Track'}</div>
+                                <div class="activity-details-text-preview">by \${trackInfo.author || 'Unknown Artist'}</div>
+                                <div class="progress-bar-container-preview">
+                                    <div class="progress-bar-preview">
+                                        <div class="progress-bar-fill-preview" id="progressFillPreview"></div>
+                                    </div>
+                                    <div class="time-display-preview">
+                                        <span id="currentTimePreview">\${trackInfo.elapsed || '0:00'}</span>
+                                        <span id="totalTimePreview">\${trackInfo.duration || '0:00'}</span>
+                                    </div>
+                                </div>
+                                \${displayButtons && trackInfo.url ? \`
+                                    <div class="activity-buttons-preview">
+                                        <button class="activity-button-preview" onclick="window.open('\${trackInfo.url}', '_blank')">
+                                            ▶️ Listen on SoundCloud
+                                        </button>
+                                    </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                    \`;
+
+                    // Start progress update
+                    startProgressUpdate(trackInfo);
+                } else if (displayWhenIdling) {
+                    // Paused/idle state
+                    activityContent.innerHTML = \`
+                        <div class="activity-header-preview">
+                            <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
+                                <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                            </svg>
+                            Using <strong>SoundCloud</strong>
+                        </div>
+                        <div class="activity-row-preview">
+                            <div class="activity-image-preview">
+                                <svg class="soundcloud-icon-preview" viewBox="0 0 24 24" style="width: 30px; height: 30px; margin: 15px;">
+                                    <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                                </svg>
+                            </div>
+                            <div class="activity-details-preview">
+                                <div class="activity-details-text-preview">Paused</div>
+                            </div>
+                        </div>
+                    \`;
+                }
+
+                activitySection.appendChild(activityContent);
+            }
+
+            function startProgressUpdate(trackInfo) {
+                clearInterval(progressInterval);
+                
+                if (!trackInfo.isPlaying || !trackInfo.elapsed || !trackInfo.duration) {
+                    return;
+                }
+
+                const startTime = Date.now();
+                const elapsedMs = parseTimeToMs(trackInfo.elapsed);
+                const totalMs = parseTimeToMs(trackInfo.duration);
+
+                function updateProgress() {
+                    const now = Date.now();
+                    const currentElapsed = elapsedMs + (now - startTime);
+                    const progress = Math.min((currentElapsed / totalMs) * 100, 100);
+
+                    const progressFill = document.getElementById('progressFillPreview');
+                    const currentTimeEl = document.getElementById('currentTimePreview');
+
+                    if (progressFill) {
+                        progressFill.style.width = \`\${progress}%\`;
+                    }
+                    
+                    if (currentTimeEl) {
+                        currentTimeEl.textContent = formatTime(currentElapsed);
+                    }
+
+                    // Stop when track ends
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                }
+
+                // Update immediately
+                updateProgress();
+                
+                // Update every second
+                progressInterval = setInterval(updateProgress, 1000);
+            }
+
+            // Listen for track updates
+            ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
+                updatePreview(trackInfo);
+            });
+
+            // Update preview when display settings change
+            document.getElementById('displayWhenIdling').addEventListener('change', () => {
+                if (currentTrack) {
+                    setTimeout(() => updatePreview(currentTrack), 100);
+                }
+            });
+
+            document.getElementById('displaySCSmallIcon').addEventListener('change', () => {
+                if (currentTrack) {
+                    setTimeout(() => updatePreview(currentTrack), 100);
+                }
+            });
+
+            document.getElementById('displayButtons').addEventListener('change', () => {
+                if (currentTrack) {
+                    setTimeout(() => updatePreview(currentTrack), 100);
+                }
+            });
+
+            // Initialize preview with current track if available
+            let currentPreviewTrack = null;
+            let previewProgressInterval = null;
+
+            function updatePreviewTrackInfo(trackInfo) {
+                currentPreviewTrack = trackInfo;
+                const activitySection = document.getElementById('activitySectionPreview');
+                const noActivity = document.getElementById('noActivityPreview');
+
+                if (!trackInfo || (!trackInfo.isPlaying && !${this.store.get('displayWhenIdling', false)})) {
+                    if (noActivity) noActivity.style.display = 'block';
+                    const existingContent = activitySection?.querySelector('.activity-content-preview');
+                    if (existingContent) existingContent.remove();
+                    clearInterval(previewProgressInterval);
+                    return;
+                }
+
+                if (noActivity) noActivity.style.display = 'none';
+
+                // Remove existing activity content
+                const existingContent = activitySection?.querySelector('.activity-content-preview');
+                if (existingContent) {
+                    existingContent.remove();
+                }
+
+                // Create activity content
+                const activityContent = document.createElement('div');
+                activityContent.className = 'activity-content-preview';
+
+                if (trackInfo.isPlaying) {
+                    activityContent.innerHTML = \`
+                        <div class="activity-header-preview">
+                            Listening to <strong>SoundCloud</strong>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                            <div class="activity-image-preview">
+                                <img src="\${trackInfo.artwork ? trackInfo.artwork.replace('50x50.', '300x300.') : ''}" alt="Track artwork" onerror="this.style.display='none'">
+                                \${${this.store.get('displaySCSmallIcon', false)} ? \`
+                                    <div class="small-icon-preview">
+                                        <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
+                                            <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                                        </svg>
+                                    </div>
+                                \` : ''}
+                            </div>
+                            <div class="activity-details-preview">
+                                <div class="activity-name-preview">\${trackInfo.title || 'Unknown Track'}</div>
+                                <div class="activity-details-text-preview">by \${trackInfo.author || 'Unknown Artist'}</div>
+                                <div class="progress-bar-container-preview">
+                                    <div class="progress-bar-preview">
+                                        <div class="progress-bar-fill-preview" id="progressFillPreview"></div>
+                                    </div>
+                                    <div class="time-display-preview">
+                                        <span id="currentTimePreview">\${trackInfo.elapsed || '0:00'}</span>
+                                        <span id="totalTimePreview">\${trackInfo.duration || '0:00'}</span>
+                                    </div>
+                                </div>
+                                \${${this.store.get('displayButtons', false)} && trackInfo.url ? \`
+                                    <div class="activity-buttons-preview">
+                                        <button class="activity-button-preview" onclick="require('electron').shell.openExternal('\${trackInfo.url}')">
+                                            ▶️ Listen on SoundCloud
+                                        </button>
+                                    </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                    \`;
+
+                    // Start progress update for preview
+                    startPreviewProgressUpdate(trackInfo);
+                } else {
+                    // Paused/idle state
+                    activityContent.innerHTML = \`
+                        <div class="activity-header-preview">
+                            <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
+                                <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                            </svg>
+                            Using <strong>SoundCloud</strong>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                            <div class="activity-image-preview">
+                                <svg class="soundcloud-icon-preview" viewBox="0 0 24 24" style="width: 30px; height: 30px; margin: 15px;">
+                                    <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
+                                </svg>
+                            </div>
+                            <div class="activity-details-preview">
+                                <div class="activity-details-text-preview">Paused</div>
+                            </div>
+                        </div>
+                    \`;
+                }
+
+                if (activitySection) {
+                    activitySection.appendChild(activityContent);
+                }
+            }
+
+            function parseTimeToMsPreview(time) {
+                if (!time) return 0;
+                const isNegative = time.trim().startsWith('-');
+                const raw = isNegative ? time.trim().slice(1) : time.trim();
+                const parts = raw.split(':').map(p => Number(p));
+                let seconds = 0;
+                for (const part of parts) {
+                    seconds = seconds * 60 + (isNaN(part) ? 0 : part);
+                }
+                const ms = seconds * 1000;
+                return isNegative ? -ms : ms;
+            }
+
+            function formatTimePreview(ms) {
+                const totalSeconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
+            }
+
+            function startPreviewProgressUpdate(trackInfo) {
+                clearInterval(previewProgressInterval);
+                
+                if (!trackInfo.isPlaying || !trackInfo.elapsed || !trackInfo.duration) {
+                    return;
+                }
+
+                const startTime = Date.now();
+                const elapsedMs = parseTimeToMsPreview(trackInfo.elapsed);
+                const totalMs = parseTimeToMsPreview(trackInfo.duration);
+
+                function updatePreviewProgress() {
+                    const now = Date.now();
+                    const currentElapsed = elapsedMs + (now - startTime);
+                    const progress = Math.min((currentElapsed / totalMs) * 100, 100);
+
+                    const progressFill = document.getElementById('progressFillPreview');
+                    const currentTimeEl = document.getElementById('currentTimePreview');
+
+                    if (progressFill) {
+                        progressFill.style.width = \`\${progress}%\`;
+                    }
+                    
+                    if (currentTimeEl) {
+                        currentTimeEl.textContent = formatTimePreview(currentElapsed);
+                    }
+
+                    // Stop when track ends
+                    if (progress >= 100) {
+                        clearInterval(previewProgressInterval);
+                    }
+                }
+
+                // Update immediately
+                updatePreviewProgress();
+                
+                // Update every second
+                previewProgressInterval = setInterval(updatePreviewProgress, 1000);
+            }
+
+            // Listen for track updates from main process
+            ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
+                updatePreviewTrackInfo(trackInfo);
             });
 
             // Apply all changes

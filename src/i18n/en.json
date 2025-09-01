@@ -1,5 +1,6 @@
 {
     "listenOnSoundcloud": "Listen on SoundCloud",
+    "listeningToSoundcloud": "Listening to SoundCloud",
     "previous": "Previous",
     "next": "Next",
     "play": "Play",
@@ -27,6 +28,9 @@
     "displaySmallIcon": "Display small icon",
     "displayButtons": "Display buttons",
     "useArtistInStatusLine": "Use artist name instead of application name",
+    "enableRichPresencePreview": "Enable Preview",
+    "richPresencePreview": "Preview",
+    "richPresencePreviewDescription": "Show a live preview of your Discord Rich Presence in the settings panel",
     "applyChanges": "Apply Changes",
     "minimizeToTray": "Enable Minimize to Tray",
     "enableNavigationControls": "Enable Navigation Controls",

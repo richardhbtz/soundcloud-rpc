@@ -49,6 +49,7 @@ const store = new Store({
         minimizeToTray: false,
         navigationControlsEnabled: false,
         trackParserEnabled: true,
+        richPresencePreviewEnabled: false,
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -472,6 +473,11 @@ async function init() {
     setupTranslationHandlers();
     setupAudioHandler();
 
+    // Provide current track info to settings preview on demand
+    ipcMain.handle('get-current-track', () => {
+        return lastTrackInfo;
+    });
+
     // Configure session
     const session = contentView.webContents.session;
     const userAgent =
@@ -894,6 +900,9 @@ function setupTranslationHandlers() {
             displaySmallIcon: translationService.translate('displaySmallIcon'),
             displayButtons: translationService.translate('displayButtons'),
             useArtistInStatusLine: translationService.translate('useArtistInStatusLine'),
+            enableRichPresencePreview: translationService.translate('enableRichPresencePreview'),
+            richPresencePreview: translationService.translate('richPresencePreview'),
+            richPresencePreviewDescription: translationService.translate('richPresencePreviewDescription'),
             applyChanges: translationService.translate('applyChanges'),
             minimizeToTray: translationService.translate('minimizeToTray'),
             customThemes: translationService.translate('customThemes'),
@@ -934,6 +943,12 @@ function setupAudioHandler() {
             }
 
             await presenceService.updatePresence(result);
+            
+            // Update the rich presence preview in settings
+            if (settingsManager) {
+                settingsManager.getView().webContents.send('presence-preview-update', result);
+            }
+            
             if (thumbarService)
                 thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
         }
