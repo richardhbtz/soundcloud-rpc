@@ -71,6 +71,8 @@ let themeService: ThemeService;
 let tray: Tray | null = null;
 let isQuitting = false;
 const devMode = process.argv.includes('--dev')
+// Header height for header BrowserView
+const HEADER_HEIGHT = 32;
 
 // Add missing property to app
 declare global {
@@ -258,7 +260,6 @@ let lastTrackInfo = {
 function setupWindowControls() {
     if (!mainWindow) return;
 
-    const HEADER_HEIGHT = 32;
 
     ipcMain.on('minimize-window', () => {
         if (mainWindow) mainWindow.minimize();
@@ -449,6 +450,10 @@ async function init() {
     // Initialize services
     translationService = new TranslationService();
     themeService = new ThemeService(store);
+    // Hot-reload custom theme CSS when files change
+    themeService.onCustomThemeUpdated(() => {
+        applyThemeToContent(isDarkTheme);
+    });
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     proxyService = new ProxyService(mainWindow, store, queueToastNotification);
@@ -700,6 +705,29 @@ function applyThemeToContent(isDark: boolean) {
 
     const customThemeCSS = themeService.getCurrentCustomThemeCSS();
 
+    // Split CSS into sections using comment markers in the theme file:
+    // /* @target all|content|header|settings */ ... /* @end */
+    const sections = (function splitSections(css: string | null) {
+        const res = { all: '', content: '', header: '', settings: '' } as Record<string, string>;
+        if (!css) return res;
+        const regex = /\/\*\s*@target\s+(all|content|header|settings)\s*\*\/[\s\S]*?(?=(\/\*\s*@target\s+(?:all|content|header|settings)\s*\*\/)|$)/gi;
+        let match: RegExpExecArray | null;
+        let any = false;
+        while ((match = regex.exec(css)) !== null) {
+            any = true;
+            const block = match[0];
+            const targetMatch = /@target\s+(all|content|header|settings)/i.exec(block);
+            const target = (targetMatch?.[1] || '').toLowerCase();
+            const body = block.replace(/^[\s\S]*?\*\//, '').trim();
+            res[target] += (res[target] ? '\n' : '') + body;
+        }
+        if (!any) {
+            // No markers: treat entire CSS as content
+            res.content = css;
+        }
+        return res;
+    })(customThemeCSS);
+
     const themeScript = `
         (function() {
             try {
@@ -756,12 +784,12 @@ function applyThemeToContent(isDark: boolean) {
                 }
                 document.head.appendChild(style);
 
-                // Apply custom theme CSS if available
-                const customThemeCSS = \`${customThemeCSS || ''}\`;
-                if (customThemeCSS.trim()) {
+                // Apply custom theme CSS (content section + all) if available
+                const contentCSS = \`${(sections.all + (sections.all && sections.content ? '\n' : '') + sections.content) || ''}\`;
+                if (contentCSS.trim()) {
                     const customStyle = document.createElement('style');
                     customStyle.id = 'custom-theme-style';
-                    customStyle.textContent = customThemeCSS;
+                    customStyle.textContent = contentCSS;
                     
                     const existingCustomStyle = document.getElementById('custom-theme-style');
                     if (existingCustomStyle) {
@@ -784,7 +812,54 @@ function applyThemeToContent(isDark: boolean) {
     `;
 
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
+
+    // Also inject into header and settings views using their specific sections
+    const headerCSS = (sections.all + (sections.all && sections.header ? '\n' : '') + sections.header) || '';
+    if (headerView && headerView.webContents) {
+        const headerScript = `
+            (function(){
+                try {
+                    const css = \`${headerCSS}\`;
+                    const id = 'custom-theme-style';
+                    const existing = document.getElementById(id);
+                    if (existing) existing.remove();
+                    if (css.trim()){
+                        const style = document.createElement('style');
+                        style.id = id;
+                        style.textContent = css;
+                        document.head.appendChild(style);
+                        console.log('Applied custom header theme CSS');
+                    }
+                } catch(e){ console.error('Header theme inject error:', e); }
+            })();
+        `;
+        headerView.webContents.executeJavaScript(headerScript).catch(console.error);
+    }
+
+    if (settingsManager) {
+        const settingsCSS = (sections.all + (sections.all && sections.settings ? '\n' : '') + sections.settings) || '';
+        const settingsScript = `
+            (function(){
+                try {
+                    const css = \`${settingsCSS}\`;
+                    const id = 'custom-theme-style';
+                    const existing = document.getElementById(id);
+                    if (existing) existing.remove();
+                    if (css.trim()){
+                        const style = document.createElement('style');
+                        style.id = id;
+                        style.textContent = css;
+                        document.head.appendChild(style);
+                        console.log('Applied custom settings theme CSS');
+                    }
+                } catch(e){ console.error('Settings theme inject error:', e); }
+            })();
+        `;
+        settingsManager.getView().webContents.executeJavaScript(settingsScript).catch(console.error);
+    }
+
 }
+
 
 function setupShortcuts(contents: WebContents) {
     if (!mainWindow || !contentView) return;

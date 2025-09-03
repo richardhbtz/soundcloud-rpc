@@ -1,7 +1,8 @@
 import { app, ipcMain } from 'electron';
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync, watch } from 'fs';
 import { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
+import { EventEmitter } from 'events';
 
 export interface CustomTheme {
     name: string;
@@ -14,6 +15,8 @@ export class ThemeService {
     private customThemes: Map<string, CustomTheme> = new Map();
     private currentCustomTheme: string | null = null;
     private themesPath: string;
+    private emitter = new EventEmitter();
+    private stopWatching?: () => void;
 
     constructor(store: ElectronStore) {
         this.store = store;
@@ -21,6 +24,7 @@ export class ThemeService {
         this.ensureThemesDirectory();
         this.loadCustomThemes();
         this.setupIpcHandlers();
+        this.startWatchingThemesFolder();
         
         const savedTheme = this.store.get('customTheme') as string;
         if (savedTheme && this.customThemes.has(savedTheme)) {
@@ -73,6 +77,64 @@ export class ThemeService {
         }
     }
 
+    private startWatchingThemesFolder(): void {
+        try {
+            if (!existsSync(this.themesPath)) return;
+
+            // Close any previous watcher
+            if (this.stopWatching) {
+                this.stopWatching();
+                this.stopWatching = undefined;
+            }
+
+            const watcher = watch(this.themesPath, { persistent: true }, (eventType, filename) => {
+                if (!filename || extname(filename).toLowerCase() !== '.css') return;
+
+                // Debounce rapid events per file
+                const themeName = basename(filename, '.css');
+                const filePath = join(this.themesPath, filename);
+
+                const handleChange = () => {
+                    try {
+                        if (eventType === 'rename') {
+                            // File added or removed or renamed – refresh all
+                            this.refreshThemes();
+                            // If current theme was removed, clear it
+                            if (this.currentCustomTheme && !this.customThemes.has(this.currentCustomTheme)) {
+                                this.currentCustomTheme = null;
+                                this.store.delete('customTheme');
+                                this.emitter.emit('custom-theme-updated', null);
+                                return;
+                            }
+                        } else if (eventType === 'change') {
+                            // Update just this file
+                            if (existsSync(filePath)) {
+                                const css = readFileSync(filePath, 'utf-8');
+                                this.customThemes.set(themeName, { name: themeName, filePath, css });
+                            }
+                        }
+
+                        // If the changed/added file is the current theme, notify listeners
+                        if (this.currentCustomTheme && this.currentCustomTheme === themeName) {
+                            this.emitter.emit('custom-theme-updated', themeName);
+                        }
+                    } catch (err) {
+                        console.error('Error handling theme file change:', err);
+                    }
+                };
+
+                // Minimal debounce using microtask queue (avoids extra timers and still coalesces bursts)
+                Promise.resolve().then(handleChange);
+            });
+
+            this.stopWatching = () => {
+                try { watcher.close(); } catch {}
+            };
+        } catch (error) {
+            console.error('Failed to watch themes folder:', error);
+        }
+    }
+
     private setupIpcHandlers(): void {
         ipcMain.handle('get-custom-themes', () => {
             return Array.from(this.customThemes.values()).map(theme => ({
@@ -121,6 +183,8 @@ export class ThemeService {
 
             this.currentCustomTheme = themeName;
             this.store.set('customTheme', themeName);
+            // Notify listeners so UI can update immediately
+            this.emitter.emit('custom-theme-updated', themeName);
             
             console.log(`Applied custom theme: ${themeName}`);
             return true;
@@ -134,6 +198,8 @@ export class ThemeService {
         try {
             this.currentCustomTheme = null;
             this.store.delete('customTheme');
+            // Notify listeners to remove style
+            this.emitter.emit('custom-theme-updated', null);
             
             console.log('Removed custom theme');
             return true;
@@ -163,5 +229,11 @@ export class ThemeService {
     public refreshThemes(): void {
         this.customThemes.clear();
         this.loadCustomThemes();
+    }
+
+    // Subscribe to hot-reload notifications when current theme CSS changes
+    public onCustomThemeUpdated(listener: (themeName: string | null) => void): () => void {
+        this.emitter.on('custom-theme-updated', listener);
+        return () => this.emitter.off('custom-theme-updated', listener);
     }
 }
