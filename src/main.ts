@@ -578,10 +578,11 @@ async function init() {
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
 
-        notificationManager.show("Press 'F1' to open settings");
-
-        // Get the current language from the page
+        // Get the current language from the page FIRST
         await getLanguage();
+
+        // Now show the notification with the correct language
+        notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
 
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
@@ -978,10 +979,18 @@ function setupTranslationHandlers() {
             proxyPort: translationService.translate('proxyPort'),
             enableProxy: translationService.translate('enableProxy'),
             enableLastFm: translationService.translate('enableLastFm'),
+            lastfm: translationService.translate('lastfm'),
             lastFmApiKey: translationService.translate('lastFmApiKey'),
             lastFmSecret: translationService.translate('lastFmApiSecret'),
             createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
             noCallbackUrl: translationService.translate('noCallbackUrl'),
+            webhooks: translationService.translate('webhooks'),
+            discord: translationService.translate('discord'),
+            enableWebhooks: translationService.translate('enableWebhooks'),
+            webhookUrl: translationService.translate('webhookUrl'),
+            webhookTrigger: translationService.translate('webhookTrigger'),
+            webhookDescription: translationService.translate('webhookDescription'),
+            showWebhookExample: translationService.translate('showWebhookExample'),
             enableRichPresence: translationService.translate('enableRichPresence'),
             displayWhenPaused: translationService.translate('displayWhenPaused'),
             displaySmallIcon: translationService.translate('displaySmallIcon'),
@@ -1001,7 +1010,11 @@ function setupTranslationHandlers() {
             noTheme: translationService.translate('noTheme'),
             openThemesFolder: translationService.translate('openThemesFolder'),
             refreshThemes: translationService.translate('refreshThemes'),
-            customThemeDescription: translationService.translate('customThemeDescription')
+            customThemeDescription: translationService.translate('customThemeDescription'),
+            pressF1ToOpenSettings: translationService.translate('pressF1ToOpenSettings'),
+            closeSettings: translationService.translate('closeSettings'),
+            noActivityToShow: translationService.translate('noActivityToShow'),
+            richPresencePreviewTitle: translationService.translate('richPresencePreviewTitle')
         };
     });
 }

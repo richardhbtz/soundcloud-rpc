@@ -14,10 +14,13 @@
     "proxyPort": "Porta do Proxy",
     "enableProxy": "Ativar Proxy",
     "enableLastFm": "Ativar scrobbling",
+    "lastfm": "Last.fm",
     "lastFmApiKey": "API Key do Last.fm",
     "lastFmApiSecret": "API Secret do Last.fm",
     "createApiKeyLastFm": "Criar API Key",
     "noCallbackUrl": "Nenhuma URL de callback necessária",
+    "webhooks": "Webhooks",
+    "discord": "Discord",
     "enableWebhooks": "Ativar Webhooks",
     "webhookUrl": "URL do Webhook",
     "webhookTrigger": "Disparar em",
@@ -42,5 +45,9 @@
     "noTheme": "Sem Tema",
     "openThemesFolder": "Abrir Pasta de Temas",
     "refreshThemes": "Atualizar Temas",
-    "customThemeDescription": "Coloque arquivos .css na pasta de temas para personalizar a interface do SoundCloud"
+    "customThemeDescription": "Coloque arquivos .css na pasta de temas para personalizar a interface do SoundCloud",
+    "pressF1ToOpenSettings": "Pressione 'F1' para abrir configurações",
+    "closeSettings": "Fechar configurações",
+    "noActivityToShow": "Nenhuma atividade para mostrar",
+    "richPresencePreviewTitle": "Visualização do Rich Presence"
 }
