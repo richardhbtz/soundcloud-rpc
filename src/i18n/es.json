@@ -35,6 +35,7 @@
     "enableNavigationControls": "Activar Controles de Navegación",
     "enableTrackParser": "Activar Analizador de Pistas",
     "trackParserDescription": "Analizar títulos de pistas para extraer nombres de artistas y pistas automáticamente",
+    "enableAutoUpdater": "Activar Actualizador Automático",
     "showWebhookExample": "Mostrar Ejemplo de Datos",
     "customThemes": "Temas Personalizados",
     "selectCustomTheme": "Seleccionar Tema Personalizado",

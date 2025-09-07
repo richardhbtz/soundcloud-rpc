@@ -50,6 +50,7 @@ const store = new Store({
         navigationControlsEnabled: false,
         trackParserEnabled: true,
         richPresencePreviewEnabled: false,
+        autoUpdaterEnabled: true,
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -96,6 +97,11 @@ let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
 // Update handling
 function setupUpdater() {
+    if (!store.get('autoUpdaterEnabled', true)) {
+        console.log('Auto-updater disabled by user setting');
+        return;
+    }
+    
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
@@ -634,6 +640,12 @@ async function init() {
         } else if (key === 'navigationControlsEnabled') {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('navigation-controls-toggle', data.value);
+            }
+        } else if (key === 'autoUpdaterEnabled') {
+            if (data.value) {
+                setupUpdater();
+            } else {
+                console.log('Auto-updater disabled by user');
             }
         } else if (key === 'customTheme') {
             if (data.value === 'none') {

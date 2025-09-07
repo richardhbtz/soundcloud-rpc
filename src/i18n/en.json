@@ -36,6 +36,7 @@
     "enableNavigationControls": "Enable Navigation Controls",
     "enableTrackParser": "Enable Track Parser",
     "trackParserDescription": "Parse track titles to extract artist and track names automatically",
+    "enableAutoUpdater": "Enable Auto Updater",
     "showWebhookExample": "Show Example Payload",
     "customThemes": "Custom Themes",
     "selectCustomTheme": "Select Custom Theme",

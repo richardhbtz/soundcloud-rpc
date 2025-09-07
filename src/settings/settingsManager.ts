@@ -745,6 +745,13 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
+                    <span>${this.translationService.translate('enableAutoUpdater')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="autoUpdaterEnabled" ${this.store.get('autoUpdaterEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
                     <span>${this.translationService.translate('enableTrackParser')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="trackParserEnabled" ${this.store.get('trackParserEnabled', true) ? 'checked' : ''}>
@@ -1168,6 +1175,10 @@ export class SettingsManager {
 
             document.getElementById('trackParserEnabled').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
+            });
+
+            document.getElementById('autoUpdaterEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'autoUpdaterEnabled', value: e.target.checked });
             });
 
             // Rich Presence Preview
