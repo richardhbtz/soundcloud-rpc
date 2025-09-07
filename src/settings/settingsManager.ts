@@ -715,61 +715,68 @@ export class SettingsManager {
                 font-style: italic;
             }
         </style>
-        <button class="close-btn" id="close-settings" title="Close settings">
+        <button class="close-btn" id="close-settings" title="${this.translationService.translate('closeSettings')}" data-i18n-title="closeSettings">
             <svg viewBox="0 0 24 24">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
         </button>
         <div class="settings-panel">
             <div class="setting-group">
-                <h2>${this.translationService.translate('client')}</h2>
+                <h2 data-i18n="client">${this.translationService.translate('client')}</h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('darkMode')}</span>
+                    <span data-i18n="darkMode">${this.translationService.translate('darkMode')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="darkMode" ${theme !== 'light' ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('minimizeToTray')}</span>
+                    <span data-i18n="minimizeToTray">${this.translationService.translate('minimizeToTray')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="minimizeToTray" ${this.store.get('minimizeToTray', true) ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableNavigationControls')}</span>
+                    <span data-i18n="enableNavigationControls">${this.translationService.translate('enableNavigationControls')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="navigationControlsEnabled" ${this.store.get('navigationControlsEnabled', true) ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableTrackParser')}</span>
+                    <span data-i18n="enableAutoUpdater">${this.translationService.translate('enableAutoUpdater')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="autoUpdaterEnabled" ${this.store.get('autoUpdaterEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="enableTrackParser">${this.translationService.translate('enableTrackParser')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="trackParserEnabled" ${this.store.get('trackParserEnabled', true) ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="description">${this.translationService.translate('trackParserDescription')}</div>
+                <div class="description" data-i18n="trackParserDescription">${this.translationService.translate('trackParserDescription')}</div>
             </div>
 
             <div class="setting-group">
-                <h2>${this.translationService.translate('adBlocker')}</h2>
+                <h2 data-i18n="adBlocker">${this.translationService.translate('adBlocker')}</h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableAdBlocker')}</span>
+                    <span data-i18n="enableAdBlocker">${this.translationService.translate('enableAdBlocker')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="adBlocker" ${this.store.get('adBlocker') ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="description">${this.translationService.translate('changesAppRestart')}</div>
+                <div class="description" data-i18n="changesAppRestart">${this.translationService.translate('changesAppRestart')}</div>
             </div>
 
             <div class="setting-group">
-                <h2>${this.translationService.translate('proxy')}</h2>
+                <h2 data-i18n="proxy">${this.translationService.translate('proxy')}</h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableProxy')}</span>
+                    <span data-i18n="enableProxy">${this.translationService.translate('enableProxy')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="proxyEnabled" ${this.store.get('proxyEnabled') ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -778,24 +785,24 @@ export class SettingsManager {
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" value="${
+                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${
                         this.store.get('proxyHost') || ''
                     }">
-                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" value="${
+                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${
                         this.store.get('proxyPort') || ''
                     }">
                 </div>
             </div>
 
             <div class="setting-group">
-                <h2>
-                    Last.fm
+                <h2 data-i18n="lastfm">
+                    ${this.translationService.translate('lastfm')}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M10.599 17.211l-.881-2.393s-1.433 1.596-3.579 1.596c-1.9 0-3.249-1.652-3.249-4.296 0-3.385 1.708-4.596 3.388-4.596 2.418 0 3.184 1.568 3.845 3.578l.871 2.751c.87 2.672 2.508 4.818 7.238 4.818 3.386 0 5.673-1.037 5.673-3.77 0-2.209-1.258-3.358-3.595-3.906l-1.738-.381c-1.193-.274-1.546-.763-1.546-1.59 0-.934.736-1.485 1.937-1.485 1.313 0 2.024.488 2.14 1.652l2.745-.33c-.225-2.511-1.937-3.541-4.745-3.541-2.479 0-4.897.934-4.897 3.947 0 1.877.902 3.063 3.172 3.608l1.871.439c1.402.332 1.866.916 1.866 1.713 0 1.021-.992 1.441-2.869 1.441-2.779 0-3.936-1.457-4.596-3.469l-.901-2.75c-1.156-3.574-3.004-4.896-6.669-4.896C2.147 5.297 0 7.802 0 12.244c0 4.325 2.208 6.638 6.169 6.638 3.193 0 4.43-1.671 4.43-1.671z"/>
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableLastFm')}</span>
+                    <span data-i18n="enableLastFm">${this.translationService.translate('enableLastFm')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="lastFmEnabled" ${this.store.get('lastFmEnabled') ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -804,28 +811,28 @@ export class SettingsManager {
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" value="${
+                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${
                         this.store.get('lastFmApiKey') || ''
                     }">
-                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" value="${
+                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${
                         this.store.get('lastFmSecret') || ''
                     }">
                 </div>
                 <div class="description">
-                    <a href="#" id="createLastFmApiKey" class="link">${this.translationService.translate('createApiKeyLastFm')}</a>
-                    - ${this.translationService.translate('noCallbackUrl')}
+                    <a href="#" id="createLastFmApiKey" class="link" data-i18n="createApiKeyLastFm">${this.translationService.translate('createApiKeyLastFm')}</a>
+                    - <span data-i18n="noCallbackUrl">${this.translationService.translate('noCallbackUrl')}</span>
                 </div>
             </div>
 
             <div class="setting-group">
-                <h2>
-                    Webhooks
+                <h2 data-i18n="webhooks">
+                    ${this.translationService.translate('webhooks')}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M10.59 13.41c.41.39.41 1.03 0 1.42-.39.39-1.03.39-1.42 0a5.003 5.003 0 0 1 0-7.07l3.54-3.54a5.003 5.003 0 0 1 7.07 0 5.003 5.003 0 0 1 0 7.07l-1.49 1.49c.01-.82-.12-1.64-.4-2.42l.47-.48a2.982 2.982 0 0 0 0-4.24 2.982 2.982 0 0 0-4.24 0l-3.53 3.53a2.982 2.982 0 0 0 0 4.24zm2.82-4.24c.39-.39 1.03-.39 1.42 0a5.003 5.003 0 0 1 0 7.07l-3.54 3.54a5.003 5.003 0 0 1-7.07 0 5.003 5.003 0 0 1 0-7.07l1.49-1.49c-.01.82.12 1.64.4 2.42l-.47.48a2.982 2.982 0 0 0 0 4.24 2.982 2.982 0 0 0 4.24 0l3.53-3.53a2.982 2.982 0 0 0 0-4.24z"/>
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableWebhooks')}</span>
+                    <span data-i18n="enableWebhooks">${this.translationService.translate('enableWebhooks')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="webhookEnabled" ${this.store.get('webhookEnabled') ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -834,11 +841,11 @@ export class SettingsManager {
                 <div class="input-group" id="webhookFields" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
                 }">
-                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" value="${
+                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${
                         this.store.get('webhookUrl') || ''
                     }">
                     <div class="setting-item">
-                        <span>${this.translationService.translate('webhookTrigger')}</span>
+                        <span data-i18n="webhookTrigger">${this.translationService.translate('webhookTrigger')}</span>
                         <div class="input-with-unit">
                             <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
                                 this.store.get('webhookTriggerPercentage') || 50
@@ -847,14 +854,14 @@ export class SettingsManager {
                         </div>
                     </div>
                 </div>
-                <div class="description">
+                <div class="description" data-i18n="webhookDescription">
                     ${this.translationService.translate('webhookDescription')}
                 </div>
                 <div class="webhook-example-container" id="webhookFields2" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
                 }">
                     <div class="example-toggle" id="webhookExampleToggle">
-                        <span class="example-toggle-text">${this.translationService.translate('showWebhookExample')}</span>
+                        <span class="example-toggle-text" data-i18n="showWebhookExample">${this.translationService.translate('showWebhookExample')}</span>
                         <svg class="example-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
                         </svg>
@@ -873,14 +880,14 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
-                <h2>
-                    Discord
+                <h2 data-i18n="discord">
+                    ${this.translationService.translate('discord')}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.864-.608 1.249a18.707 18.707 0 0 0-5.487 0 12.505 12.505 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.369a.07.07 0 0 0-.032.027C.533 9.045-.32 13.579.099 18.057a.082.082 0 0 0 .031.056 19.911 19.911 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.464-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.105 13.184 13.184 0 0 1-1.872-.9.077.077 0 0 1-.008-.128c.126-.094.252-.192.373-.291a.075.075 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.122.099.247.197.374.291a.077.077 0 0 1-.006.128 12.509 12.509 0 0 1-1.873.899.076.076 0 0 0-.04.106c.36.698.772 1.363 1.225 1.993a.076.076 0 0 0 .084.028 19.876 19.876 0 0 0 6.002-3.03.077.077 0 0 0 .031-.056c.5-5.177-.838-9.665-3.546-13.661a.067.067 0 0 0-.033-.027zM8.02 15.331c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.955 2.418-2.156 2.418zm7.974 0c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.213 0 2.187 1.096 2.156 2.419 0 1.333-.943 2.418-2.156 2.418z"/>
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableRichPresence')}</span>
+                    <span data-i18n="enableRichPresence">${this.translationService.translate('enableRichPresence')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="discordRichPresence" ${
                             this.store.get('discordRichPresence') ? 'checked' : ''
@@ -889,7 +896,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('displayWhenPaused')}</span>
+                    <span data-i18n="displayWhenPaused">${this.translationService.translate('displayWhenPaused')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="displayWhenIdling" ${
                             this.store.get('displayWhenIdling') ? 'checked' : ''
@@ -898,7 +905,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('displaySmallIcon')}</span>
+                    <span data-i18n="displaySmallIcon">${this.translationService.translate('displaySmallIcon')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="displaySCSmallIcon" ${
                             this.store.get('displaySCSmallIcon') ? 'checked' : ''
@@ -907,7 +914,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('displayButtons')}</span>
+                    <span data-i18n="displayButtons">${this.translationService.translate('displayButtons')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="displayButtons" ${
                             this.store.get('displayButtons') ? 'checked' : ''
@@ -916,7 +923,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('useArtistInStatusLine')}</span>
+                    <span data-i18n="useArtistInStatusLine">${this.translationService.translate('useArtistInStatusLine')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="useArtistInStatusLineToggle" ${
                             (this.store.get('statusDisplayType') as number) === 1 ? 'checked' : ''
@@ -925,7 +932,7 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('enableRichPresencePreview')}</span>
+                    <span data-i18n="enableRichPresencePreview">${this.translationService.translate('enableRichPresencePreview')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="richPresencePreviewEnabled" ${
                             this.store.get('richPresencePreviewEnabled', false) ? 'checked' : ''
@@ -933,7 +940,7 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="description">${this.translationService.translate('richPresencePreviewDescription')}</div>
+                <div class="description" data-i18n="richPresencePreviewDescription">${this.translationService.translate('richPresencePreviewDescription')}</div>
                 
                 <!-- Rich Presence Preview -->
                 <div class="preview-container" id="presencePreviewContainer" style="display: ${
@@ -941,12 +948,12 @@ export class SettingsManager {
                 }">
                     <div class="preview-panel">
                         <div class="preview-header-inline">
-                            <span class="preview-title-inline">Rich Presence Preview</span>
+                            <span class="preview-title-inline" data-i18n="richPresencePreviewTitle">${this.translationService.translate('richPresencePreviewTitle')}</span>
                         </div>
                         <div class="discord-preview">
                             <div class="activity-section-preview" id="activitySectionPreview">
-                                <div class="no-activity-preview" id="noActivityPreview">
-                                    No activity to show
+                                <div class="no-activity-preview" id="noActivityPreview" data-i18n="noActivityToShow">
+                                    ${this.translationService.translate('noActivityToShow')}
                                 </div>
                             </div>
                         </div>
@@ -955,7 +962,7 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
-                <h2>
+                <h2 data-i18n="customThemes">
                     ${this.translationService.translate('customThemes')}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
@@ -963,20 +970,20 @@ export class SettingsManager {
                     </svg>
                 </h2>
                 <div class="setting-item">
-                    <span>${this.translationService.translate('selectCustomTheme')}</span>
+                    <span data-i18n="selectCustomTheme">${this.translationService.translate('selectCustomTheme')}</span>
                     <select id="customThemeSelector" class="theme-selector">
-                        <option value="none">${this.translationService.translate('noTheme')}</option>
+                        <option value="none" data-i18n="noTheme">${this.translationService.translate('noTheme')}</option>
                     </select>
                 </div>
                 <div class="theme-controls">
-                    <button id="openThemesFolder" class="theme-button">${this.translationService.translate('openThemesFolder')}</button>
-                    <button id="refreshThemes" class="theme-button">${this.translationService.translate('refreshThemes')}</button>
+                    <button id="openThemesFolder" class="theme-button" data-i18n="openThemesFolder">${this.translationService.translate('openThemesFolder')}</button>
+                    <button id="refreshThemes" class="theme-button" data-i18n="refreshThemes">${this.translationService.translate('refreshThemes')}</button>
                 </div>
-                <div class="description">${this.translationService.translate('customThemeDescription')}</div>
+                <div class="description" data-i18n="customThemeDescription">${this.translationService.translate('customThemeDescription')}</div>
             </div>
 
             <div class="setting-group">
-                <button class="button" id="applyChanges">${this.translationService.translate('applyChanges')}</button>
+                <button class="button" id="applyChanges" data-i18n="applyChanges">${this.translationService.translate('applyChanges')}</button>
             </div>
         </div>
         <script>
@@ -1168,6 +1175,10 @@ export class SettingsManager {
 
             document.getElementById('trackParserEnabled').addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
+            });
+
+            document.getElementById('autoUpdaterEnabled').addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'autoUpdaterEnabled', value: e.target.checked });
             });
 
             // Rich Presence Preview
@@ -1581,33 +1592,37 @@ export class SettingsManager {
             // Request translations from the main process
             ipcRenderer.on('update-translations', () => {
                 ipcRenderer.invoke('get-translations').then((translations) => {
-                    document.querySelector('.setting-group:nth-child(1) h2').textContent = translations.client || 'Client';
-                    document.querySelector('.setting-group:nth-child(1) .setting-item:nth-child(1) span').textContent = translations.darkMode || 'Dark Mode';
-                    
-                    document.querySelector('.setting-group:nth-child(1) .setting-item:nth-child(2) span').textContent = translations.minimizeToTray || 'Minimize to Tray';
+                    // Update all elements with data-i18n attributes
+                    document.querySelectorAll('[data-i18n]').forEach(element => {
+                        const key = element.getAttribute('data-i18n');
+                        if (key && translations[key]) {
+                            // Special handling for h2 elements that might contain SVG
+                            if (element.tagName === 'H2' && element.querySelector('svg')) {
+                                // Update only the text node, preserve SVG
+                                const svg = element.querySelector('svg');
+                                element.textContent = translations[key];
+                                if (svg) element.appendChild(svg);
+                            } else {
+                                element.textContent = translations[key];
+                            }
+                        }
+                    });
 
-                    document.querySelector('.setting-group:nth-child(2) h2').textContent = translations.adBlocker || 'Ad Blocker';
-                    document.querySelector('.setting-group:nth-child(2) .setting-item span').textContent = translations.enableAdBlocker || 'Enable Ad Blocker';
-                    document.querySelector('.setting-group:nth-child(2) .description').textContent = translations.changesAppRestart || 'Changes require app restart';
+                    // Update placeholder attributes
+                    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                        const key = element.getAttribute('data-i18n-placeholder');
+                        if (key && translations[key]) {
+                            element.setAttribute('placeholder', translations[key]);
+                        }
+                    });
 
-                    document.querySelector('.setting-group:nth-child(3) h2').textContent = translations.proxy || 'Proxy';
-                    document.querySelector('.setting-group:nth-child(3) .setting-item span').textContent = translations.enableProxy || 'Enable Proxy';
-                    document.getElementById('proxyHost').placeholder = translations.proxyHost || 'Proxy Host';
-                    document.getElementById('proxyPort').placeholder = translations.proxyPort || 'Proxy Port';
-                    
-                    document.querySelector('.setting-group:nth-child(4) .setting-item span').textContent = translations.enableLastFm || 'Enable scrobbling';
-                    document.querySelector('.setting-group:nth-child(4) .description .link').textContent = translations.createApiKeyLastFm || 'Create API Key';
-                    document.getElementById('lastFmApiKey').placeholder = translations.lastFmApiKey || 'Last.fm API Key';
-                    document.getElementById('lastFmSecret').placeholder = translations.lastFmSecret || 'Last.fm API Secret';
-                    document.querySelector('.setting-group:nth-child(4) .description').innerHTML = document.querySelector('.setting-group:nth-child(4) .description').innerHTML.replace(/- No callback URL needed/, '- ' + (translations.noCallbackUrl || 'No callback URL needed'));
-
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(1) span').textContent = translations.enableRichPresence || 'Enable Rich Presence';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(2) span').textContent = translations.displayWhenPaused || 'Display when paused';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(3) span').textContent = translations.displaySmallIcon || 'Display small icon';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(4) span').textContent = translations.displayButtons || 'Display buttons';
-                    document.querySelector('.setting-group:nth-child(5) .setting-item:nth-child(5) span').textContent = translations.useArtistInStatusLine || 'Use artist name in status line';
-                    
-                    document.querySelector('.setting-group:nth-child(6) .button').textContent = translations.applyChanges || 'Apply Changes';
+                    // Update title attributes (for tooltips)
+                    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+                        const key = element.getAttribute('data-i18n-title');
+                        if (key && translations[key]) {
+                            element.setAttribute('title', translations[key]);
+                        }
+                    });
                 });
             });
         `;
@@ -1621,6 +1636,8 @@ export class SettingsManager {
             document.body.style.opacity;
             document.body.classList.add('visible');
         `);
+        // Trigger translation updates when panel is shown
+        this.getView().webContents.send('update-translations');
     }
 
     private hide(): void {

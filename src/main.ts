@@ -50,6 +50,7 @@ const store = new Store({
         navigationControlsEnabled: false,
         trackParserEnabled: true,
         richPresencePreviewEnabled: false,
+        autoUpdaterEnabled: true,
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -96,6 +97,11 @@ let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
 // Update handling
 function setupUpdater() {
+    if (!store.get('autoUpdaterEnabled', true)) {
+        console.log('Auto-updater disabled by user setting');
+        return;
+    }
+    
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
@@ -572,10 +578,11 @@ async function init() {
             blocker.enableBlockingInSession(contentView.webContents.session);
         }
 
-        notificationManager.show("Press 'F1' to open settings");
-
-        // Get the current language from the page
+        // Get the current language from the page FIRST
         await getLanguage();
+
+        // Now show the notification with the correct language
+        notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
 
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
@@ -634,6 +641,12 @@ async function init() {
         } else if (key === 'navigationControlsEnabled') {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('navigation-controls-toggle', data.value);
+            }
+        } else if (key === 'autoUpdaterEnabled') {
+            if (data.value) {
+                setupUpdater();
+            } else {
+                console.log('Auto-updater disabled by user');
             }
         } else if (key === 'customTheme') {
             if (data.value === 'none') {
@@ -966,10 +979,18 @@ function setupTranslationHandlers() {
             proxyPort: translationService.translate('proxyPort'),
             enableProxy: translationService.translate('enableProxy'),
             enableLastFm: translationService.translate('enableLastFm'),
+            lastfm: translationService.translate('lastfm'),
             lastFmApiKey: translationService.translate('lastFmApiKey'),
             lastFmSecret: translationService.translate('lastFmApiSecret'),
             createApiKeyLastFm: translationService.translate('createApiKeyLastFm'),
             noCallbackUrl: translationService.translate('noCallbackUrl'),
+            webhooks: translationService.translate('webhooks'),
+            discord: translationService.translate('discord'),
+            enableWebhooks: translationService.translate('enableWebhooks'),
+            webhookUrl: translationService.translate('webhookUrl'),
+            webhookTrigger: translationService.translate('webhookTrigger'),
+            webhookDescription: translationService.translate('webhookDescription'),
+            showWebhookExample: translationService.translate('showWebhookExample'),
             enableRichPresence: translationService.translate('enableRichPresence'),
             displayWhenPaused: translationService.translate('displayWhenPaused'),
             displaySmallIcon: translationService.translate('displaySmallIcon'),
@@ -980,12 +1001,20 @@ function setupTranslationHandlers() {
             richPresencePreviewDescription: translationService.translate('richPresencePreviewDescription'),
             applyChanges: translationService.translate('applyChanges'),
             minimizeToTray: translationService.translate('minimizeToTray'),
+            enableNavigationControls: translationService.translate('enableNavigationControls'),
+            enableTrackParser: translationService.translate('enableTrackParser'),
+            trackParserDescription: translationService.translate('trackParserDescription'),
+            enableAutoUpdater: translationService.translate('enableAutoUpdater'),
             customThemes: translationService.translate('customThemes'),
             selectCustomTheme: translationService.translate('selectCustomTheme'),
             noTheme: translationService.translate('noTheme'),
             openThemesFolder: translationService.translate('openThemesFolder'),
             refreshThemes: translationService.translate('refreshThemes'),
-            customThemeDescription: translationService.translate('customThemeDescription')
+            customThemeDescription: translationService.translate('customThemeDescription'),
+            pressF1ToOpenSettings: translationService.translate('pressF1ToOpenSettings'),
+            closeSettings: translationService.translate('closeSettings'),
+            noActivityToShow: translationService.translate('noActivityToShow'),
+            richPresencePreviewTitle: translationService.translate('richPresencePreviewTitle')
         };
     });
 }
