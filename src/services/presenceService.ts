@@ -102,7 +102,7 @@ export class PresenceService {
 
                 const activity: SetActivity & { name?: string; statusDisplayType?: number } = {
                     type: ActivityType.Listening,
-                    name: currentTrack.author,
+                    name: this.statusDisplayType === 1 ? currentTrack.author : 'SoundCloud',
                     details: `${this.shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
                     state: `${this.shortenString(currentTrack.author)}${currentTrack.author.length < 2 ? '⠀⠀' : ''}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
