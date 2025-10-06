@@ -1035,6 +1035,7 @@ function setupAudioHandler() {
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
+                    elapsed: result.elapsed,
                 });
 
                 await webhookService.updateTrackInfo({
@@ -1043,6 +1044,7 @@ function setupAudioHandler() {
                     duration: result.duration,
                     url: result.url,
                     artwork: result.artwork,
+                    elapsed: result.elapsed,
                 });
             }
 
