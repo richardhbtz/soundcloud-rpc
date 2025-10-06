@@ -352,6 +352,7 @@ function setupWindowControls() {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('refresh-state-changed', true);
             }
+            console.log('Manual refresh triggered - reloading page');
             contentView.webContents.reload();
         }
     });
@@ -560,11 +561,9 @@ async function init() {
         updateNavigationState();
     });
 
-    // Setup event handlers
-    contentView.webContents.on('did-finish-load', async () => {
-        await lastFmService.authenticate();
-
-        if (store.get('adBlocker')) {
+    // Initialize adblocker once
+    if (store.get('adBlocker')) {
+        try {
             const blocker = await ElectronBlocker.fromLists(
                 fetch,
                 fullLists,
@@ -576,13 +575,26 @@ async function init() {
                 }
             );
             blocker.enableBlockingInSession(contentView.webContents.session);
+        } catch (error) {
+            console.error('Failed to initialize adblocker:', error);
         }
+    }
+
+    // Track if this is initial load
+    let isInitialLoad = true;
+
+    // Setup event handlers
+    contentView.webContents.on('did-finish-load', async () => {
+        await lastFmService.authenticate();
 
         // Get the current language from the page FIRST
         await getLanguage();
 
-        // Now show the notification with the correct language
-        notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
+        // Show notification only on first load
+        if (isInitialLoad) {
+            notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
+            isInitialLoad = false;
+        }
 
         // Update the language in the settings manager
         settingsManager.updateTranslations(translationService);
@@ -596,14 +608,23 @@ async function init() {
             headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
         }
 
-        // Inject audio monitoring script
-        try {
-            await contentView.webContents.executeJavaScript(audioMonitorScript);
-            console.log('Audio monitoring script injected successfully');
-        } catch (error) {
-            console.error('Failed to inject audio monitoring script:', error);
-        }
+        // Reinitialize after page load/refresh
+        await reinitializeAfterPageLoad();
     });
+
+    // Reinitialize everything after page load/refresh
+    async function reinitializeAfterPageLoad() {
+        try {
+            // Inject audio monitoring script
+            await contentView.webContents.executeJavaScript(audioMonitorScript);
+            
+            if (presenceService) {
+                await presenceService.updatePresence(lastTrackInfo as any);
+            }
+        } catch (error) {
+            console.error('Failed to reinitialize after page load:', error);
+        }
+    }
 
     // Register settings related events
     ipcMain.on('setting-changed', async (_event, data) => {
