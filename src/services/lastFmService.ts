@@ -220,6 +220,7 @@ export class LastFmService {
         title: string;
         author: string;
         duration: string;
+        elapsed: string;
     }): Promise<void> {
         if (!this.store.get('lastFmEnabled')) return;
 
@@ -243,7 +244,8 @@ export class LastFmService {
         if (
             !this.currentScrobbleState ||
             this.currentScrobbleState.artist !== currentTrack.author ||
-            this.currentScrobbleState.title !== currentTrack.title
+            this.currentScrobbleState.title !== currentTrack.title ||
+            trackInfo.elapsed === '0:00'
         ) {
             // Scrobble previous track if it wasn't scrobbled and met criteria
             if (
@@ -251,12 +253,10 @@ export class LastFmService {
                 !this.currentScrobbleState.scrobbled &&
                 shouldScrobble(this.currentScrobbleState)
             ) {
-                await this.scrobbleTrack(
-                    {
-                        author: this.currentScrobbleState.artist,
-                        title: this.currentScrobbleState.title,
-                    }
-                );
+                await this.scrobbleTrack({
+                    author: this.currentScrobbleState.artist,
+                    title: this.currentScrobbleState.title,
+                });
             }
 
             // Start tracking new track
@@ -273,12 +273,10 @@ export class LastFmService {
             shouldScrobble(this.currentScrobbleState)
         ) {
             // Scrobble current track if it meets criteria
-            await this.scrobbleTrack(
-                {
-                    author: this.currentScrobbleState.artist,
-                    title: this.currentScrobbleState.title,
-                }
-            );
+            await this.scrobbleTrack({
+                author: this.currentScrobbleState.artist,
+                title: this.currentScrobbleState.title,
+            });
             this.currentScrobbleState.scrobbled = true;
         }
     }

@@ -134,6 +134,7 @@ export class WebhookService {
         duration: string;
         url: string;
         artwork: string;
+        elapsed: string;
     }): Promise<void> {
         const webhookEnabled = this.store.get('webhookEnabled') as boolean;
         if (!webhookEnabled) return;
@@ -157,7 +158,8 @@ export class WebhookService {
         if (
             !this.currentWebhookState ||
             this.currentWebhookState.artist !== currentTrack.artist ||
-            this.currentWebhookState.track !== currentTrack.track
+            this.currentWebhookState.track !== currentTrack.track ||
+            trackInfo.elapsed === '0:00'
         ) {
             if (
                 this.currentWebhookState &&
@@ -184,7 +186,9 @@ export class WebhookService {
             };
 
             this.scheduleWebhook();
-        } else if (
+        }
+        
+        if (
             this.currentWebhookState &&
             !this.currentWebhookState.webhookSent &&
             shouldSendWebhook(this.currentWebhookState, triggerPercentage)
