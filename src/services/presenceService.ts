@@ -90,9 +90,11 @@ export class PresenceService {
 
                 const elapsedMilliseconds = Math.max(0, parseTimeToMs(elapsedTime));
                 const parsedTotal = parseTimeToMs(totalTime);
-                const totalMilliseconds = parsedTotal < 0
+                const totalMilliseconds = parsedTotal < 0 
                     ? elapsedMilliseconds + Math.abs(parsedTotal) // total time = elapsed + remaining
                     : parsedTotal;
+                
+                if (totalMilliseconds <= 0) return;
 
                 if (!this.info.rpc.isConnected) {
                     if (await !this.info.rpc.login().catch(console.error)) {
@@ -100,14 +102,18 @@ export class PresenceService {
                     }
                 }
 
+                const now = Date.now();
+                const startTimestamp = now - elapsedMilliseconds;
+                const endTimestamp = startTimestamp + totalMilliseconds;
+
                 const activity: SetActivity & { name?: string; statusDisplayType?: number } = {
                     type: ActivityType.Listening,
                     name: this.statusDisplayType === 1 ? currentTrack.author : 'SoundCloud',
                     details: `${this.shortenString(currentTrack.title)}${currentTrack.title.length < 2 ? '⠀⠀' : ''}`,
                     state: `${this.shortenString(currentTrack.author)}${currentTrack.author.length < 2 ? '⠀⠀' : ''}`,
                     largeImageKey: artworkUrl.replace('50x50.', '500x500.'),
-                    startTimestamp: Date.now() - elapsedMilliseconds,
-                    endTimestamp: Date.now() + Math.max(0, totalMilliseconds - elapsedMilliseconds),
+                    startTimestamp,
+                    endTimestamp,
                     smallImageKey: this.displaySCSmallIcon ? 'soundcloud-logo' : '',
                     smallImageText: this.displaySCSmallIcon ? 'SoundCloud' : '',
                     statusDisplayType: this.statusDisplayType,
