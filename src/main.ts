@@ -74,6 +74,8 @@ let isQuitting = false;
 const devMode = process.argv.includes('--dev')
 // Header height for header BrowserView
 const HEADER_HEIGHT = 32;
+// macOS check
+const isMas = process.mas === true
 
 // Add missing property to app
 declare global {
@@ -81,6 +83,15 @@ declare global {
         interface Global {
             app: any;
         }
+    }
+}
+
+// Multiple startup check
+if (!isMas) {
+    const gotTheLock = app.requestSingleInstanceLock();
+    if (!gotTheLock) {
+        app.quit();
+        process.exit(0);
     }
 }
 
@@ -980,6 +991,17 @@ app.on('will-quit', () => {
         tray = null;
     }
 });
+
+// focus the window when the second instance is opened.
+app.on("second-instance", () => {
+    if (!mainWindow) {
+        return;
+    }
+    if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+    }
+    mainWindow.focus();
+})
 
 export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
