@@ -16,7 +16,8 @@
     "build-win-ptb": "tsc && electron-builder -w portable",
     "build-mac": "tsc && electron-builder -m dmg",
     "build-linux-deb": "tsc && electron-builder -l deb",
-    "build-linux-appimage": "tsc && electron-builder -l appimage"
+    "build-linux-appimage": "tsc && electron-builder -l appimage",
+    "format:check": "prettier --check ."
   },
   "main": "./tsc/main.js",
   "repository": "https://github.com/richardhbtz/soundcloud-rpc",
@@ -59,11 +60,8 @@
     "@types/discord-rpc": "^4.0.6",
     "@types/node": "^24.2.1",
     "@types/semver": "^7.5.8",
-    "@typescript-eslint/eslint-plugin": "^4.33.0",
-    "@typescript-eslint/parser": "^4.33.0",
     "electron": "^37.0.0",
     "electron-builder": "^26.0.12",
-    "eslint": "^9.33.0",
     "typescript": "^5.9.2"
   },
   "dependencies": {
