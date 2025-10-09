@@ -8,19 +8,17 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
         return { artist: null, track: '' };
     }
 
-    const cleanTitle = title
-        .replace(/\n.*/, '')
-        .trim();
+    const cleanTitle = title.replace(/\n.*/, '').trim();
 
     const match = cleanTitle.match(SEPARATOR_REGEX);
     if (match && match.index && match.index > 0) {
         const potentialArtist = cleanTitle.substring(0, match.index).trim();
         const potentialTrack = cleanTitle.substring(match.index + match[0].length).trim();
-        
+
         if (potentialArtist.length > 0 && potentialTrack.length > 0) {
             return {
                 artist: potentialArtist,
-                track: potentialTrack
+                track: potentialTrack,
             };
         }
     }
@@ -28,30 +26,28 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
     // If no separator found or splitting didn't work, use the whole title as track
     return {
         artist: null,
-        track: cleanTitle
+        track: cleanTitle,
     };
 }
 
 export function normalizeTrackInfo(
     titleFromPage: string,
     authorFromPage: string,
-    useTrackParser: boolean = true
+    useTrackParser: boolean = true,
 ): NormalizedTrackInfo {
     if (!useTrackParser || !titleFromPage) {
         // Fallback to original behavior
         return {
             artist: authorFromPage || 'Unknown Artist',
-            track: titleFromPage
-                .replace(/\n.*/, '')
-                .trim() || 'Unknown Track'
+            track: titleFromPage.replace(/\n.*/, '').trim() || 'Unknown Track',
         };
     }
 
     const parsed = parseSoundCloudTitle(titleFromPage);
-    
+
     return {
         artist: parsed.artist || authorFromPage || 'Unknown Artist',
-        track: parsed.track || 'Unknown Track'
+        track: parsed.track || 'Unknown Track',
     };
 }
 
@@ -86,4 +82,3 @@ function testTrackParser() {
 
 testTrackParser();
 */
-

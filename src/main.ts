@@ -72,11 +72,11 @@ let thumbarService: ThumbarService;
 let themeService: ThemeService;
 let tray: Tray | null = null;
 let isQuitting = false;
-const devMode = process.argv.includes('--dev')
+const devMode = process.argv.includes('--dev');
 // Header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
-const isMas = process.mas === true
+const isMas = process.mas === true;
 
 // Add missing property to app
 declare global {
@@ -100,7 +100,7 @@ if (!isMas) {
 Object.defineProperty(app, 'isQuitting', {
     value: false,
     writable: true,
-    configurable: true
+    configurable: true,
 });
 
 // Display settings
@@ -113,7 +113,7 @@ function setupUpdater() {
         console.log('Auto-updater disabled by user setting');
         return;
     }
-    
+
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
@@ -136,12 +136,16 @@ function setupTray() {
     }
 
     // Create tray icon
-    const iconPath = path.join(RESOURCES_PATH, 'icons', process.platform === 'win32' ? 'soundcloud-win.ico' : 'soundcloud.png');
+    const iconPath = path.join(
+        RESOURCES_PATH,
+        'icons',
+        process.platform === 'win32' ? 'soundcloud-win.ico' : 'soundcloud.png',
+    );
     const icon = nativeImage.createFromPath(iconPath);
-    
+
     // Resize icon for tray (16x16 is standard for most systems)
     const trayIcon = icon.resize({ width: 16, height: 16 });
-    
+
     tray = new Tray(trayIcon);
     tray.setToolTip('SoundCloud RPC');
 
@@ -154,7 +158,7 @@ function setupTray() {
                     mainWindow.show();
                     mainWindow.focus();
                 }
-            }
+            },
         },
         {
             label: 'Settings',
@@ -162,15 +166,15 @@ function setupTray() {
                 if (settingsManager) {
                     settingsManager.toggle();
                 }
-            }
+            },
         },
         { type: 'separator' },
         {
             label: 'Quit',
             click: () => {
                 app.quit();
-            }
-        }
+            },
+        },
     ]);
 
     tray.setContextMenu(contextMenu);
@@ -226,7 +230,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             images: true,
             plugins: true,
             experimentalFeatures: false,
-            devTools: devMode
+            devTools: devMode,
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
@@ -271,13 +275,11 @@ let lastTrackInfo: TrackInfo = {
     elapsed: '',
     duration: '',
     isPlaying: false,
-    url: ''
+    url: '',
 };
-
 
 function setupWindowControls() {
     if (!mainWindow) return;
-
 
     ipcMain.on('minimize-window', () => {
         if (mainWindow) mainWindow.minimize();
@@ -454,7 +456,7 @@ async function init() {
             nodeIntegration: false,
             contextIsolation: true,
             devTools: devMode,
-            preload: path.join(__dirname, 'preload.js')
+            preload: path.join(__dirname, 'preload.js'),
         },
     });
 
@@ -468,7 +470,7 @@ async function init() {
     contentView.setAutoResize({ width: true, height: true });
 
     contentView.webContents.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     );
 
     // Initialize services
@@ -484,8 +486,7 @@ async function init() {
     presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(contentView, store);
     webhookService = new WebhookService(store);
-    if (platform() === 'win32')
-        thumbarService = new ThumbarService(translationService);
+    if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
@@ -542,13 +543,13 @@ async function init() {
         if (headerView && headerView.webContents && contentView) {
             const state = {
                 canGoBack: contentView.webContents.navigationHistory.canGoBack(),
-                canGoForward: contentView.webContents.navigationHistory.canGoForward()
+                canGoForward: contentView.webContents.navigationHistory.canGoForward(),
             };
             headerView.webContents.send('navigation-state-changed', state);
         }
     }
 
-    // Listen for navigation events to update button states 
+    // Listen for navigation events to update button states
     contentView.webContents.on('did-navigate', () => {
         updateNavigationState();
     });
@@ -557,7 +558,7 @@ async function init() {
         updateNavigationState();
     });
 
-    // Listen for page load events to manage refresh state 
+    // Listen for page load events to manage refresh state
     contentView.webContents.on('did-start-loading', () => {
         if (headerView && headerView.webContents) {
             headerView.webContents.send('refresh-state-changed', true);
@@ -589,7 +590,7 @@ async function init() {
                     path: 'engine.bin',
                     read: async (...args) => readFileSync(...args),
                     write: async (...args) => writeFileSync(...args),
-                }
+                },
             );
             blocker.enableBlockingInSession(contentView.webContents.session);
         } catch (error) {
@@ -634,7 +635,7 @@ async function init() {
         try {
             // Inject audio monitoring script
             await contentView.webContents.executeJavaScript(audioMonitorScript);
-            
+
             if (presenceService) {
                 await presenceService.updatePresence(lastTrackInfo as any);
             }
@@ -761,7 +762,8 @@ function applyThemeToContent(isDark: boolean) {
     const sections = (function splitSections(css: string | null) {
         const res = { all: '', content: '', header: '', settings: '' } as Record<string, string>;
         if (!css) return res;
-        const regex = /\/\*\s*@target\s+(all|content|header|settings)\s*\*\/[\s\S]*?(?=(\/\*\s*@target\s+(?:all|content|header|settings)\s*\*\/)|$)/gi;
+        const regex =
+            /\/\*\s*@target\s+(all|content|header|settings)\s*\*\/[\s\S]*?(?=(\/\*\s*@target\s+(?:all|content|header|settings)\s*\*\/)|$)/gi;
         let match: RegExpExecArray | null;
         let any = false;
         while ((match = regex.exec(css)) !== null) {
@@ -836,7 +838,7 @@ function applyThemeToContent(isDark: boolean) {
                 document.head.appendChild(style);
 
                 // Apply custom theme CSS (content section + all) if available
-                const contentCSS = \`${(sections.all + (sections.all && sections.content ? '\n' : '') + sections.content) || ''}\`;
+                const contentCSS = \`${sections.all + (sections.all && sections.content ? '\n' : '') + sections.content || ''}\`;
                 if (contentCSS.trim()) {
                     const customStyle = document.createElement('style');
                     customStyle.id = 'custom-theme-style';
@@ -865,7 +867,7 @@ function applyThemeToContent(isDark: boolean) {
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
 
     // Also inject into header and settings views using their specific sections
-    const headerCSS = (sections.all + (sections.all && sections.header ? '\n' : '') + sections.header) || '';
+    const headerCSS = sections.all + (sections.all && sections.header ? '\n' : '') + sections.header || '';
     if (headerView && headerView.webContents) {
         const headerScript = `
             (function(){
@@ -888,7 +890,7 @@ function applyThemeToContent(isDark: boolean) {
     }
 
     if (settingsManager) {
-        const settingsCSS = (sections.all + (sections.all && sections.settings ? '\n' : '') + sections.settings) || '';
+        const settingsCSS = sections.all + (sections.all && sections.settings ? '\n' : '') + sections.settings || '';
         const settingsScript = `
             (function(){
                 try {
@@ -908,9 +910,7 @@ function applyThemeToContent(isDark: boolean) {
         `;
         settingsManager.getView().webContents.executeJavaScript(settingsScript).catch(console.error);
     }
-
 }
-
 
 function setupShortcuts(contents: WebContents) {
     if (!mainWindow || !contentView) return;
@@ -926,7 +926,7 @@ function setupShortcuts(contents: WebContents) {
             contents.setZoomLevel(Math.min(zoomLevel + 1, 9));
             event.preventDefault();
         }
-        if (input.key == "F12" && !input.alt && !input.control && !input.meta && !input.shift && devMode)  {
+        if (input.key == 'F12' && !input.alt && !input.control && !input.meta && !input.shift && devMode) {
             contents.openDevTools();
             event.preventDefault();
         }
@@ -999,7 +999,7 @@ app.on('will-quit', () => {
 });
 
 // focus the window when the second instance is opened.
-app.on("second-instance", () => {
+app.on('second-instance', () => {
     if (!mainWindow) {
         return;
     }
@@ -1007,7 +1007,7 @@ app.on("second-instance", () => {
         mainWindow.restore();
     }
     mainWindow.focus();
-})
+});
 
 export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
@@ -1063,17 +1063,16 @@ function setupTranslationHandlers() {
             pressF1ToOpenSettings: translationService.translate('pressF1ToOpenSettings'),
             closeSettings: translationService.translate('closeSettings'),
             noActivityToShow: translationService.translate('noActivityToShow'),
-            richPresencePreviewTitle: translationService.translate('richPresencePreviewTitle')
+            richPresencePreviewTitle: translationService.translate('richPresencePreviewTitle'),
         };
     });
 }
 
-
 // Setup audio event handler for track updates
 function setupAudioHandler() {
-  ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
+    ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
         console.debug(`Track update received: ${reason}`);
-    
+
         // Only update if there are actual changes
         const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
         if (hasChanges) {
@@ -1098,14 +1097,13 @@ function setupAudioHandler() {
             }
 
             await presenceService.updatePresence(result);
-            
+
             // Update the rich presence preview in settings
             if (settingsManager) {
                 settingsManager.getView().webContents.send('presence-preview-update', result);
             }
-            
-            if (thumbarService)
-                thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
+
+            if (thumbarService) thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
         }
     });
 }

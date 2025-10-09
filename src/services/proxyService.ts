@@ -45,16 +45,16 @@ export class ProxyService {
         const proxyData = this.store.get('proxyData') as ProxyData | undefined;
         return {
             username: proxyData?.user || '',
-            password: proxyData?.password || ''
+            password: proxyData?.password || '',
         };
     }
 
     transformKey(key: string): string {
         const keyMap: Record<string, string> = {
-            'proxyEnabled': 'proxyEnabled',
-            'proxyHost': 'proxyHost',
-            'proxyPort': 'proxyPort',
-            'proxyData': 'proxyData'
+            proxyEnabled: 'proxyEnabled',
+            proxyHost: 'proxyHost',
+            proxyPort: 'proxyPort',
+            proxyData: 'proxyData',
         };
         return keyMap[key] || key;
     }

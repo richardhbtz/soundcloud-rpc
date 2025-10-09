@@ -1,5 +1,5 @@
 onlyBuiltDependencies:
-  - core-js
-  - electron
-  - electron-winstaller
-  - register-scheme
+    - core-js
+    - electron
+    - electron-winstaller
+    - register-scheme

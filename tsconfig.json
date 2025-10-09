@@ -1,24 +1,24 @@
 {
-  "compilerOptions": {
-    "target": "es2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "noImplicitAny": true,
-    "sourceMap": true,
-    "outDir": "tsc",
-    "baseUrl": ".",
-    "paths": {
-      "*": ["node_modules/*"]
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "noImplicitAny": true,
+        "sourceMap": true,
+        "outDir": "tsc",
+        "baseUrl": ".",
+        "paths": {
+            "*": ["node_modules/*"]
+        },
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true
     },
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "strict": true,                           
-    "noUnusedLocals": true,                   
-    "noUnusedParameters": true,               
-    "noImplicitReturns": true,               
-    "noFallthroughCasesInSwitch": true,      
-    "forceConsistentCasingInFileNames": true  
-  },
-  "include": ["src/**/*"]
+    "include": ["src/**/*"]
 }

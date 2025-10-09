@@ -25,7 +25,7 @@ export class ThemeService {
         this.loadCustomThemes();
         this.setupIpcHandlers();
         this.startWatchingThemesFolder();
-        
+
         const savedTheme = this.store.get('customTheme') as string;
         if (savedTheme && this.customThemes.has(savedTheme)) {
             this.currentCustomTheme = savedTheme;
@@ -50,22 +50,22 @@ export class ThemeService {
             }
 
             const files = readdirSync(this.themesPath);
-            
+
             for (const file of files) {
                 const filePath = join(this.themesPath, file);
                 const stat = statSync(filePath);
-                
+
                 if (stat.isFile() && extname(file).toLowerCase() === '.css') {
                     try {
                         const css = readFileSync(filePath, 'utf-8');
                         const themeName = basename(file, '.css');
-                        
+
                         this.customThemes.set(themeName, {
                             name: themeName,
                             filePath,
-                            css
+                            css,
                         });
-                        
+
                         console.log(`Loaded custom theme: ${themeName}`);
                     } catch (error) {
                         console.error(`Failed to load theme ${file}:`, error);
@@ -128,7 +128,9 @@ export class ThemeService {
             });
 
             this.stopWatching = () => {
-                try { watcher.close(); } catch {}
+                try {
+                    watcher.close();
+                } catch {}
             };
         } catch (error) {
             console.error('Failed to watch themes folder:', error);
@@ -137,9 +139,9 @@ export class ThemeService {
 
     private setupIpcHandlers(): void {
         ipcMain.handle('get-custom-themes', () => {
-            return Array.from(this.customThemes.values()).map(theme => ({
+            return Array.from(this.customThemes.values()).map((theme) => ({
                 name: theme.name,
-                filePath: theme.filePath
+                filePath: theme.filePath,
             }));
         });
 
@@ -162,9 +164,9 @@ export class ThemeService {
         ipcMain.handle('refresh-custom-themes', () => {
             this.customThemes.clear();
             this.loadCustomThemes();
-            return Array.from(this.customThemes.values()).map(theme => ({
+            return Array.from(this.customThemes.values()).map((theme) => ({
                 name: theme.name,
-                filePath: theme.filePath
+                filePath: theme.filePath,
             }));
         });
     }
@@ -185,7 +187,7 @@ export class ThemeService {
             this.store.set('customTheme', themeName);
             // Notify listeners so UI can update immediately
             this.emitter.emit('custom-theme-updated', themeName);
-            
+
             console.log(`Applied custom theme: ${themeName}`);
             return true;
         } catch (error) {
@@ -200,7 +202,7 @@ export class ThemeService {
             this.store.delete('customTheme');
             // Notify listeners to remove style
             this.emitter.emit('custom-theme-updated', null);
-            
+
             console.log('Removed custom theme');
             return true;
         } catch (error) {

@@ -4,8 +4,8 @@ import * as es from '../i18n/es.json';
 
 const translations = {
     en,
-    "pt-BR": pt_BR,
-    es
+    'pt-BR': pt_BR,
+    es,
 } as const;
 
 type Lang = keyof typeof translations;
@@ -20,7 +20,7 @@ export class TranslationService {
     }
 
     setLanguage(lang: Lang) {
-        this.currentLang = ["en", "pt-BR", "es"].includes(lang) ? lang : 'en';
+        this.currentLang = ['en', 'pt-BR', 'es'].includes(lang) ? lang : 'en';
     }
 
     getLanguage(): Lang {

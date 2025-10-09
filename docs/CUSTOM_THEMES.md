@@ -1,6 +1,7 @@
 # Custom Themes
 
-soundcloud-rpc now supports custom themes, You can customize the appearance of the SoundCloud UI by creating and loading CSS theme files.
+soundcloud-rpc now supports custom themes, You can customize the appearance of the SoundCloud UI by creating and loading
+CSS theme files.
 
 ## How to Use Custom Themes
 
@@ -14,9 +15,11 @@ soundcloud-rpc now supports custom themes, You can customize the appearance of t
 
 ## Creating Custom Themes
 
-Custom themes are standard CSS files that can modify the appearance of SoundCloud. Here are some tips for creating your own themes:
+Custom themes are standard CSS files that can modify the appearance of SoundCloud. Here are some tips for creating your
+own themes:
 
 ### Basic Structure
+
 ```css
 /* Your Custom Theme Name */
 /* Description of what your theme does */
@@ -32,11 +35,13 @@ body {
 ```
 
 ### Important Notes
+
 - Use `!important` declarations to ensure your styles override SoundCloud's default styles
 - SoundCloud's class names may change, so themes might need updates occasionally
 - Test your themes thoroughly to ensure they work across different pages
 
 ### Common Elements to Customize
+
 - `body` - Main background
 - `.header` - Top navigation bar
 - `.sidebar` - Left sidebar
@@ -48,6 +53,7 @@ body {
 ## Theme Locations
 
 Themes are stored in your user data directory:
+
 - **Windows**: `%APPDATA%\soundcloud-rpc\themes\`
 - **macOS**: `~/Library/Application Support/soundcloud-rpc/themes/`
 - **Linux**: `~/.config/soundcloud-rpc/themes/`
@@ -55,37 +61,47 @@ Themes are stored in your user data directory:
 ## Troubleshooting
 
 ### Theme Not Loading
+
 1. Ensure the file has a `.css` extension
 2. Check that the CSS syntax is valid
 3. Try refreshing themes in the settings
 4. Restart the application if necessary
 
 ### Theme Not Working
+
 1. Verify you're using `!important` declarations
 2. Check browser developer tools for CSS conflicts
 3. SoundCloud may have updated their class names
 
 ### Reverting to Default
+
 Select "No Theme" from the dropdown to remove all custom styling.
-
-
 
 ## Advanced Features
 
 ### CSS Variables
+
 Some themes may use CSS custom properties:
+
 ```css
 :root {
     --primary-color: #ff6b35;
     --secondary-color: #ff4500;
 }
 ```
+
 ### Animations
+
 Add custom animations:
+
 ```css
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .my-element {
@@ -95,9 +111,12 @@ Add custom animations:
 
 ## Contributing Themes
 
-Feel free to share themes you've created — if you'd like your theme included in the project, open a pull request adding your `.css` file under the `themes/` folder (or send it in an issue/attachment). I'll review submissions and merge themes that are well-made and follow the guidelines above.
+Feel free to share themes you've created — if you'd like your theme included in the project, open a pull request adding
+your `.css` file under the `themes/` folder (or send it in an issue/attachment). I'll review submissions and merge
+themes that are well-made and follow the guidelines above.
 
 Guidelines for contribution:
+
 - Include a short header comment at the top of your `.css` with the theme name and a one-line description.
 - Keep changes scoped to styling only (no scripts or binary files).
 - Prefer reasonably named CSS selectors and document any assumptions in the comment block.

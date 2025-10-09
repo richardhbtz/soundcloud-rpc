@@ -16,7 +16,7 @@ export class ThumbarService {
         const pauseIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/pause.ico'));
         const forwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/forward.ico'));
         const buttons = [
-             {
+            {
                 tooltip: this.translationService.translate('previous'),
                 icon: backwardIcon,
                 click: () => {
@@ -26,16 +26,19 @@ export class ThumbarService {
                 },
             },
             {
-                tooltip: isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play'),
+                tooltip: isPlaying
+                    ? this.translationService.translate('pause')
+                    : this.translationService.translate('play'),
                 icon: isPlaying ? pauseIcon : playIcon,
                 click: () => {
                     isPlaying = !isPlaying;
                     mainWindow.webContents.executeJavaScript(`
                         document.querySelector('.playControl')?.click();
                     `);
-                    buttons[1].tooltip = isPlaying ? this.translationService.translate('pause') : this.translationService.translate('play')
+                    buttons[1].tooltip = isPlaying
+                        ? this.translationService.translate('pause')
+                        : this.translationService.translate('play');
                 },
-
             },
             {
                 tooltip: this.translationService.translate('next'),
@@ -45,9 +48,8 @@ export class ThumbarService {
                         document.querySelector('.skipControl__next')?.click();
                     `);
                 },
-
-            }
-        ]
+            },
+        ];
         win.setThumbarButtons(buttons);
     }
 }

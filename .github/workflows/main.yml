@@ -3,40 +3,40 @@ name: Build/release
 on: push
 
 jobs:
-  release:
-    runs-on: ${{ matrix.os }}
+    release:
+        runs-on: ${{ matrix.os }}
 
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-latest, windows-latest]
 
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
+        steps:
+            - name: Check out Git repository
+              uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'pnpm'
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install
+            - name: Install dependencies
+              run: pnpm install
 
-      - name: Check code formatting with Prettier
-        run: pnpm prettier --check .
+            - name: Check code formatting with Prettier
+              run: pnpm prettier --check .
 
-      - name: Lint code with ESLint
-        run: pnpm eslint . --max-warnings=0
+            - name: Lint code with ESLint
+              run: pnpm eslint . --max-warnings=0
 
-      - name: Build/release Electron app
-        uses: actions-marketplace-validations/njzydark_action-electron-builder-pnpm@pnpm
-        with:
-          github_token: ${{ secrets.github_token }}
-          package_manager: 'pnpm'
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+            - name: Build/release Electron app
+              uses: actions-marketplace-validations/njzydark_action-electron-builder-pnpm@pnpm
+              with:
+                  github_token: ${{ secrets.github_token }}
+                  package_manager: 'pnpm'
+                  release: ${{ startsWith(github.ref, 'refs/tags/v') }}

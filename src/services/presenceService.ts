@@ -53,9 +53,9 @@ export class PresenceService {
                 }
 
                 const normalizedTrack = normalizeTrackInfo(
-                    trackInfo.title, 
-                    trackInfo.author, 
-                    this.store.get('trackParserEnabled', true) as boolean
+                    trackInfo.title,
+                    trackInfo.author,
+                    this.store.get('trackParserEnabled', true) as boolean,
                 );
 
                 const currentTrack = {
@@ -83,10 +83,11 @@ export class PresenceService {
 
                 const elapsedMilliseconds = Math.max(0, parseTimeToMs(elapsedTime));
                 const parsedTotal = parseTimeToMs(totalTime);
-                const totalMilliseconds = parsedTotal < 0 
-                    ? elapsedMilliseconds + Math.abs(parsedTotal) // total time = elapsed + remaining
-                    : parsedTotal;
-                
+                const totalMilliseconds =
+                    parsedTotal < 0
+                        ? elapsedMilliseconds + Math.abs(parsedTotal) // total time = elapsed + remaining
+                        : parsedTotal;
+
                 if (totalMilliseconds <= 0) return;
 
                 if (!this.info.rpc.isConnected) {
@@ -117,8 +118,8 @@ export class PresenceService {
                     activity.buttons = [
                         {
                             label: `▶️ ${this.translationService.translate('listenOnSoundcloud')}`,
-                            url: currentTrack.url
-                        }
+                            url: currentTrack.url,
+                        },
                     ];
                 }
 
@@ -141,7 +142,11 @@ export class PresenceService {
         }
     }
 
-    public updateDisplaySettings(displayWhenIdling: boolean, displaySCSmallIcon: boolean, displayButtons?: boolean): void {
+    public updateDisplaySettings(
+        displayWhenIdling: boolean,
+        displaySCSmallIcon: boolean,
+        displayButtons?: boolean,
+    ): void {
         this.displayWhenIdling = displayWhenIdling;
         this.displaySCSmallIcon = displaySCSmallIcon;
         if (displayButtons !== undefined) {

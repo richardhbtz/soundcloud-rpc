@@ -15,13 +15,13 @@ function updateNavigationState(state = {}) {
         navButtons = {
             back: document.getElementById('back-btn'),
             forward: document.getElementById('forward-btn'),
-            refresh: document.getElementById('refresh-btn')
+            refresh: document.getElementById('refresh-btn'),
         };
     }
 
     if ('canGoBack' in state) canGoBack = state.canGoBack;
     if ('canGoForward' in state) canGoForward = state.canGoForward;
-    
+
     if ('refreshing' in state) {
         isRefreshing = state.refreshing;
         if (navButtons.refresh) {
@@ -44,7 +44,7 @@ function updateWindowControls() {
         // Load and set the appropriate icon
         const iconName = isMaximized ? 'restore.svg' : 'maximize.svg';
         setSvgContent(maximizeBtn, loadSvgContent(iconName));
-        
+
         // Update the button title
         document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
     }
@@ -103,7 +103,7 @@ document.body.classList.add(`platform-${process.platform}`);
 // Navigation event delegation
 document.querySelector('.navigation-controls')?.addEventListener('click', (e) => {
     const { id } = e.target.closest('.nav-button') || {};
-    
+
     switch (id) {
         case 'back-btn':
             if (canGoBack) ipcRenderer.send('navigate-back');
@@ -184,7 +184,7 @@ ipcRenderer.on('navigation-controls-toggle', (_, enabled) => {
 document.addEventListener('DOMContentLoaded', () => {
     initializeIcons();
     updateNavigationState();
-    
+
     // Request initial navigation controls state
     ipcRenderer.invoke('get-navigation-controls-enabled').then((enabled) => {
         const navControls = document.querySelector('.navigation-controls');
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
             navControls.classList.remove('hidden');
         }
     });
-    
+
     // Check window state periodically
     setInterval(() => {
         ipcRenderer.invoke('is-maximized').then((maximized) => {

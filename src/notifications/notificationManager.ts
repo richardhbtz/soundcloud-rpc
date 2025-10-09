@@ -42,7 +42,7 @@ export class NotificationManager {
             x: Math.floor((bounds.width - width) / 2),
             y: bounds.height - height - 100, // increased from 20 to move it up
             width,
-            height
+            height,
         });
 
         const html = `

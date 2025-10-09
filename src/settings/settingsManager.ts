@@ -916,9 +916,7 @@ export class SettingsManager {
                 <div class="setting-item">
                     <span data-i18n="displayButtons">${this.translationService.translate('displayButtons')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="displayButtons" ${
-                            this.store.get('displayButtons') ? 'checked' : ''
-                        }>
+                        <input type="checkbox" id="displayButtons" ${this.store.get('displayButtons') ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>

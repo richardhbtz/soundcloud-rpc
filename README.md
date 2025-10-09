@@ -12,19 +12,25 @@ A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm
 
 ## ⚡️ Quick start
 
-For the latest version of soundcloud-rpc, download the installer or executable file from the [latest release](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
+For the latest version of soundcloud-rpc, download the installer or executable file from the
+[latest release](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
 
 > [!NOTE]
->### macOS Users
->If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the issue:
->```
->xattr -dr com.apple.quarantine /Applications/soundcloud.app
->```
->After running this command, the app should launch without any problem.
+>
+> ### macOS Users
+>
+> If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the
+> issue:
+>
+> ```
+> xattr -dr com.apple.quarantine /Applications/soundcloud.app
+> ```
+>
+> After running this command, the app should launch without any problem.
 
 ## ⚙️‍ Building
 
-Before installing and running this app, you must have [Node.js](https://nodejs.org/) installed on your machine. 
+Before installing and running this app, you must have [Node.js](https://nodejs.org/) installed on your machine.
 
 1. Clone this repository to your local machine
 2. Run `npm install` to install the required dependencies.
@@ -35,6 +41,7 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 Press `F1` to open the application menu, which provides access to various settings and features.
 
 ### Navigation Keybinds
+
 - `Ctrl + B or Command + B`: Go back to the previous page
 - `Ctrl + F or Command + F`: Go forward to the next page
 
@@ -61,7 +68,8 @@ Press `F1` to open the application menu, which provides access to various settin
 
 ## 🤝 Contributing
 
-Contributions to this project are welcome. If you find a bug or would like to suggest a new feature, please open an issue on this repository.
+Contributions to this project are welcome. If you find a bug or would like to suggest a new feature, please open an
+issue on this repository.
 
 ## 📜 License
 

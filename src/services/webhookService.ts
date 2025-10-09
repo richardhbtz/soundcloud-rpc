@@ -43,7 +43,7 @@ function timeStringToSeconds(timeStr: string | undefined): number {
 function shouldSendWebhook(state: WebhookState, triggerPercentage: number): boolean {
     const playedTime = (Date.now() - state.startTime) / 1000;
     const targetTime = (state.duration * triggerPercentage) / 100;
-    
+
     return !state.webhookSent && playedTime >= targetTime;
 }
 
@@ -93,16 +93,16 @@ export class WebhookService {
             track: this.currentWebhookState.track,
             duration: this.currentWebhookState.duration,
             originUrl: this.currentWebhookState.originUrl,
-            trackArt: this.currentWebhookState.trackArt
+            trackArt: this.currentWebhookState.trackArt,
         });
-        
+
         this.currentWebhookState.webhookSent = true;
     }
 
     private async sendWebhook(trackData: WebhookTrackData): Promise<void> {
         const webhookUrl = this.store.get('webhookUrl') as string;
         const webhookEnabled = this.store.get('webhookEnabled') as boolean;
-        
+
         if (!webhookEnabled || !webhookUrl) {
             return;
         }
@@ -115,7 +115,7 @@ export class WebhookService {
                 },
                 body: JSON.stringify({
                     timestamp: new Date().toISOString(),
-                    ...trackData
+                    ...trackData,
                 }),
             });
 
@@ -138,13 +138,13 @@ export class WebhookService {
         }
 
         const normalizedTrack = normalizeTrackInfo(
-            trackInfo.title, 
-            trackInfo.author, 
-            this.store.get('trackParserEnabled', true) as boolean
+            trackInfo.title,
+            trackInfo.author,
+            this.store.get('trackParserEnabled', true) as boolean,
         );
         const currentTrack = {
             artist: normalizedTrack.artist,
-            track: normalizedTrack.track
+            track: normalizedTrack.track,
         };
 
         const triggerPercentage = (this.store.get('webhookTriggerPercentage') as number) || 50;
@@ -165,7 +165,7 @@ export class WebhookService {
                     track: this.currentWebhookState.track,
                     duration: this.currentWebhookState.duration,
                     originUrl: this.currentWebhookState.originUrl,
-                    trackArt: this.currentWebhookState.trackArt
+                    trackArt: this.currentWebhookState.trackArt,
                 });
             }
 
@@ -181,7 +181,7 @@ export class WebhookService {
 
             this.scheduleWebhook();
         }
-        
+
         if (
             this.currentWebhookState &&
             !this.currentWebhookState.webhookSent &&
@@ -192,7 +192,7 @@ export class WebhookService {
                 track: this.currentWebhookState.track,
                 duration: this.currentWebhookState.duration,
                 originUrl: this.currentWebhookState.originUrl,
-                trackArt: this.currentWebhookState.trackArt
+                trackArt: this.currentWebhookState.trackArt,
             });
             this.currentWebhookState.webhookSent = true;
         }

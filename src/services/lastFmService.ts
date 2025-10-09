@@ -226,13 +226,13 @@ export class LastFmService {
         }
 
         const normalizedTrack = normalizeTrackInfo(
-            trackInfo.title, 
-            trackInfo.author, 
-            this.store.get('trackParserEnabled', true) as boolean
+            trackInfo.title,
+            trackInfo.author,
+            this.store.get('trackParserEnabled', true) as boolean,
         );
         const currentTrack = {
             author: normalizedTrack.artist,
-            title: normalizedTrack.track
+            title: normalizedTrack.track,
         };
 
         await this.updateNowPlaying(currentTrack);
@@ -284,4 +284,4 @@ export class LastFmService {
         this.store.delete('lastFmSessionKey');
         this.window.webContents.reload();
     }
-} 
+}
