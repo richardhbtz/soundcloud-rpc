@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, WebContents, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -12,6 +12,7 @@ import { TranslationService } from './services/translationService';
 import { ThumbarService } from './services/thumbarService';
 import { WebhookService } from './services/webhookService';
 import { ThemeService } from './services/themeService';
+import { ShortcutService } from './services/shortcutService';
 import { audioMonitorScript } from './services/audioMonitorService';
 import type { TrackInfo, TrackUpdateMessage } from './types';
 import path = require('path');
@@ -70,6 +71,7 @@ let webhookService: WebhookService;
 let translationService: TranslationService;
 let thumbarService: ThumbarService;
 let themeService: ThemeService;
+let shortcutService: ShortcutService;
 let tray: Tray | null = null;
 let isQuitting = false;
 const devMode = process.argv.includes('--dev');
@@ -486,6 +488,7 @@ async function init() {
     presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(contentView, store);
     webhookService = new WebhookService(store);
+    shortcutService = new ShortcutService(mainWindow);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
@@ -495,9 +498,8 @@ async function init() {
 
     setupWindowControls();
 
-    setupShortcuts(contentView.webContents);
-    setupShortcuts(mainWindow.webContents);
-    setupShortcuts(settingsManager.getView().webContents);
+    initializeShortcuts();
+    shortcutService.setup();
 
     setupThemeHandlers();
     setupTranslationHandlers();
@@ -912,60 +914,103 @@ function applyThemeToContent(isDark: boolean) {
     }
 }
 
-function setupShortcuts(contents: WebContents) {
-    if (!mainWindow || !contentView) return;
+function initializeShortcuts() {
+    if (!mainWindow || !contentView || !settingsManager) return;
 
-    contents.on('before-input-event', (event, input) => {
-        if (input.key === 'F1' && !input.alt && !input.control && !input.meta && !input.shift) {
-            settingsManager.toggle();
-            event.preventDefault();
-        }
+    shortcutService.register(
+        'openSettings',
+        'F1',
+        'Open Settings',
+        () => settingsManager.toggle(),
+    );
 
-        if (input.key === '=' && input.control && !input.alt && !input.meta && !input.shift) {
-            const zoomLevel = contents.getZoomLevel();
-            contents.setZoomLevel(Math.min(zoomLevel + 1, 9));
-            event.preventDefault();
-        }
-        if (input.key == 'F12' && !input.alt && !input.control && !input.meta && !input.shift && devMode) {
-            contents.openDevTools();
-            event.preventDefault();
-        }
+    if (devMode) {
+        shortcutService.register(
+            'devTools',
+            'F12',
+            'Open Developer Tools',
+            () => {
+                if (contentView) contentView.webContents.openDevTools();
+            },
+        );
+    }
 
-        if (input.key === '-' && input.control && !input.alt && !input.meta && !input.shift) {
-            const zoomLevel = contents.getZoomLevel();
-            contents.setZoomLevel(Math.max(zoomLevel - 1, -9));
-            event.preventDefault();
-        }
+    shortcutService.register(
+        'zoomIn',
+        'CommandOrControl+=',
+        'Zoom In',
+        () => {
+            if (!contentView) return;
+            const zoomLevel = contentView.webContents.getZoomLevel();
+            contentView.webContents.setZoomLevel(Math.min(zoomLevel + 1, 9));
+        },
+    );
 
-        if (input.key === '0' && input.control && !input.alt && !input.meta && !input.shift) {
-            contents.setZoomLevel(0);
-            event.preventDefault();
-        }
+    shortcutService.register(
+        'zoomOut',
+        'CommandOrControl+-',
+        'Zoom Out',
+        () => {
+            if (!contentView) return;
+            const zoomLevel = contentView.webContents.getZoomLevel();
+            contentView.webContents.setZoomLevel(Math.max(zoomLevel - 1, -9));
+        },
+    );
 
-        if ((input.key === 'b' || input.key === 'p') && input.control && !input.alt && !input.meta && !input.shift) {
-            if (contents.canGoBack()) {
-                contents.goBack();
+    shortcutService.register(
+        'zoomReset',
+        'CommandOrControl+0',
+        'Reset Zoom',
+        () => {
+            if (contentView) contentView.webContents.setZoomLevel(0);
+        },
+    );
+
+    shortcutService.register(
+        'goBack',
+        'CommandOrControl+B',
+        'Go Back',
+        () => {
+            if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+                contentView.webContents.navigationHistory.goBack();
             }
-            event.preventDefault();
-        }
+        },
+    );
 
-        if ((input.key === 'f' || input.key === 'n') && input.control && !input.alt && !input.meta && !input.shift) {
-            if (contents.canGoForward()) {
-                contents.goForward();
+    shortcutService.register(
+        'goBackAlt',
+        'CommandOrControl+P',
+        'Go Back (Alternative)',
+        () => {
+            if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+                contentView.webContents.navigationHistory.goBack();
             }
-            event.preventDefault();
-        }
-    });
+        },
+    );
 
-    mainWindow.webContents.on('before-input-event', (_, input) => {
-        if (contents) {
-            contents.sendInputEvent({
-                type: input.type === 'keyDown' ? 'keyDown' : 'keyUp',
-                keyCode: input.key,
-                modifiers: [],
-            });
-        }
-    });
+    shortcutService.register(
+        'goForward',
+        'CommandOrControl+F',
+        'Go Forward',
+        () => {
+            if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+                contentView.webContents.navigationHistory.goForward();
+            }
+        },
+    );
+
+    shortcutService.register(
+        'goForwardAlt',
+        'CommandOrControl+N',
+        'Go Forward (Alternative)',
+        () => {
+            if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+                contentView.webContents.navigationHistory.goForward();
+            }
+        },
+    );
+
+    console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
 }
 
 // App lifecycle handlers
@@ -985,6 +1030,9 @@ app.on('activate', function () {
 
 app.on('before-quit', () => {
     isQuitting = true;
+    if (shortcutService) {
+        shortcutService.destroy();
+    }
     if (tray) {
         tray.destroy();
         tray = null;

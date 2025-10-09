@@ -1315,7 +1315,7 @@ export class SettingsManager {
                                 \${displayButtons && trackInfo.url ? \`
                                     <div class="activity-buttons-preview">
                                         <button class="activity-button-preview" onclick="window.open('\${trackInfo.url}', '_blank')">
-                                            ▶️ Listen on SoundCloud
+                                             Listen on SoundCloud
                                         </button>
                                     </div>
                                 \` : ''}
@@ -1474,7 +1474,7 @@ export class SettingsManager {
                                 \${${this.store.get('displayButtons', false)} && trackInfo.url ? \`
                                     <div class="activity-buttons-preview">
                                         <button class="activity-button-preview" onclick="require('electron').shell.openExternal('\${trackInfo.url}')">
-                                            ▶️ Listen on SoundCloud
+                                             Listen on SoundCloud
                                         </button>
                                     </div>
                                 \` : ''}
