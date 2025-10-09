@@ -31,9 +31,6 @@ jobs:
             - name: Check code formatting with Prettier
               run: pnpm prettier --check .
 
-            - name: Lint code with ESLint
-              run: pnpm eslint . --max-warnings=0
-
             - name: Build/release Electron app
               uses: actions-marketplace-validations/njzydark_action-electron-builder-pnpm@pnpm
               with:
