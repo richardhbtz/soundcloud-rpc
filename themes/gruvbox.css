@@ -1,0 +1,324 @@
+/**
+ * @name Gruvbox
+ * @author richardhbtz
+ * @version 1.0.0
+ * @description Gruvbox theme for Soundcloud based on https://github.com/morhetz/gruvbox 
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
+body {
+    font-family: "Ubuntu Mono";
+    font-weight: 700;
+}
+
+body {
+    margin: 0;
+    font-family: "Ubuntu Mono" !important;
+}
+
+.theme-dark {
+    /* === Core surfaces === */
+    --surface-color: #282828 !important;
+    --surface-rgb: 40, 40, 40 !important;
+    --primary-color: #ebdbb2 !important;
+    --primary-rgb: 235, 219, 178 !important;
+    --secondary-color: #a89984 !important;
+    --secondary-rgb: 168, 153, 132 !important;
+    --highlight-color: #3c3836 !important;
+    --highlight-rgb: 60, 56, 54 !important;
+    --link-color: #83a598 !important;
+    --link-rgb: 131, 165, 152 !important;
+    --overlay-color: hsla(0, 0%, 100%, 0.1) !important;
+    --overlay-rgb: 255, 255, 255, 0.1 !important;
+    --imageBorder-color: hsla(0, 0%, 100%, 0.05) !important;
+    --imageBorder-rgb: 255, 255, 255, 0.05 !important;
+
+    /* === Accent usage === */
+    --artist-color: #d3869b !important;
+    --artist-rgb: 211, 134, 155 !important;
+    --artist-pro-color: #fabd2f !important;
+    --artist-pro-rgb: 250, 189, 47 !important;
+    --artist-surface-color: #b16286 !important;
+    --artist-surface-rgb: 177, 98, 134 !important;
+    --artist-pro-surface-color: #d79921 !important;
+    --artist-pro-surface-rgb: 215, 153, 33 !important;
+
+    /* === Support colors === */
+    --support-bg-color: #98971a !important;
+    --support-bg-rgb: 152, 151, 26 !important;
+    --support-text-color: #282828 !important;
+    --support-text-rgb: 40, 40, 40 !important;
+    --support-hover-bg-color: #b8bb26 !important;
+    --support-hover-bg-rgb: 184, 187, 38 !important;
+    --support-hover-text-color: #282828 !important;
+    --support-hover-text-rgb: 40, 40, 40 !important;
+
+    /* === Background layers === */
+    --background-surface-color: #1d2021 !important;
+    --background-highlight-color: #3c3836 !important;
+
+    /* === Fonts === */
+    --font-sans-serif-family: "Ubuntu Mono" !important;
+    --font-monospace-family: "Ubuntu Mono" !important;
+    --font-light-color: #fbf1c7 !important;
+    --font-dark-color: #282828 !important;
+    --font-special-color: #fe8019 !important;
+    --font-error-color: #cc241d !important;
+    --font-primary-color: #ebdbb2 !important;
+    --font-secondary-color: #a89984 !important;
+    --font-link-color: #83a598 !important;
+
+    /* === Buttons === */
+    --button-light-background-color: #ebdbb2 !important;
+    --button-light-font-color: #282828 !important;
+    --button-dark-background-color: #282828 !important;
+    --button-dark-font-color: #ebdbb2 !important;
+    --button-special-background-color: #fe8019 !important;
+    --button-special-font-color: #282828 !important;
+
+    /* Focus/active states */
+    --button-focused-box-shadow: 0 0 0 2px #83a598 inset !important;
+    --button-disabled-opacity: 0.4 !important;
+    --button-active-opacity: 0.6 !important;
+
+    /* Primary buttons */
+    --button-primary-background-color: #ebdbb2 !important;
+    --button-primary-font-color: #282828 !important;
+    --button-primary-hover-font-color: rgba(40, 40, 40, 0.7) !important;
+    --button-primary-disabled-background-color: #a89984 !important;
+    --button-primary-disabled-font-color: #282828 !important;
+    --button-primary-selected-background-color: #3c3836 !important;
+    --button-primary-selected-font-color: #ebdbb2 !important;
+    --button-primary-selected-hover-font-color: hsla(40, 100%, 90%, 0.6) !important;
+    --button-primary-selected-active-font-color: #ebdbb2 !important;
+
+    /* Secondary buttons */
+    --button-secondary-background-color: #3c3836 !important;
+    --button-secondary-font-color: #ebdbb2 !important;
+    --button-secondary-hover-font-color: hsla(40, 100%, 90%, 0.6) !important;
+    --button-secondary-selected-background-color: #3c3836 !important;
+    --button-secondary-selected-font-color: #fe8019 !important;
+    --button-secondary-selected-hover-font-color: rgba(254, 128, 25, 0.6) !important;
+
+    /* Tertiary buttons */
+    --button-tertiary-background-color: #1d2021 !important;
+    --button-tertiary-font-color: #ebdbb2 !important;
+    --button-tertiary-selected-font-color: #fe8019 !important;
+
+    /* Links */
+    --link-standard-color: #83a598 !important;
+    --link-standard-focus-box-shadow: 0 0 0 2px #83a598 !important;
+    --link-standard-hover-color: #83a598 !important;
+    --link-primary-color: #ebdbb2 !important;
+    --link-primary-focus-box-shadow: 0 0 0 2px #83a598 !important;
+    --link-secondary-color: #a89984 !important;
+
+    /* Inputs */
+    --input-default-background-color: #3c3836 !important;
+    --input-default-font-color: #ebdbb2 !important;
+    --input-placeholder-font-color: #a89984 !important;
+    --input-focused-border-color: #b8bb26 !important;
+
+    /* Toggles */
+    --toggle-focused-box-shadow: 0 0 0 2px #83a598 !important;
+    --toggle-on-body-color: #fe8019 !important;
+    --toggle-on-handle-color: #282828 !important;
+    --toggle-off-body-color: #a89984 !important;
+    --toggle-off-handle-color: #282828 !important;
+}
+
+
+.playbackSoundBadge__showQueue, 
+.creatorSubscriptionsButton, 
+.sidebarModule__webiEmbeddedModule, 
+.spotlightUpsellBanner__background, 
+.sidebarContent {
+    display: none !important;
+}
+
+.header__logoLink {
+    background-size: contain !important; 
+}
+
+.header {
+    background: rgba(0, 0, 0, 0.1) !important; /* semi-transparent */
+    backdrop-filter: blur(10px) !important;               /* applies blur to background */
+    -webkit-backdrop-filter: blur(10px) !important;       
+    border-radius: 12px !important;                       /* optional: rounded edges */
+}
+
+.playControls__inner {
+    background: rgba(0, 0, 0, 0.1) !important; /* semi-transparent */
+    backdrop-filter: blur(10px) !important;               /* applies blur to background */
+    -webkit-backdrop-filter: blur(10px) !important;     
+    border-radius: 12px !important;      
+}
+
+.sc-button.sc-button-secondary,
+.sc-button.sc-button-secondary:visited {
+    background: rgb(60, 56, 54, 0.4) !important;  /* semi-transparent background */
+    backdrop-filter: blur(8px);                 /* blur behind */
+    -webkit-backdrop-filter: blur(8px);        
+    color: #fff !important;                     /* white text */
+    border: 2px solid rgba(255, 255, 255, 0.2); /* subtle border */
+    border-radius: 10px;                         /* rounded corners */
+    padding: 6px 18px;                          /* spacing */
+    transition: background 0.2s, transform 0.2s;
+}
+
+/* Hover effect */
+.sc-button.sc-button-secondary:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: scale(1.05);
+}
+
+.theme-dark,.theme-light,:root {
+    --special-color: #fe8019; 
+    --special-rgb: 254,128,25;
+    --success-color: #b8bb26;
+    --success-rgb: 184,187,38;
+    --error-color: #cc241d; 
+    --error-rgb: 204,36,29;
+    --white-color: #fbf1c7; 
+    --white-rgb: 251,241,199;
+    --black-color: #282828; 
+    --black-rgb: 40,40,40;
+    --goPlus-color: linear-gradient(135deg,#9f34a9,#ff4600);
+    --facebook-color: #003bb3;
+    --facebook-rgb: 0,59,179;
+    --twitter-color: #1da1f2;
+    --twitter-rgb: 29,161,242;
+    --pinterest-color: #e60023;
+    --pinterest-rgb: 230,0,35;
+    --tumblr-color: #36465d;
+    --tumblr-rgb: 54,70,93;
+    --transparent-color: transparent;
+    --success-surface-color: #e6f7ee;
+    --success-surface-rgb: 230,247,238;
+    --warning-surface-color: #fff8e1;
+    --warning-surface-rgb: 255,248,225;
+    --error-surface-color: #ffebee;
+    --error-surface-rgb: 255,235,238;
+    --background-light-color: #fff;
+    --background-dark-color: #121212;
+    --input-default-border-color: transparent;
+    --input-placeholder-border-color: transparent;
+    --input-invalid-border-color: #d61348;
+    --input-invalid-font-color: #d61348;
+    --input-disabled-border-color: transparent;
+    --checkbox-default-background-color: transparent;
+    --checkbox-default-border-color: #666;
+    --checkbox-checked-background-color: #f50;
+    --checkbox-checked-border-color: #f50;
+    --typography-root-font-size: 1.075em;
+    --typography-display3-font-size: 3.2857142857142856rem;
+    --typography-display3-font-weight: 600;
+    --typography-display3-line-height: 2.5714285714285716rem;
+    --typography-display3-letter-spacing: -0.04em;
+    --typography-display3-font: 600 2.2857142857142856rem/2.5714285714285716rem "Ubuntu Mono";
+    --typography-display2-font-size: 2.857142857142857rem;
+    --typography-display2-font-weight: 600;
+    --typography-display2-line-height: 2.5714285714285716rem;
+    --typography-display2-letter-spacing: -0.03em;
+    --typography-display2-font: 600 2.857142857142857rem/2.5714285714285716rem "Ubuntu Mono";
+    --typography-display1-font-size: 4.285714285714286rem;
+    --typography-display1-font-weight: 600;
+    --typography-display1-line-height: 2.5714285714285716rem;
+    --typography-display1-letter-spacing: -0.02em;
+    --typography-display1-font: 600 4.285714285714286rem/2.5714285714285716rem "Ubuntu Mono";
+    --typography-heading1-font-size: 2rem;
+    --typography-heading1-font-weight: 600;
+    --typography-heading1-line-height: 2.5714285714285716rem;
+    --typography-heading1-font: 600 2rem/2.5714285714285716rem "Ubuntu Mono";
+    --typography-heading2-font-size: 1.5714285714285714rem;
+    --typography-heading2-font-weight: 600;
+    --typography-heading2-line-height: 2rem;
+    --typography-heading2-font: 600 1.5714285714285714rem/2rem "Ubuntu Mono";
+    --typography-heading3-font-size: 1.2142857142857142rem;
+    --typography-heading3-font-weight: 600;
+    --typography-heading3-line-height: 1.7142857142857142rem;
+    --typography-heading3-font: 600 1.2142857142857142rem/1.7142857142857142rem "Ubuntu Mono";
+    --typography-heading4-font-size: 1rem;
+    --typography-heading4-font-weight: 600;
+    --typography-heading4-line-height: 1.4285714285714286rem;
+    --typography-heading4-font: 600 1rem/1.4285714285714286rem "Ubuntu Mono";
+    --typography-body-font-size: 1rem;
+    --typography-body-font-weight: 400;
+    --typography-body-line-height: 1.4285714285714286rem;
+    --typography-body-font: 400 1rem/1.4285714285714286rem "Ubuntu Mono";
+    --typography-body1-font-size: 1.2142857142857142rem;
+    --typography-body1-font-weight: 400;
+    --typography-body1-line-height: 1.7142857142857142rem;
+    --typography-body1-font: 400 1.2142857142857142rem/1.7142857142857142rem "Ubuntu Mono";
+    --typography-body2-font-size: 1rem !important;
+    --typography-body2-font-weight: 400;
+    --typography-body2-line-height: 1.4285714285714286rem;
+    --typography-body2-font: 400 1rem/1.4285714285714286rem "Ubuntu Mono";
+    --typography-heading5-font-size: 0.8571428571428571rem;
+    --typography-heading5-font-weight: 600;
+    --typography-heading5-line-height: 1.1428571428571428rem;
+    --typography-heading5-font: 600 0.8571428571428571rem/1.1428571428571428rem "Ubuntu Mono";
+    --typography-captions-font-size: 0.8571428571428571rem;
+    --typography-captions-font-weight: 400;
+    --typography-captions-line-height: 1.1428571428571428rem;
+    --typography-captions-font: 400 0.8571428571428571rem/1.1428571428571428rem "Ubuntu Mono";
+    --typography-heading6-font-size: 0.7142857142857143rem;
+    --typography-heading6-font-weight: 600;
+    --typography-heading6-letter-spacing: 0.1em;
+    --typography-heading6-line-height: 1.1428571428571428rem;
+    --typography-heading6-text-transform: uppercase;
+    --typography-heading6-font: 600 0.7142857142857143rem/1.1428571428571428rem "Ubuntu Mono";
+    --typography-micro-font-size: 0.7142857142857143rem;
+    --typography-micro-font-weight: 600;
+    --typography-micro-letter-spacing: 0.07142857142857142rem;
+    --typography-micro-line-height: 1.1428571428571428rem;
+    --typography-micro-text-transform: uppercase;
+    --typography-micro-font: 600 0.7142857142857143rem/1.1428571428571428rem "Ubuntu Mono";
+    --spacing-0_25x: 2px;
+    --spacing-0_5x: 4px;
+    --spacing-0_75x: 6px;
+    --spacing-1x: 8px;
+    --spacing-1_25x: 10px;
+    --spacing-1_5x: 12px;
+    --spacing-1_75x: 14px;
+    --spacing-2x: 16px;
+    --spacing-2_5x: 20px;
+    --spacing-3x: 24px;
+    --spacing-3_5x: 28px;
+    --spacing-4x: 32px;
+    --spacing-5x: 40px;
+    --spacing-6x: 48px;
+    --spacing-7x: 56px;
+    --spacing-8x: 64px;
+    --artwork-1x-size: 8px;
+    --artwork-2x-size: 16px;
+    --artwork-3x-size: 24px;
+    --artwork-4x-size: 32px;
+    --artwork-5x-size: 40px;
+    --artwork-6x-size: 48px;
+    --artwork-8x-size: 64px;
+    --artwork-13x-size: 104px;
+    --artwork-15x-size: 120px;
+    --artwork-16x-size: 128px;
+    --artwork-18x-size: 144px;
+    --artwork-20x-size: 160px;
+    --artwork-25x-size: 200px;
+    --artwork-29x-size: 232px;
+    --artwork-40x-size: 320px;
+    --artwork-42x-size: 336px;
+    --artwork-45x-size: 360px;
+    --artwork-64x-size: 512px;
+    --breakpoints-xs: 480;
+    --breakpoints-sm: 768;
+    --breakpoints-md: 1152;
+    --breakpoints-lg: 1440;
+    --breakpoints-xl: 1920;
+    --borderRadiuses-4: 4px;
+    --borderRadiuses-8: 8px;
+    --borderRadiuses-10: 10px;
+    --borderRadiuses-16: 16px;
+    --borderRadiuses-20: 20px;
+    --borderRadiuses-50: 50px;
+    --borderRadiuses-100: 100px
+}

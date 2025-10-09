@@ -1010,6 +1010,20 @@ function initializeShortcuts() {
         },
     );
 
+    shortcutService.register(
+        'refresh',
+        'CommandOrControl+R',
+        'Refresh Page',
+        () => {
+            if (contentView) {
+                if (headerView && headerView.webContents) {
+                    headerView.webContents.send('refresh-state-changed', true);
+                }
+                contentView.webContents.reload();
+            }
+        },
+    );
+
     console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
 }
 

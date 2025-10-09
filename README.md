@@ -42,10 +42,9 @@ Press `F1` to open the application menu, which provides access to various settin
 
 ### Keyboard Shortcuts
 
-For a complete list of keyboard shortcuts, see [Shortcuts Documentation](docs/SHORTCUTS.md).
-
 **Quick Reference:**
 - **F1** - Open Settings
+- **Ctrl/Cmd + R** - Refresh the current page
 - **Ctrl/Cmd + B** - Go back to the previous page
 - **Ctrl/Cmd + F** - Go forward to the next page
 - **Ctrl/Cmd + =** - Zoom in
