@@ -13,6 +13,7 @@ import { ThumbarService } from './services/thumbarService';
 import { WebhookService } from './services/webhookService';
 import { ThemeService } from './services/themeService';
 import { audioMonitorScript } from './services/audioMonitorService';
+import type { TrackInfo, TrackUpdateMessage } from './types';
 import path = require('path');
 import { platform } from 'os';
 
@@ -263,7 +264,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
 }
 
 // Track info polling
-let lastTrackInfo = {
+let lastTrackInfo: TrackInfo = {
     title: '',
     author: '',
     artwork: '',
@@ -393,6 +394,11 @@ function setupWindowControls() {
     // Handle minimize to tray setting
     ipcMain.handle('get-minimize-to-tray', () => {
         return store.get('minimizeToTray', true);
+    });
+
+    // Handle navigation controls enabled setting
+    ipcMain.handle('get-navigation-controls-enabled', () => {
+        return store.get('navigationControlsEnabled', false);
     });
 
     adjustContentViews();
@@ -614,7 +620,7 @@ async function init() {
         updateNavigationState();
 
         // Initialize navigation controls visibility
-        const navigationEnabled = store.get('navigationControlsEnabled', true);
+        const navigationEnabled = store.get('navigationControlsEnabled', false);
         if (headerView && headerView.webContents) {
             headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
         }
@@ -1065,7 +1071,7 @@ function setupTranslationHandlers() {
 
 // Setup audio event handler for track updates
 function setupAudioHandler() {
-  ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }) => {
+  ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
         console.debug(`Track update received: ${reason}`);
     
         // Only update if there are actual changes

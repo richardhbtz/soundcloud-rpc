@@ -3,6 +3,7 @@ import { ActivityType } from 'discord-api-types/v10';
 import { Client as DiscordClient, SetActivity } from '@xhayper/discord-rpc';
 import { TranslationService } from './translationService';
 import { normalizeTrackInfo } from '../utils/trackParser';
+import type { TrackInfo } from '../types';
 
 export interface Info {
     rpc: DiscordClient;
@@ -38,15 +39,7 @@ export class PresenceService {
         this.info.rpc.login().catch(console.error);
     }
 
-    public async updatePresence(trackInfo: {
-        title: string;
-        author: string;
-        artwork: string;
-        elapsed: string;
-        duration: string;
-        isPlaying: boolean;
-        url: string;
-    }): Promise<void> {
+    public async updatePresence(trackInfo: TrackInfo): Promise<void> {
         try {
             if (!this.store.get('discordRichPresence')) {
                 this.clearActivity();

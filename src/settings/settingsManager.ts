@@ -740,7 +740,7 @@ export class SettingsManager {
                 <div class="setting-item">
                     <span data-i18n="enableNavigationControls">${this.translationService.translate('enableNavigationControls')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="navigationControlsEnabled" ${this.store.get('navigationControlsEnabled', true) ? 'checked' : ''}>
+                        <input type="checkbox" id="navigationControlsEnabled" ${this.store.get('navigationControlsEnabled', false) ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>

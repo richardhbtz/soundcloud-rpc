@@ -1,6 +1,7 @@
 import type ElectronStore = require('electron-store');
 import fetch from 'cross-fetch';
 import { normalizeTrackInfo } from '../utils/trackParser';
+import type { WebhookTrackData as WebhookInputData } from '../types';
 
 export interface WebhookTrackData {
     artist: string;
@@ -128,14 +129,7 @@ export class WebhookService {
         }
     }
 
-    public async updateTrackInfo(trackInfo: {
-        title: string;
-        author: string;
-        duration: string;
-        url: string;
-        artwork: string;
-        elapsed: string;
-    }): Promise<void> {
+    public async updateTrackInfo(trackInfo: WebhookInputData): Promise<void> {
         const webhookEnabled = this.store.get('webhookEnabled') as boolean;
         if (!webhookEnabled) return;
 

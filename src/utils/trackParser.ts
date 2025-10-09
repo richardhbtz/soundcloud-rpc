@@ -1,7 +1,4 @@
-export interface ParsedTrackInfo {
-    artist: string | null;
-    track: string;
-}
+import type { ParsedTrackInfo, NormalizedTrackInfo } from '../types';
 
 // Characters: - (hyphen U+002D), – (en dash U+2013), — (em dash U+2014), ― (horizontal bar U+2015)
 const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]\s+|[\u002D\u2013\u2014\u2015])/;
@@ -39,7 +36,7 @@ export function normalizeTrackInfo(
     titleFromPage: string,
     authorFromPage: string,
     useTrackParser: boolean = true
-): { artist: string; track: string } {
+): NormalizedTrackInfo {
     if (!useTrackParser || !titleFromPage) {
         // Fallback to original behavior
         return {

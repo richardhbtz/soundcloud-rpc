@@ -169,8 +169,12 @@ ipcRenderer.on('refresh-state-changed', (_, refreshing) => {
 ipcRenderer.on('navigation-controls-toggle', (_, enabled) => {
     const navControls = document.querySelector('.navigation-controls');
     if (navControls) {
-        navControls.classList.toggle('hidden', !enabled);
-        if (!enabled) {
+        if (enabled) {
+            navControls.classList.add('visible');
+            navControls.classList.remove('hidden');
+        } else {
+            navControls.classList.remove('visible');
+            navControls.classList.add('hidden');
             navButtons = null;
         }
     }
@@ -180,6 +184,15 @@ ipcRenderer.on('navigation-controls-toggle', (_, enabled) => {
 document.addEventListener('DOMContentLoaded', () => {
     initializeIcons();
     updateNavigationState();
+    
+    // Request initial navigation controls state
+    ipcRenderer.invoke('get-navigation-controls-enabled').then((enabled) => {
+        const navControls = document.querySelector('.navigation-controls');
+        if (navControls && enabled) {
+            navControls.classList.add('visible');
+            navControls.classList.remove('hidden');
+        }
+    });
     
     // Check window state periodically
     setInterval(() => {

@@ -28,10 +28,14 @@ body {
 }
 
 .navigation-controls {
-    display: flex;
+    display: none; /* Hidden by default, shown when enabled */
     align-items: center;
     padding-left: 8px;
     -webkit-app-region: no-drag;
+}
+
+.navigation-controls.visible {
+    display: flex;
 }
 
 .navigation-controls.hidden {

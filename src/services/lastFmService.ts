@@ -3,6 +3,7 @@ import type ElectronStore = require('electron-store');
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';
 import { normalizeTrackInfo } from '../utils/trackParser';
+import type { LastFmTrackData } from '../types';
 
 export interface ScrobbleState {
     artist: string;
@@ -216,12 +217,7 @@ export class LastFmService {
         }
     }
 
-    public async updateTrackInfo(trackInfo: {
-        title: string;
-        author: string;
-        duration: string;
-        elapsed: string;
-    }): Promise<void> {
+    public async updateTrackInfo(trackInfo: LastFmTrackData): Promise<void> {
         if (!this.store.get('lastFmEnabled')) return;
 
         if (!trackInfo.title || !trackInfo.author) {
