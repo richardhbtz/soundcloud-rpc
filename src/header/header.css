@@ -76,6 +76,16 @@ html.theme-light {
     display: none;
 }
 
+/* Reserve space for native macOS traffic light controls */
+body.platform-darwin .custom-header {
+    padding-left: 80px;
+    padding-right: 12px;
+}
+
+body.platform-darwin .navigation-controls {
+    padding-left: 0;
+}
+
 .nav-button {
     display: flex;
     align-items: center;
