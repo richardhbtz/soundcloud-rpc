@@ -1100,37 +1100,38 @@ function setupAudioHandler() {
     ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
         console.debug(`Track update received: ${reason}`);
 
-        // Only update if there are actual changes
-        const hasChanges = JSON.stringify(result) !== JSON.stringify(lastTrackInfo);
-        if (hasChanges) {
-            lastTrackInfo = result;
+        lastTrackInfo = result;
 
-            if (result.isPlaying && result.title && result.author && result.duration) {
-                await lastFmService.updateTrackInfo({
+        // Update services only if track is playing
+        if (result.isPlaying && result.title && result.author && result.duration) {
+            await Promise.all([
+                lastFmService.updateTrackInfo({
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
                     elapsed: result.elapsed,
-                });
-
-                await webhookService.updateTrackInfo({
+                }),
+                webhookService.updateTrackInfo({
                     title: result.title,
                     author: result.author,
                     duration: result.duration,
                     url: result.url,
                     artwork: result.artwork,
                     elapsed: result.elapsed,
-                });
-            }
-
+                }),
+                presenceService.updatePresence(result)
+            ]);
+        } else {
             await presenceService.updatePresence(result);
+        }
 
-            // Update the rich presence preview in settings
-            if (settingsManager) {
-                settingsManager.getView().webContents.send('presence-preview-update', result);
-            }
+        // Update the rich presence preview in settings
+        if (settingsManager) {
+            settingsManager.getView().webContents.send('presence-preview-update', result);
+        }
 
-            if (thumbarService) thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
+        if (thumbarService) {
+            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
         }
     });
 }
