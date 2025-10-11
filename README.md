@@ -43,6 +43,7 @@ Press `F1` to open the application menu, which provides access to various settin
 ### Keyboard Shortcuts
 
 **Quick Reference:**
+
 - **F1** - Open Settings
 - **Ctrl/Cmd + R** - Refresh the current page
 - **Ctrl/Cmd + B** - Go back to the previous page

@@ -635,6 +635,9 @@ async function init() {
     // Reinitialize everything after page load/refresh
     async function reinitializeAfterPageLoad() {
         try {
+            // Reapply theme to content after page reload
+            applyThemeToContent(isDarkTheme);
+
             // Inject audio monitoring script
             await contentView.webContents.executeJavaScript(audioMonitorScript);
 
@@ -758,6 +761,18 @@ function applyThemeToContent(isDark: boolean) {
     if (!contentView) return;
 
     const customThemeCSS = themeService.getCurrentCustomThemeCSS();
+    const themeColors = themeService.getCurrentThemeColors();
+
+    // Update theme colors for all UI components
+    if (notificationManager) {
+        notificationManager.setThemeColors(themeColors);
+    }
+    if (settingsManager) {
+        settingsManager.setThemeColors(themeColors);
+    }
+    if (headerView && headerView.webContents) {
+        headerView.webContents.send('theme-colors-changed', themeColors);
+    }
 
     // Split CSS into sections using comment markers in the theme file:
     // /* @target all|content|header|settings */ ... /* @end */
@@ -917,112 +932,62 @@ function applyThemeToContent(isDark: boolean) {
 function initializeShortcuts() {
     if (!mainWindow || !contentView || !settingsManager) return;
 
-    shortcutService.register(
-        'openSettings',
-        'F1',
-        'Open Settings',
-        () => settingsManager.toggle(),
-    );
+    shortcutService.register('openSettings', 'F1', 'Open Settings', () => settingsManager.toggle());
 
     if (devMode) {
-        shortcutService.register(
-            'devTools',
-            'F12',
-            'Open Developer Tools',
-            () => {
-                if (contentView) contentView.webContents.openDevTools();
-            },
-        );
+        shortcutService.register('devTools', 'F12', 'Open Developer Tools', () => {
+            if (contentView) contentView.webContents.openDevTools();
+        });
     }
 
-    shortcutService.register(
-        'zoomIn',
-        'CommandOrControl+=',
-        'Zoom In',
-        () => {
-            if (!contentView) return;
-            const zoomLevel = contentView.webContents.getZoomLevel();
-            contentView.webContents.setZoomLevel(Math.min(zoomLevel + 1, 9));
-        },
-    );
+    shortcutService.register('zoomIn', 'CommandOrControl+=', 'Zoom In', () => {
+        if (!contentView) return;
+        const zoomLevel = contentView.webContents.getZoomLevel();
+        contentView.webContents.setZoomLevel(Math.min(zoomLevel + 1, 9));
+    });
 
-    shortcutService.register(
-        'zoomOut',
-        'CommandOrControl+-',
-        'Zoom Out',
-        () => {
-            if (!contentView) return;
-            const zoomLevel = contentView.webContents.getZoomLevel();
-            contentView.webContents.setZoomLevel(Math.max(zoomLevel - 1, -9));
-        },
-    );
+    shortcutService.register('zoomOut', 'CommandOrControl+-', 'Zoom Out', () => {
+        if (!contentView) return;
+        const zoomLevel = contentView.webContents.getZoomLevel();
+        contentView.webContents.setZoomLevel(Math.max(zoomLevel - 1, -9));
+    });
 
-    shortcutService.register(
-        'zoomReset',
-        'CommandOrControl+0',
-        'Reset Zoom',
-        () => {
-            if (contentView) contentView.webContents.setZoomLevel(0);
-        },
-    );
+    shortcutService.register('zoomReset', 'CommandOrControl+0', 'Reset Zoom', () => {
+        if (contentView) contentView.webContents.setZoomLevel(0);
+    });
 
-    shortcutService.register(
-        'goBack',
-        'CommandOrControl+B',
-        'Go Back',
-        () => {
-            if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
-                contentView.webContents.navigationHistory.goBack();
+    shortcutService.register('goBack', 'CommandOrControl+B', 'Go Back', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+            contentView.webContents.navigationHistory.goBack();
+        }
+    });
+
+    shortcutService.register('goBackAlt', 'CommandOrControl+P', 'Go Back (Alternative)', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
+            contentView.webContents.navigationHistory.goBack();
+        }
+    });
+
+    shortcutService.register('goForward', 'CommandOrControl+F', 'Go Forward', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+            contentView.webContents.navigationHistory.goForward();
+        }
+    });
+
+    shortcutService.register('goForwardAlt', 'CommandOrControl+N', 'Go Forward (Alternative)', () => {
+        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
+            contentView.webContents.navigationHistory.goForward();
+        }
+    });
+
+    shortcutService.register('refresh', 'CommandOrControl+R', 'Refresh Page', () => {
+        if (contentView) {
+            if (headerView && headerView.webContents) {
+                headerView.webContents.send('refresh-state-changed', true);
             }
-        },
-    );
-
-    shortcutService.register(
-        'goBackAlt',
-        'CommandOrControl+P',
-        'Go Back (Alternative)',
-        () => {
-            if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
-                contentView.webContents.navigationHistory.goBack();
-            }
-        },
-    );
-
-    shortcutService.register(
-        'goForward',
-        'CommandOrControl+F',
-        'Go Forward',
-        () => {
-            if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
-                contentView.webContents.navigationHistory.goForward();
-            }
-        },
-    );
-
-    shortcutService.register(
-        'goForwardAlt',
-        'CommandOrControl+N',
-        'Go Forward (Alternative)',
-        () => {
-            if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
-                contentView.webContents.navigationHistory.goForward();
-            }
-        },
-    );
-
-    shortcutService.register(
-        'refresh',
-        'CommandOrControl+R',
-        'Refresh Page',
-        () => {
-            if (contentView) {
-                if (headerView && headerView.webContents) {
-                    headerView.webContents.send('refresh-state-changed', true);
-                }
-                contentView.webContents.reload();
-            }
-        },
-    );
+            contentView.webContents.reload();
+        }
+    });
 
     console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
 }

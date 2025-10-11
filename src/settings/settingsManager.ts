@@ -1,6 +1,7 @@
 import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
+import type { ThemeColors } from '../utils/colorExtractor';
 
 export class SettingsManager {
     private view: BrowserView;
@@ -1645,6 +1646,31 @@ export class SettingsManager {
                 window.postMessage('hidePanel', '*');
             }, 300);
         `);
+    }
+
+    public setThemeColors(colors: ThemeColors | null): void {
+        if (!colors) {
+            // Reset to default theme colors
+            this.view.webContents.executeJavaScript(`
+                document.documentElement.style.removeProperty('--bg-primary');
+                document.documentElement.style.removeProperty('--bg-secondary');
+                document.documentElement.style.removeProperty('--text-primary');
+                document.documentElement.style.removeProperty('--accent');
+            `);
+            return;
+        }
+
+        // Apply custom theme colors
+        this.view.webContents
+            .executeJavaScript(
+                `
+            document.documentElement.style.setProperty('--bg-primary', '${colors.surface || colors.background}');
+            document.documentElement.style.setProperty('--bg-secondary', '${colors.background}');
+            document.documentElement.style.setProperty('--text-primary', '${colors.text}');
+            document.documentElement.style.setProperty('--accent', '${colors.accent || colors.primary}');
+        `,
+            )
+            .catch(console.error);
     }
 
     public getView(): BrowserView {

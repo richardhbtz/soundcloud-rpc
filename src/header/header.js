@@ -1,7 +1,5 @@
 /* eslint-disable */
 const { ipcRenderer } = require('electron');
-const fs = require('fs');
-const path = require('path');
 
 let isMaximized = false;
 let isDarkTheme = true;
@@ -9,6 +7,49 @@ let canGoBack = false;
 let canGoForward = false;
 let isRefreshing = false;
 let navButtons = null;
+let themeColors = null;
+let minimizeGlyphEl = null;
+let maximizeGlyphEl = null;
+let closeGlyphEl = null;
+
+const SEGOE_GLYPHS = {
+    minimize: '\uE921',
+    maximize: '\uE922',
+    restore: '\uE923',
+    close: '\uE8BB',
+    closeHighContrast: '\uEF2C',
+};
+const forcedColorsQuery = window.matchMedia ? window.matchMedia('(forced-colors: active)') : null;
+
+function applyThemeColors(colors) {
+    themeColors = colors;
+    if (!colors) {
+        // Reset to default - remove custom properties so CSS theme classes take effect
+        document.documentElement.style.removeProperty('--header-bg');
+        document.documentElement.style.removeProperty('--header-text');
+        document.documentElement.style.removeProperty('--header-accent');
+
+        // Also reset inline styles so CSS variables work
+        const header = document.querySelector('.custom-header');
+        if (header) {
+            header.style.removeProperty('background-color');
+            header.style.removeProperty('color');
+        }
+        return;
+    }
+
+    // Apply custom theme colors
+    document.documentElement.style.setProperty('--header-bg', colors.primary || colors.background);
+    document.documentElement.style.setProperty('--header-text', colors.text);
+    document.documentElement.style.setProperty('--header-accent', colors.accent || colors.primary);
+
+    // Update the header background
+    const header = document.querySelector('.custom-header');
+    if (header) {
+        header.style.backgroundColor = colors.surface || colors.background;
+        header.style.color = colors.text;
+    }
+}
 
 function updateNavigationState(state = {}) {
     if (!navButtons) {
@@ -36,43 +77,23 @@ function updateNavigationState(state = {}) {
 
 // Helper function to update window controls
 function updateWindowControls() {
-    console.log('updateWindowControls', isMaximized);
     if (process.platform === 'win32') {
-        const maximizeBtn = document.querySelector('#maximize-btn svg');
-        if (!maximizeBtn) return;
+        if (!maximizeGlyphEl) {
+            maximizeGlyphEl = document.querySelector('#maximize-btn .icon-glyph');
+        }
+        if (!maximizeGlyphEl) return;
 
-        // Load and set the appropriate icon
-        const iconName = isMaximized ? 'restore.svg' : 'maximize.svg';
-        setSvgContent(maximizeBtn, loadSvgContent(iconName));
+        setIconGlyph(maximizeGlyphEl, isMaximized ? SEGOE_GLYPHS.restore : SEGOE_GLYPHS.maximize);
 
         // Update the button title
         document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
+        document.getElementById('maximize-btn').setAttribute('aria-label', isMaximized ? 'Restore' : 'Maximize');
     }
 }
 
-// Helper function to load SVG file
-function loadSvgContent(filename) {
-    try {
-        const filePath = path.join(__dirname, 'icons', filename);
-        const content = fs.readFileSync(filePath, 'utf8');
-        return content;
-    } catch (error) {
-        console.error(`Error loading SVG file ${filename}:`, error);
-        return '';
-    }
-}
-
-// Helper function to set SVG content
-function setSvgContent(element, svgContent) {
-    if (!element) {
-        console.error('SVG element not found');
-        return;
-    }
-    try {
-        element.outerHTML = svgContent;
-    } catch (error) {
-        console.error('Error setting SVG content:', error);
-    }
+function setIconGlyph(element, glyph) {
+    if (!element) return;
+    element.textContent = glyph;
 }
 
 // Initialize icons
@@ -80,20 +101,32 @@ function initializeIcons() {
     try {
         // Only initialize SVG icons if we're on Windows
         if (process.platform === 'win32') {
-            // Minimize icon
-            const minimizeBtn = document.querySelector('#minimize-btn svg');
-            setSvgContent(minimizeBtn, loadSvgContent('minimize.svg'));
+            minimizeGlyphEl = document.querySelector('#minimize-btn .icon-glyph');
+            maximizeGlyphEl = document.querySelector('#maximize-btn .icon-glyph');
+            closeGlyphEl = document.querySelector('#close-btn .icon-glyph');
 
-            // Initial maximize/restore icon
-            const maximizeBtn = document.querySelector('#maximize-btn svg');
-            setSvgContent(maximizeBtn, loadSvgContent('maximize.svg'));
+            setIconGlyph(minimizeGlyphEl, SEGOE_GLYPHS.minimize);
+            setIconGlyph(maximizeGlyphEl, SEGOE_GLYPHS.maximize);
+            setIconGlyph(closeGlyphEl, getCloseGlyph());
 
-            // Close icon
-            const closeBtn = document.querySelector('#close-btn svg');
-            setSvgContent(closeBtn, loadSvgContent('close.svg'));
+            if (forcedColorsQuery?.addEventListener) {
+                forcedColorsQuery.addEventListener('change', handleForcedColorsChange);
+            } else if (forcedColorsQuery?.addListener) {
+                forcedColorsQuery.addListener(handleForcedColorsChange);
+            }
         }
     } catch (error) {
         console.error('Error initializing icons:', error);
+    }
+}
+
+function getCloseGlyph() {
+    return forcedColorsQuery?.matches ? SEGOE_GLYPHS.closeHighContrast : SEGOE_GLYPHS.close;
+}
+
+function handleForcedColorsChange() {
+    if (closeGlyphEl) {
+        setIconGlyph(closeGlyphEl, getCloseGlyph());
     }
 }
 
@@ -153,6 +186,20 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
     } else {
         document.documentElement.classList.add('theme-light');
     }
+
+    // If no custom theme colors are applied, reset inline styles to use CSS variables
+    if (!themeColors) {
+        const header = document.querySelector('.custom-header');
+        if (header) {
+            header.style.removeProperty('background-color');
+            header.style.removeProperty('color');
+        }
+    }
+});
+
+// Listen for theme color updates
+ipcRenderer.on('theme-colors-changed', (_, colors) => {
+    applyThemeColors(colors);
 });
 
 // Listen for navigation state changes
@@ -191,6 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navControls && enabled) {
             navControls.classList.add('visible');
             navControls.classList.remove('hidden');
+        }
+    });
+
+    // Request initial theme colors
+    ipcRenderer.invoke('get-theme-colors').then((colors) => {
+        if (colors) {
+            applyThemeColors(colors);
         }
     });
 

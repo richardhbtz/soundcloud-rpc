@@ -1,10 +1,12 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
+import type { ThemeColors } from '../utils/colorExtractor';
 
 export class NotificationManager {
     private view: BrowserView;
     private queue: string[] = [];
     private isDisplaying = false;
     private parentWindow: BrowserWindow;
+    private themeColors: ThemeColors | null = null;
 
     constructor(parentWindow: BrowserWindow) {
         this.parentWindow = parentWindow;
@@ -15,6 +17,10 @@ export class NotificationManager {
                 transparent: true,
             },
         });
+    }
+
+    public setThemeColors(colors: ThemeColors | null): void {
+        this.themeColors = colors;
     }
 
     public show(message: string): void {
@@ -45,6 +51,10 @@ export class NotificationManager {
             height,
         });
 
+        // Use theme colors if available
+        const backgroundColor = this.themeColors?.surface || '#303030';
+        const textColor = this.themeColors?.text || '#ffffff';
+
         const html = `
         <style>
             body {
@@ -54,7 +64,7 @@ export class NotificationManager {
                 align-items: center;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 background-color: transparent;
-                color: white;
+                color: ${textColor};
                 height: 100vh;
                 opacity: 0;
                 transition: opacity 0.3s ease-in-out;
@@ -76,8 +86,10 @@ export class NotificationManager {
                 max-width: 90%;
                 user-select: none;
                 -webkit-user-select: none;
-                background: #303030;
-                backdrop-filter: blur(5px);
+                background: ${backgroundColor};
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             }
             body.fade-out .notification {
                 transform: translateY(10px);

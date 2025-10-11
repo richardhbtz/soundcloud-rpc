@@ -25,13 +25,34 @@ body {
     overflow: hidden;
 }
 
+/* Theme specific styles */
+:root {
+    --header-bg: #121212;
+    --header-text: #ffffff;
+    --header-accent: #ff5500;
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --scrollbar-bg: rgba(255, 255, 255, 0.05);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+}
+
+html.theme-light {
+    --header-bg: #ffffff;
+    --header-text: #333333;
+    --header-accent: #ff5500;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+    --scrollbar-bg: rgba(0, 0, 0, 0.05);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+}
+
 .custom-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     height: 32px;
-    background-color: #121212;
-    color: #ffffff;
+    background-color: var(--header-bg);
+    color: var(--header-text);
     -webkit-app-region: drag;
     padding: 0 0px;
     transition:
@@ -42,7 +63,8 @@ body {
 .navigation-controls {
     display: none; /* Hidden by default, shown when enabled */
     align-items: center;
-    padding-left: 8px;
+    padding-left: 4px;
+    padding-top: 2px;
     -webkit-app-region: no-drag;
 }
 
@@ -62,19 +84,17 @@ body {
     height: 24px;
     margin-right: 4px;
     border-radius: 4px;
-    cursor: pointer;
     opacity: 0.7;
     transition: all 0.2s ease;
 }
 
 .nav-button:hover {
     opacity: 1;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--hover-bg);
 }
 
 .nav-button.disabled {
     opacity: 0.3;
-    cursor: not-allowed;
 }
 
 .nav-button.disabled:hover {
@@ -82,7 +102,7 @@ body {
 }
 
 .nav-button svg {
-    color: #ffffff;
+    color: var(--header-text);
     transition: color 0.3s;
 }
 
@@ -139,48 +159,56 @@ body {
     justify-content: center;
     width: 46px;
     height: 32px;
-    opacity: 0.85;
-    transition:
-        background-color 0.2s ease,
-        opacity 0.2s ease;
+    opacity: 1;
+    transition: all 0.2s ease;
 }
 
-.windows-controls .control svg,
-.theme-toggle svg {
-    transition: color 0.3s;
-    width: 10px;
-    height: 10px;
-    display: block;
-    color: #ffffff;
-    filter: invert(100%);
-}
-
-.icon-container {
+.windows-controls .control,
+.theme-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
+    width: 46px;
+    height: 32px;
+    opacity: 1;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: default;
+    font: inherit;
 }
 
-.icon-container svg {
-    position: absolute;
+.windows-controls .control:hover,
+.theme-toggle:hover {
+    opacity: 1;
+    background-color: var(--hover-bg);
 }
 
-.windows-controls .maximize:hover i {
-    transform: scale(0.9);
+.windows-controls .control .icon-glyph,
+.theme-toggle svg {
+    transition: color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    color: var(--header-text);
 }
 
-.windows-controls .minimize:hover i {
-    transform: translateY(1px);
+.windows-controls .control .icon-glyph {
+    font-family: 'Segoe Fluent Icons', 'Segoe MDL2 Assets';
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 400;
 }
 
-.windows-controls .close:hover {
-    background-color: #e81123;
+.windows-controls .minimize:hover .icon-glyph {
+    opacity: 1;
 }
 
-.windows-controls .close:hover svg {
-    color: #ffffff;
+.windows-controls .close:hover .icon-glyph {
+    color: #ffffff !important;
 }
 
 /* Platform specific display */
@@ -196,67 +224,61 @@ body.platform-win32 .windows-controls {
 :root {
     --header-bg: #121212;
     --header-text: #ffffff;
+    --header-accent: #ff5500;
     --hover-bg: rgba(255, 255, 255, 0.1);
     --scrollbar-bg: rgba(255, 255, 255, 0.05);
     --scrollbar-thumb: rgba(255, 255, 255, 0.2);
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 }
 
-html.theme-light .custom-header {
-    background-color: #ffffff;
-    color: #333333;
-}
-
-html.theme-light .nav-button svg {
-    color: #333333;
-}
-
-html.theme-light .nav-button:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-html.theme-light .windows-controls .control svg,
-html.theme-light .theme-toggle svg {
-    filter: invert(0%);
-}
-
-html.theme-light .windows-controls .control:hover,
-html.theme-light .theme-toggle:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-html.theme-light .windows-controls .close:hover {
-    background-color: #e81123;
-}
-
-html.theme-light .windows-controls .close:hover svg {
-    color: #ffffff;
-}
-
-html.theme-light:root {
+html.theme-light {
     --header-bg: #ffffff;
     --header-text: #333333;
+    --header-accent: #ff5500;
     --hover-bg: rgba(0, 0, 0, 0.1);
     --scrollbar-bg: rgba(0, 0, 0, 0.05);
     --scrollbar-thumb: rgba(0, 0, 0, 0.2);
     --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 }
 
-/* Dark theme */
-.custom-header {
-    background-color: #121212;
-    color: #ffffff;
+html.theme-light .custom-header {
+    background-color: var(--header-bg);
+    color: var(--header-text);
 }
 
-.windows-controls .control:hover,
-.theme-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+html.theme-light .nav-button svg {
+    color: var(--header-text);
 }
 
-.windows-controls .close:hover {
-    background-color: #e81123;
+html.theme-light .nav-button:hover {
+    background-color: var(--hover-bg);
 }
 
-.windows-controls .close:hover svg {
-    color: #ffffff;
+html.theme-light .windows-controls .control svg,
+html.theme-light .theme-toggle svg {
+    color: var(--header-text);
+}
+
+html.theme-light .windows-controls .control svg path,
+html.theme-light .theme-toggle svg path {
+    fill: currentColor;
+    stroke: currentColor;
+}
+
+html.theme-light .windows-controls .close:hover {
+    background-color: #e81123 !important;
+}
+
+html.theme-light .windows-controls .close:hover .icon-glyph {
+    color: #ffffff !important;
+}
+
+html.theme-light:root {
+    --header-bg: #ffffff;
+    --header-text: #333333;
+    --header-accent: #ff5500;
+    --hover-bg: rgba(0, 0, 0, 0.1);
+    --scrollbar-bg: rgba(0, 0, 0, 0.05);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 }

@@ -3,6 +3,7 @@ import { readFileSync, existsSync, readdirSync, statSync, watch } from 'fs';
 import { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
 import { EventEmitter } from 'events';
+import { extractThemeColors, type ThemeColors } from '../utils/colorExtractor';
 
 export interface CustomTheme {
     name: string;
@@ -169,6 +170,10 @@ export class ThemeService {
                 filePath: theme.filePath,
             }));
         });
+
+        ipcMain.handle('get-theme-colors', () => {
+            return this.getCurrentThemeColors();
+        });
     }
 
     public applyCustomTheme(themeName: string): boolean {
@@ -218,6 +223,15 @@ export class ThemeService {
 
         const theme = this.customThemes.get(this.currentCustomTheme);
         return theme ? theme.css : null;
+    }
+
+    public getCurrentThemeColors(): ThemeColors | null {
+        const css = this.getCurrentCustomThemeCSS();
+        if (!css) {
+            return null;
+        }
+
+        return extractThemeColors(css);
     }
 
     public getThemesPath(): string {

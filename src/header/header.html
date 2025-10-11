@@ -65,15 +65,27 @@
             <div class="title-bar" title="Double click to maximize/restore"></div>
             <div class="window-controls">
                 <div class="control-group windows-controls">
-                    <div class="control minimize" id="minimize-btn" title="Minimize">
-                        <svg width="10" height="10" viewBox="0 0 20 20"></svg>
-                    </div>
-                    <div class="control maximize" id="maximize-btn" title="Maximize">
-                        <svg class="maximize-icon" viewBox="0 0 20 20"></svg>
-                    </div>
-                    <div class="control close" id="close-btn" title="Close">
-                        <svg width="10" height="10" viewBox="0 0 20 20"></svg>
-                    </div>
+                    <button
+                        class="control minimize"
+                        id="minimize-btn"
+                        title="Minimize"
+                        aria-label="Minimize"
+                        type="button"
+                    >
+                        <span class="icon-glyph" aria-hidden="true"></span>
+                    </button>
+                    <button
+                        class="control maximize"
+                        id="maximize-btn"
+                        title="Maximize"
+                        aria-label="Maximize"
+                        type="button"
+                    >
+                        <span class="icon-glyph" aria-hidden="true"></span>
+                    </button>
+                    <button class="control close" id="close-btn" title="Close" aria-label="Close" type="button">
+                        <span class="icon-glyph" aria-hidden="true"></span>
+                    </button>
                 </div>
             </div>
         </div>

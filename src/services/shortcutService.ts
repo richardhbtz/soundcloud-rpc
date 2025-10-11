@@ -22,13 +22,7 @@ export class ShortcutService {
         this.window = window;
     }
 
-    register(
-        id: string,
-        accelerator: string,
-        description: string,
-        action: () => void,
-        enabled: boolean = true,
-    ) {
+    register(id: string, accelerator: string, description: string, action: () => void, enabled: boolean = true) {
         this.shortcuts.set(id, { accelerator, action, description, enabled });
     }
 
