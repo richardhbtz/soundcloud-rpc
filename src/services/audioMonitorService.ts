@@ -12,6 +12,8 @@ export const audioMonitorScript = `
   let currentTrackAuthor = '';
   let currentTrackUrl = '';
   let currentTrackElapsed = '';
+  let currentTrackDuration = '';
+  let elapsedObserver = null;
   
   function getTrackInfo() {
     const playButton = document.querySelector('.playControls__play');
@@ -42,17 +44,19 @@ export const audioMonitorScript = `
       trackInfo.author !== currentTrackAuthor ||
       trackInfo.url !== currentTrackUrl;
     const elapsedChanged = trackInfo.elapsed !== currentTrackElapsed;
+    const durationChanged = trackInfo.duration !== currentTrackDuration;
+    
     if (stateChanged || trackChanged || elapsedChanged || !window.__initialStateSent) {
       isCurrentlyPlaying = trackInfo.isPlaying;
       currentTrackTitle = trackInfo.title;
       currentTrackAuthor = trackInfo.author;
       currentTrackUrl = trackInfo.url;
       currentTrackElapsed = trackInfo.elapsed;
+      currentTrackDuration = trackInfo.duration;
       window.__initialStateSent = true;
       
-    window.soundcloudAPI.sendTrackUpdate(trackInfo, 'playback-state-change');
-    console.debug('Playback state change:', trackInfo.isPlaying ? 'playing' : 'paused', trackInfo);
-      
+      window.soundcloudAPI.sendTrackUpdate(trackInfo, 'playback-state-change');
+      console.debug('Playbook state change:', trackInfo.isPlaying ? 'playing' : 'paused', trackInfo);
     }
   }
   
@@ -139,6 +143,68 @@ export const audioMonitorScript = `
     }
   }
   
+  // Monitor elapsed time element for changes (catches loops)
+  function monitorElapsedTime() {
+    const elapsedElement = document.querySelector('.playbackTimeline__timePassed span:last-child');
+    
+    if (elapsedElement) {
+      if (elapsedObserver) {
+        elapsedObserver.disconnect();
+      }
+      
+      elapsedObserver = new MutationObserver(() => {
+        const trackInfo = getTrackInfo();
+        
+        // Only update if one of these have changed:
+        // 1. Track changed (title/author/url)
+        // 2. Play state changed
+        // 3. Elapsed time reset to start (loop detection)
+        const trackChanged = trackInfo.title !== currentTrackTitle ||
+                            trackInfo.author !== currentTrackAuthor ||
+                            trackInfo.url !== currentTrackUrl;
+        const playStateChanged = trackInfo.isPlaying !== isCurrentlyPlaying;
+        
+        // Check if it's near the start (0-3 seconds = loop)
+        const parseTimeToSeconds = (time) => {
+          if (!time) return 0;
+          const parts = time.split(':').map(p => parseInt(p) || 0);
+          let seconds = 0;
+          for (const part of parts) {
+            seconds = seconds * 60 + part;
+          }
+          return seconds;
+        };
+        const elapsedSeconds = parseTimeToSeconds(trackInfo.elapsed);
+        const isLoop = elapsedSeconds <= 3;
+        
+        if (trackChanged || playStateChanged || isLoop) {
+          notifyPlaybackStateChange();
+        }
+      });
+      
+      // Watch for text content changes
+      const parentEl = elapsedElement.parentElement;
+      if (parentEl) {
+        elapsedObserver.observe(parentEl, {
+          childList: true,
+          characterData: true,
+          subtree: true
+        });
+        console.debug('Monitoring elapsed time parent element');
+      } else {
+        elapsedObserver.observe(elapsedElement, {
+          childList: true,
+          characterData: true,
+          subtree: true
+        });
+        console.debug('Monitoring elapsed time element');
+      }
+      
+      return true;
+    }
+    return false;
+  }
+  
   // Initial setup
   function initialize() {
     const playbackObserverSet = setupPlaybackObserver();
@@ -163,7 +229,31 @@ export const audioMonitorScript = `
         subtree: true
       });
     }
+    
+    // Start monitoring elapsed time for loop detection
+    monitorElapsedTime();
+    
+    // Re-monitor elapsed time if the element gets replaced/recreated
+    const bodyObserver = new MutationObserver(() => {
+      const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
+      if (elapsedEl && !elapsedObserver) {
+        monitorElapsedTime();
+      }
+    });
+    
+    bodyObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   }
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (elapsedObserver) {
+      elapsedObserver.disconnect();
+      elapsedObserver = null;
+    }
+  });
   
   // Start monitoring
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

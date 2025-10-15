@@ -237,11 +237,18 @@ export class LastFmService {
 
         await this.updateNowPlaying(currentTrack);
 
+        // Check for loop (elapsed time <= 3 seconds on same track)
+        const elapsedSeconds = timeStringToSeconds(trackInfo.elapsed);
+        const isLoop = this.currentScrobbleState &&
+            this.currentScrobbleState.artist === currentTrack.author &&
+            this.currentScrobbleState.title === currentTrack.title &&
+            elapsedSeconds <= 3;
+
         if (
             !this.currentScrobbleState ||
             this.currentScrobbleState.artist !== currentTrack.author ||
             this.currentScrobbleState.title !== currentTrack.title ||
-            trackInfo.elapsed === '0:00'
+            isLoop
         ) {
             // Scrobble previous track if it wasn't scrobbled and met criteria
             if (
@@ -255,7 +262,7 @@ export class LastFmService {
                 });
             }
 
-            // Start tracking new track
+            // Start tracking new track/loop
             this.currentScrobbleState = {
                 artist: currentTrack.author,
                 title: currentTrack.title,
