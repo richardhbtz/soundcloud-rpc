@@ -4,7 +4,7 @@ import type { ParsedTrackInfo, NormalizedTrackInfo } from '../types';
 const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]+\s+|[\u002D\u2013\u2014\u2015]{2,})/;
 const INVALID_PATTERNS = [
     /^[^a-zA-Z]*$/, /^\s*$/, /^[\u002D\u2013\u2014\u2015]/, /[\u002D\u2013\u2014\u2015]$/,
-    /(.)\1{4,}/, /[\u002D\u2013\u2014\u2015]{3,}/
+    /(.)\1{4,}/, /[\u002D\u2013\u2014\u2015]{2,}/
 ];
 
 const hasInvalidPatterns = (text: string): boolean => INVALID_PATTERNS.some(p => p.test(text));
@@ -66,7 +66,7 @@ function testTrackParser() {
         "- No Artist",                           // separator at start
         "No Song -",                             // separator at end
         "Her head is so0o0o0o0 rolling (POST-MORTEM MIX)",  // repeated characters (invalid)
-        "FRONT DOOR ENTRY ONLY ---- until I cant feel a thing",  // 4+ separators (invalid)
+        "FRONT DOOR ENTRY ONLY ---- until I cant feel a thing",  // 2+ separators without spaces (invalid)
         "a - b",                                 // short but valid
         "Valid Artist - Valid Track",            // valid parse
         "",                                      // empty string
