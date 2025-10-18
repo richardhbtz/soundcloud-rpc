@@ -112,6 +112,23 @@ export const audioMonitorScript = `
     }
 
     monitorTimelineSeeking();
+    monitorWaveformClicks();
+  }
+
+  function monitorWaveformClicks() {
+    const waveformWrapper = document.querySelector('.waveform');
+    
+    if (waveformWrapper && !waveformWrapper.__waveformMonitored) {
+      waveformWrapper.__waveformMonitored = true;
+      
+      waveformWrapper.addEventListener('click', () => {
+        setTimeout(() => {
+          const trackInfo = getTrackInfo();
+          currentTrackElapsed = trackInfo.elapsed;
+          window.soundcloudAPI.sendTrackUpdate(trackInfo, 'waveform-seek');
+        }, 100);
+      });
+    }
   }
 
   function monitorTimelineSeeking() {
@@ -128,7 +145,11 @@ export const audioMonitorScript = `
             if (!isDragging && timelineElement.__wasDragging) {
               // Dragging ended - update the presence with new position
               console.debug('Seek completed - updating time position');
-              setTimeout(notifyPlaybackStateChange, 50);
+              setTimeout(() => {
+                const trackInfo = getTrackInfo();
+                currentTrackElapsed = trackInfo.elapsed;
+                window.soundcloudAPI.sendTrackUpdate(trackInfo, 'timeline-seek');
+              }, 50);
             }
             
             timelineElement.__wasDragging = isDragging;
