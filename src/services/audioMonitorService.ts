@@ -118,10 +118,10 @@ export const audioMonitorScript = `
     }
 
     monitorTimelineSeeking();
-    monitorWaveformClicks();
+    monitorWaveformSeeking();
   }
 
-  function monitorWaveformClicks() {
+  function monitorWaveformSeeking() {
     const waveformWrapper = document.querySelector('.waveform');
     
     if (waveformWrapper && !waveformWrapper.__waveformMonitored) {
@@ -275,7 +275,7 @@ export const audioMonitorScript = `
       
       const waveformEl = document.querySelector('.waveform');
       if (waveformEl && !waveformEl.__waveformMonitored) {
-        monitorWaveformClicks();
+        monitorWaveformSeeking();
       }
       
       const timelineEl = document.querySelector('.playbackTimeline.is-scrubbable.has-sound');
