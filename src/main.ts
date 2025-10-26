@@ -1119,7 +1119,7 @@ function setupAudioHandler() {
                     artwork: result.artwork,
                     elapsed: result.elapsed,
                 }),
-                presenceService.updatePresence(result)
+                presenceService.updatePresence(result),
             ]);
         } else {
             await presenceService.updatePresence(result);

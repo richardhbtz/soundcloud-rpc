@@ -1,7 +1,17 @@
 import type { ParsedTrackInfo, NormalizedTrackInfo } from '../types';
 
 // Characters: - (hyphen U+002D), – (en dash U+2013), — (em dash U+2014), ― (horizontal bar U+2015)
-const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]\s+|[\u002D\u2013\u2014\u2015])/;
+const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]+\s+|[\u002D\u2013\u2014\u2015]{2,})/;
+const INVALID_PATTERNS = [
+    /^[^a-zA-Z]*$/,
+    /^\s*$/,
+    /^[\u002D\u2013\u2014\u2015]/,
+    /[\u002D\u2013\u2014\u2015]$/,
+    /(.)\1{4,}/,
+    /[\u002D\u2013\u2014\u2015]{2,}/,
+];
+
+const hasInvalidPatterns = (text: string): boolean => INVALID_PATTERNS.some((p) => p.test(text));
 
 export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
     if (!title || typeof title !== 'string') {
@@ -9,21 +19,18 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
     }
 
     const cleanTitle = title.replace(/\n.*/, '').trim();
+    if (hasInvalidPatterns(cleanTitle)) return { artist: null, track: cleanTitle };
 
     const match = cleanTitle.match(SEPARATOR_REGEX);
     if (match && match.index && match.index > 0) {
-        const potentialArtist = cleanTitle.substring(0, match.index).trim();
-        const potentialTrack = cleanTitle.substring(match.index + match[0].length).trim();
+        const artist = cleanTitle.substring(0, match.index).trim();
+        const track = cleanTitle.substring(match.index + match[0].length).trim();
 
-        if (potentialArtist.length > 0 && potentialTrack.length > 0) {
-            return {
-                artist: potentialArtist,
-                track: potentialTrack,
-            };
+        if (artist.length > 0 && track.length > 0 && !hasInvalidPatterns(artist) && !hasInvalidPatterns(track)) {
+            return { artist, track };
         }
     }
 
-    // If no separator found or splitting didn't work, use the whole title as track
     return {
         artist: null,
         track: cleanTitle,
@@ -44,7 +51,6 @@ export function normalizeTrackInfo(
     }
 
     const parsed = parseSoundCloudTitle(titleFromPage);
-
     return {
         artist: parsed.artist || authorFromPage || 'Unknown Artist',
         track: parsed.track || 'Unknown Track',
@@ -55,20 +61,19 @@ export function normalizeTrackInfo(
 /*
 function testTrackParser() {
     const testCases = [
-        "Artist Name - Song Title",
-        "Artist Name-Song Title",
-        "Artist Name — Song Title",  // em dash with spaces
-        "Artist Name—Song Title",    // em dash without spaces
-        "Artist Name – Song Title",  // en dash with spaces
-        "Artist Name–Song Title",    // en dash without spaces
-        "Artist Name ― Song Title",  // horizontal bar with spaces
-        "Artist Name―Song Title",    // horizontal bar without spaces
-        "Just a Song Title",         // no separator
-        "- No Artist",               // separator at start
-        "No Song -",                 // separator at end
-        "Multiple - Dashes - Here",  // multiple separators
-        "",                          // empty string
-        "Artist\nWith\nNewlines - Song Title"  // with newlines
+        "Artist Name - Song Title",              // hyphen with spaces
+        "Artist Name -- Song Title",             // double hyphen with spaces
+        "Artist Name — Song Title",              // em dash with spaces
+        "Artist Name—Song Title",                // em dash without spaces
+        "Just a Song Title",                     // no separator
+        "- No Artist",                           // separator at start
+        "No Song -",                             // separator at end
+        "Her head is so0o0o0o0 rolling (POST-MORTEM MIX)",  // repeated characters (invalid)
+        "FRONT DOOR ENTRY ONLY ---- until I cant feel a thing",  // 2+ separators without spaces (invalid)
+        "a - b",                                 // short but valid
+        "Valid Artist - Valid Track",            // valid parse
+        "",                                      // empty string
+        "Artist\nWith\nNewlines - Song Title"    // with newlines
     ];
 
     console.log("=== Track Parser Test Results ===");

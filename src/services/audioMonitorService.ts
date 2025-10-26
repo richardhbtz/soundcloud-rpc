@@ -97,6 +97,9 @@ export const audioMonitorScript = `
       prevButton.__monitored = true;
       prevButton.addEventListener('click', () => {
         console.debug('Previous track button clicked');
+        currentTrackTitle = '';
+        currentTrackAuthor = '';
+        currentTrackUrl = '';
         // Wait a bit longer for track to change
         setTimeout(notifyPlaybackStateChange, 300);
       });
@@ -106,12 +109,35 @@ export const audioMonitorScript = `
       nextButton.__monitored = true;
       nextButton.addEventListener('click', () => {
         console.debug('Next track button clicked');
+        currentTrackTitle = '';
+        currentTrackAuthor = '';
+        currentTrackUrl = '';
         // Wait a bit longer for track to change
         setTimeout(notifyPlaybackStateChange, 300);
       });
     }
 
     monitorTimelineSeeking();
+    monitorWaveformSeeking();
+  }
+
+  function monitorWaveformSeeking() {
+    const waveformWrapper = document.querySelector('.waveform');
+    
+    if (waveformWrapper && !waveformWrapper.__waveformMonitored) {
+      waveformWrapper.__waveformMonitored = true;
+      
+      waveformWrapper.addEventListener('click', () => {
+        setTimeout(() => {
+          const trackInfo = getTrackInfo();
+          currentTrackElapsed = trackInfo.elapsed;
+          window.soundcloudAPI.sendTrackUpdate(trackInfo, 'waveform-seek');
+        }, 100);
+      });
+      console.debug('Waveform click monitoring attached');
+    }
+    
+    return !!waveformWrapper;
   }
 
   function monitorTimelineSeeking() {
@@ -128,7 +154,11 @@ export const audioMonitorScript = `
             if (!isDragging && timelineElement.__wasDragging) {
               // Dragging ended - update the presence with new position
               console.debug('Seek completed - updating time position');
-              setTimeout(notifyPlaybackStateChange, 50);
+              setTimeout(() => {
+                const trackInfo = getTrackInfo();
+                currentTrackElapsed = trackInfo.elapsed;
+                window.soundcloudAPI.sendTrackUpdate(trackInfo, 'timeline-seek');
+              }, 50);
             }
             
             timelineElement.__wasDragging = isDragging;
@@ -140,7 +170,10 @@ export const audioMonitorScript = `
         attributes: true,
         attributeFilter: ['class']
       });
+      console.debug('Timeline seek monitoring attached');
     }
+    
+    return !!timelineElement;
   }
   
   // Monitor elapsed time element for changes (catches loops)
@@ -233,11 +266,32 @@ export const audioMonitorScript = `
     // Start monitoring elapsed time for loop detection
     monitorElapsedTime();
     
-    // Re-monitor elapsed time if the element gets replaced/recreated
+    // Re-monitor elements if they get replaced/recreated
     const bodyObserver = new MutationObserver(() => {
       const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
       if (elapsedEl && !elapsedObserver) {
         monitorElapsedTime();
+      }
+      
+      const waveformEl = document.querySelector('.waveform');
+      if (waveformEl && !waveformEl.__waveformMonitored) {
+        monitorWaveformSeeking();
+      }
+      
+      const timelineEl = document.querySelector('.playbackTimeline.is-scrubbable.has-sound');
+      if (timelineEl && !timelineEl.__seekMonitored) {
+        monitorTimelineSeeking();
+      }
+      
+      const prevButton = document.querySelector('.skipControl__previous');
+      const nextButton = document.querySelector('.skipControl__next');
+      if ((prevButton && !prevButton.__monitored) || (nextButton && !nextButton.__monitored)) {
+        monitorPlaybackControls();
+      }
+      
+      const playPauseButton = document.querySelector('.playControl');
+      if (playPauseButton && !playPauseButton.__monitored) {
+        monitorPlaybackControls();
       }
     });
     
