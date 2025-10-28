@@ -63,13 +63,6 @@ export class LastFmService {
     constructor(window: BrowserView, store: ElectronStore) {
         this.window = window;
         this.store = store;
-
-        // Initialize Last.fm state from store
-        const apikey = this.store.get('lastFmApiKey');
-        const secret = this.store.get('lastFmSecret');
-        if (apikey && secret) {
-            this.store.set('lastFmEnabled', true);
-        }
     }
 
     private async getLastFmSession(api_key: string, token: string) {
