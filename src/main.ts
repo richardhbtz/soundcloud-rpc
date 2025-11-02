@@ -489,6 +489,7 @@ async function init() {
     lastFmService = new LastFmService(contentView, store);
     webhookService = new WebhookService(store);
     shortcutService = new ShortcutService(mainWindow);
+    shortcutService.attachToWebContents(contentView.webContents);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
 
     // Add settings toggle handler
@@ -499,7 +500,6 @@ async function init() {
     setupWindowControls();
 
     initializeShortcuts();
-    shortcutService.setup();
 
     setupThemeHandlers();
     setupTranslationHandlers();
