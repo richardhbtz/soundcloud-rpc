@@ -14,12 +14,14 @@ export class ShortcutService {
 
     constructor(window?: BrowserWindow) {
         if (window) {
-            this.window = window;
+            this.setWindow(window);
         }
     }
 
     setWindow(window: BrowserWindow) {
         this.window = window;
+        window.on('focus', () => this.shortcuts.size > 0 && this.setup());
+        window.on('blur', () => this.unregisterAll());
     }
 
     register(id: string, accelerator: string, description: string, action: () => void, enabled: boolean = true) {
@@ -38,41 +40,32 @@ export class ShortcutService {
         const shortcut = this.shortcuts.get(id);
         if (shortcut) {
             shortcut.enabled = enabled;
-            if (this.registered) {
-                this.refreshRegistrations();
+            if (this.registered && this.window?.isFocused()) {
+                this.setup();
             }
         }
     }
 
     setup() {
-        if (this.registered) {
-            this.unregisterAll();
-        }
+        if (!this.window?.isFocused()) return;
+
+        this.unregisterAll();
 
         for (const [id, shortcut] of this.shortcuts) {
             if (shortcut.enabled === false) continue;
 
-            const success = globalShortcut.register(shortcut.accelerator, () => {
-                if (!this.window || !this.window.isFocused()) return;
-
+            if (!globalShortcut.register(shortcut.accelerator, () => {
                 try {
                     shortcut.action();
                 } catch (error) {
                     console.error(`Error executing shortcut '${id}':`, error);
                 }
-            });
-
-            if (!success) {
+            })) {
                 console.warn(`Failed to register shortcut '${id}' (${shortcut.accelerator})`);
             }
         }
 
         this.registered = true;
-    }
-
-    private refreshRegistrations() {
-        this.unregisterAll();
-        this.setup();
     }
 
     private unregisterAll() {
