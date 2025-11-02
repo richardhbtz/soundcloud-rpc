@@ -1,4 +1,4 @@
-import { BrowserWindow, globalShortcut } from 'electron';
+import { BrowserWindow, Input, WebContents } from 'electron';
 
 interface Shortcut {
     accelerator: string;
@@ -7,70 +7,113 @@ interface Shortcut {
     enabled?: boolean;
 }
 
+interface ParsedAccelerator {
+    control: boolean;
+    shift: boolean;
+    alt: boolean;
+    meta: boolean;
+    key: string;
+}
+
 export class ShortcutService {
     private shortcuts: Map<string, Shortcut> = new Map();
-    private window: BrowserWindow | null = null;
-    private registered: boolean = false;
 
     constructor(window?: BrowserWindow) {
-        if (window) {
-            this.setWindow(window);
-        }
+        if (window) this.setWindow(window);
     }
 
     setWindow(window: BrowserWindow) {
-        this.window = window;
-        window.on('focus', () => this.shortcuts.size > 0 && this.setup());
-        window.on('blur', () => this.unregisterAll());
+        this.attachToWebContents(window.webContents);
     }
 
-    register(id: string, accelerator: string, description: string, action: () => void, enabled: boolean = true) {
+    attachToWebContents(webContents: WebContents) {
+        webContents.on('before-input-event', (event, input) => {
+            this.handleInput(event, input);
+        });
+    }
+
+    private handleInput(event: Electron.Event, input: Input) {
+        if (input.type !== 'keyDown') return;
+        
+        for (const [id, shortcut] of this.shortcuts) {
+            if (shortcut.enabled === false) continue;
+            
+            if (this.matches(input, shortcut.accelerator)) {
+                event.preventDefault();
+                try {
+                    shortcut.action();
+                } catch (error) {
+                    console.error(`Shortcut '${id}' error:`, error);
+                }
+                break;
+            }
+        }
+    }
+
+    private matches(input: Input, accelerator: string): boolean {
+        const parsed = this.parse(accelerator);
+        const keyMatch = input.key.toLowerCase() === parsed.key.toLowerCase();
+        const modMatch = input.control === parsed.control &&
+                        input.shift === parsed.shift &&
+                        input.alt === parsed.alt &&
+                        input.meta === parsed.meta;
+        return keyMatch && modMatch;
+    }
+
+    private parse(accelerator: string): ParsedAccelerator {
+        const parts = accelerator.split('+').map(p => p.trim());
+        const result: ParsedAccelerator = {
+            control: false,
+            shift: false,
+            alt: false,
+            meta: false,
+            key: ''
+        };
+        
+        for (const part of parts) {
+            const lower = part.toLowerCase();
+            
+            if (lower === 'commandorcontrol' || lower === 'cmdorctrl') {
+                if (process.platform === 'darwin') {
+                    result.meta = true;
+                } else {
+                    result.control = true;
+                }
+            } else if (lower === 'command' || lower === 'cmd') {
+                result.meta = true;
+            } else if (lower === 'control' || lower === 'ctrl') {
+                result.control = true;
+            } else if (lower === 'shift') {
+                result.shift = true;
+            } else if (lower === 'alt' || lower === 'option') {
+                result.alt = true;
+            } else if (lower === 'super' || lower === 'meta') {
+                result.meta = true;
+            } else {
+                result.key = part;
+            }
+        }
+        
+        return result;
+    }
+
+    register(
+        id: string,
+        accelerator: string,
+        description: string,
+        action: () => void,
+        enabled: boolean = true
+    ) {
         this.shortcuts.set(id, { accelerator, action, description, enabled });
     }
 
     unregister(id: string) {
-        const shortcut = this.shortcuts.get(id);
-        if (shortcut && this.registered) {
-            globalShortcut.unregister(shortcut.accelerator);
-        }
         this.shortcuts.delete(id);
     }
 
     setEnabled(id: string, enabled: boolean) {
         const shortcut = this.shortcuts.get(id);
-        if (shortcut) {
-            shortcut.enabled = enabled;
-            if (this.registered && this.window?.isFocused()) {
-                this.setup();
-            }
-        }
-    }
-
-    setup() {
-        if (!this.window?.isFocused()) return;
-
-        this.unregisterAll();
-
-        for (const [id, shortcut] of this.shortcuts) {
-            if (shortcut.enabled === false) continue;
-
-            if (!globalShortcut.register(shortcut.accelerator, () => {
-                try {
-                    shortcut.action();
-                } catch (error) {
-                    console.error(`Error executing shortcut '${id}':`, error);
-                }
-            })) {
-                console.warn(`Failed to register shortcut '${id}' (${shortcut.accelerator})`);
-            }
-        }
-
-        this.registered = true;
-    }
-
-    private unregisterAll() {
-        globalShortcut.unregisterAll();
-        this.registered = false;
+        if (shortcut) shortcut.enabled = enabled;
     }
 
     getShortcuts() {
@@ -83,7 +126,6 @@ export class ShortcutService {
     }
 
     clear() {
-        this.unregisterAll();
         this.shortcuts.clear();
     }
 
@@ -92,8 +134,6 @@ export class ShortcutService {
     }
 
     destroy() {
-        this.unregisterAll();
         this.shortcuts.clear();
-        this.window = null;
     }
 }
