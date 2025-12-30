@@ -11,10 +11,12 @@ export interface ScrobbleState {
     startTime: number;
     duration: number;
     scrobbled: boolean;
+    isPaused: boolean;
+    pausedTime: number;
 }
 
 function timeStringToSeconds(timeStr: string | undefined): number {
-    if (!timeStr || typeof timeStr !== 'string') return 240; // Default to 4 minutes if no duration
+    if (!timeStr || typeof timeStr !== 'string') return 0;
     try {
         const isNegative = timeStr.trim().startsWith('-');
         const raw = isNegative ? timeStr.trim().slice(1) : timeStr.trim();
@@ -23,16 +25,16 @@ function timeStringToSeconds(timeStr: string | undefined): number {
         for (const part of parts) {
             seconds = seconds * 60 + (isNaN(part) ? 0 : part);
         }
-        // Use absolute value for track duration
         return Math.max(1, Math.abs(seconds));
     } catch (error) {
         console.error('Error parsing time string:', error);
-        return 240; // Default to 4 minutes on error
+        return 0;
     }
 }
 
 function shouldScrobble(state: ScrobbleState): boolean {
-    const playedTime = (Date.now() - state.startTime) / 1000;
+    const totalElapsed = (Date.now() - state.startTime) / 1000;
+    const playedTime = totalElapsed - state.pausedTime;
     const halfDuration = state.duration / 2;
 
     return !state.scrobbled && playedTime >= Math.min(halfDuration, 240);
@@ -59,6 +61,7 @@ export class LastFmService {
     private window: BrowserView;
     private store: ElectronStore;
     private currentScrobbleState: ScrobbleState | null = null;
+    private pauseStartTime: number = 0;
 
     constructor(window: BrowserView, store: ElectronStore) {
         this.window = window;
@@ -210,7 +213,7 @@ export class LastFmService {
         }
     }
 
-    public async updateTrackInfo(trackInfo: LastFmTrackData): Promise<void> {
+    public async updateTrackInfo(trackInfo: LastFmTrackData, isPlaying: boolean = true): Promise<void> {
         if (!this.store.get('lastFmEnabled')) return;
 
         if (!trackInfo.title || !trackInfo.author) {
@@ -228,7 +231,20 @@ export class LastFmService {
             title: normalizedTrack.track,
         };
 
-        await this.updateNowPlaying(currentTrack);
+        if (this.currentScrobbleState) {
+            if (!isPlaying && !this.currentScrobbleState.isPaused) {
+                this.currentScrobbleState.isPaused = true;
+                this.pauseStartTime = Date.now();
+            } else if (isPlaying && this.currentScrobbleState.isPaused) {
+                this.currentScrobbleState.isPaused = false;
+                this.currentScrobbleState.pausedTime += (Date.now() - this.pauseStartTime) / 1000;
+                this.pauseStartTime = 0;
+            }
+        }
+
+        if (isPlaying) {
+            await this.updateNowPlaying(currentTrack);
+        }
 
         // Check for loop (elapsed time <= 3 seconds on same track)
         const elapsedSeconds = timeStringToSeconds(trackInfo.elapsed);
@@ -244,9 +260,9 @@ export class LastFmService {
             this.currentScrobbleState.title !== currentTrack.title ||
             isLoop
         ) {
-            // Scrobble previous track if it wasn't scrobbled and met criteria
             if (
                 this.currentScrobbleState &&
+                !this.currentScrobbleState.isPaused &&
                 !this.currentScrobbleState.scrobbled &&
                 shouldScrobble(this.currentScrobbleState)
             ) {
@@ -256,20 +272,24 @@ export class LastFmService {
                 });
             }
 
-            // Start tracking new track/loop
             this.currentScrobbleState = {
                 artist: currentTrack.author,
                 title: currentTrack.title,
                 startTime: Date.now(),
                 duration: timeStringToSeconds(trackInfo.duration),
                 scrobbled: false,
+                isPaused: !isPlaying,
+                pausedTime: 0,
             };
+            if (!isPlaying) {
+                this.pauseStartTime = Date.now();
+            }
         } else if (
             this.currentScrobbleState &&
+            !this.currentScrobbleState.isPaused &&
             !this.currentScrobbleState.scrobbled &&
             shouldScrobble(this.currentScrobbleState)
         ) {
-            // Scrobble current track if it meets criteria
             await this.scrobbleTrack({
                 author: this.currentScrobbleState.artist,
                 title: this.currentScrobbleState.title,
