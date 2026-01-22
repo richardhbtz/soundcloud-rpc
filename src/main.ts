@@ -993,7 +993,7 @@ function initializeShortcuts() {
 }
 
 // App lifecycle handlers
-app.on('ready', init);
+app.on('ready', () => { init(); setupAutoScaling(); });
 
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
@@ -1134,4 +1134,36 @@ function setupAudioHandler() {
             thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
         }
     });
+}
+
+function setupAutoScaling() {
+    if (!mainWindow) return;
+
+    const baseWidth = 1280;
+    const baseHeight = 800;
+
+    const resize = () => {
+        const [width, height] = mainWindow!.getContentSize();
+        const scale = Math.min(width / baseWidth, height / baseHeight);
+
+        if (contentView) {
+            contentView.webContents.setZoomFactor(scale);
+            contentView.setBounds({ x: 0, y: 60, width, height: height - 60 });
+            contentView.setAutoResize({ width: true, height: true });
+        }
+
+        if (headerView) {
+            headerView.setBounds({ x: 0, y: 0, width, height: 60 });
+            headerView.setAutoResize({ width: true });
+        }
+
+        if (settingsManager) {
+            const view = settingsManager.getView();
+            view.setBounds({ x: 0, y: 60, width, height: height - 60 });
+            view.setAutoResize({ width: true, height: true });
+        }
+    };
+
+    resize();
+    mainWindow.on('resize', resize);
 }
