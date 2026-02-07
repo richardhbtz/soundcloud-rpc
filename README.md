@@ -36,7 +36,7 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 
 <h3 align="left">Building</h3>
 
-Before installing and running this app, you must have [Node.js](https://nodejs.org/)<img src=".github/assets/node.png" width=10 /> installed on your machine.
+Before installing and running this app, you must have [Node.js](https://nodejs.org/)<img src=".github/assets/node.png" width=15 /> installed on your machine.
 
 1. Clone this repository to your local machine
 2. Run `npm install` to install the required dependencies.
