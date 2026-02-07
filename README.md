@@ -29,7 +29,7 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 
 > [!NOTE]
 >
-> ### macOS Users
+> #### macOS Users
 >
 > If you encounter a "Damaged App" popup after installation, run the following command in the terminal to resolve the
 > issue:
@@ -50,6 +50,8 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 2. Run `npm install` to install the required dependencies.
 3. Run `npm build` to build the application.
 
+---
+
 ## Keyboard Shortcuts
 
 - **F1** - Open Settings
@@ -60,7 +62,9 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 - **Ctrl/Cmd + -** - Zoom out
 - **Ctrl/Cmd + 0** - Reset zoom
 
-## 🛠️ Built With
+---
+
+### Built With
 
 - [@xhayper/discord-rpc](https://www.npmjs.com/package/@xhayper/discord-rpc) - Discord Rich Presence integration
 - [Electron](https://www.electronjs.org/) - Framework for building cross-platform desktop applications
@@ -69,12 +73,16 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 - [electron-store](https://www.npmjs.com/package/electron-store) - Data persistence
 - [electron-updater](https://www.npmjs.com/package/electron-updater) - Auto-update functionality
 
-## Contributing
+---
+
+### Contributing
 
 Contributions to this project are welcome. If you find a bug or would like to suggest a new feature, please open an
 issue on this repository.
 
-## License
+---
+
+### License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
 
