@@ -35,7 +35,7 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 > After running this command, the app should launch without any problem.
 
 <div align="left">
-      <img align="left" src=".github/assets/bob.png" width=80 /><h3>Building</h3>
+      <img align="left" src=".github/assets/bob.png" width=200 /><h3>Building</h3>
 </div>
 
 Before installing and running this app, you must have [Node.js](https://nodejs.org/) installed on your machine.
