@@ -40,6 +40,8 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 >
 > After running this command, the app should launch without any problem.
 
+---
+
 <h3 align="left">Building</h3>
 
 Before installing and running this app, you must have [Node.js](https://nodejs.org/)<img src=".github/assets/node.png" width=15 /> installed on your machine.
@@ -48,13 +50,7 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 2. Run `npm install` to install the required dependencies.
 3. Run `npm build` to build the application.
 
-## 📖 Usage
-
-Press `F1` to open the application menu, which provides access to various settings and features.
-
-### Keyboard Shortcuts
-
-**Quick Reference:**
+## Keyboard Shortcuts
 
 - **F1** - Open Settings
 - **Ctrl/Cmd + R** - Refresh the current page
@@ -73,12 +69,12 @@ Press `F1` to open the application menu, which provides access to various settin
 - [electron-store](https://www.npmjs.com/package/electron-store) - Data persistence
 - [electron-updater](https://www.npmjs.com/package/electron-updater) - Auto-update functionality
 
-## 🤝 Contributing
+## Contributing
 
 Contributions to this project are welcome. If you find a bug or would like to suggest a new feature, please open an
 issue on this repository.
 
-## 📜 License
+## License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
 
