@@ -1105,20 +1105,26 @@ function setupAudioHandler() {
         // Update services on track update
         if (result.title && result.author && result.duration) {
             await Promise.all([
-                lastFmService.updateTrackInfo({
-                    title: result.title,
-                    author: result.author,
-                    duration: result.duration,
-                    elapsed: result.elapsed,
-                }, result.isPlaying),
-                webhookService.updateTrackInfo({
-                    title: result.title,
-                    author: result.author,
-                    duration: result.duration,
-                    url: result.url,
-                    artwork: result.artwork,
-                    elapsed: result.elapsed,
-                }, result.isPlaying),
+                lastFmService.updateTrackInfo(
+                    {
+                        title: result.title,
+                        author: result.author,
+                        duration: result.duration,
+                        elapsed: result.elapsed,
+                    },
+                    result.isPlaying,
+                ),
+                webhookService.updateTrackInfo(
+                    {
+                        title: result.title,
+                        author: result.author,
+                        duration: result.duration,
+                        url: result.url,
+                        artwork: result.artwork,
+                        elapsed: result.elapsed,
+                    },
+                    result.isPlaying,
+                ),
                 presenceService.updatePresence(result),
             ]);
         } else {
