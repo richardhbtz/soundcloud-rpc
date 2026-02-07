@@ -14,6 +14,16 @@ A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm
 
 </div>
 
+<div align="center">
+<picture>
+      <img src="assets/preview/soundcloud-preview-dark.png" />
+</picture>
+
+<picture>
+      <img src="assets/preview/soundcloud-preview-light.png" />
+</picture>
+</div>
+
 <div align="left">
       <img align="left" src=".github/assets/run.png" width=80 /><h3>Quick start</h3>
 </div>
@@ -57,18 +67,6 @@ Press `F1` to open the application menu, which provides access to various settin
 - **Ctrl/Cmd + =** - Zoom in
 - **Ctrl/Cmd + -** - Zoom out
 - **Ctrl/Cmd + 0** - Reset zoom
-
-## 🖼️ Preview
-
-<div align="center">
-<picture>
-      <img src="assets/preview/soundcloud-preview-dark.png" />
-</picture>
-
-<picture>
-      <img src="assets/preview/soundcloud-preview-light.png" />
-</picture>
-</div>
 
 ## 🛠️ Built With
 
