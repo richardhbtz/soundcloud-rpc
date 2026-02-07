@@ -3,8 +3,8 @@
 <div align="center">
       <img align="center" src="assets/icons/soundcloud.png" width="200" />
       <img align="center" src=".github/assets/plus.png" width=80 />
-      <img align="center" src=".github/assets/discord.png" width=60 />
-      <img align="center" src=".github/assets/lastfm.png" width=60 />
+      <img align="center" src=".github/assets/discord.png" width=160 />
+      <img align="center" src=".github/assets/lastfm.png" width=160 />
 </div>
 
 # Soundcloud RPC
