@@ -10,7 +10,9 @@ A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm
 
 </div>
 
-## ⚡️ Quick start
+<div align="left">
+      <img align="left" src=".github/assets/run.png" width=80 /><h2>Quick start</h2>
+</div>
 
 For the latest version of soundcloud-rpc, download the installer or executable file from the
 [latest release](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
