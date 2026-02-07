@@ -15,8 +15,8 @@ A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm
 </div>
 
 <div align="center">
-<img align="center" src="assets/preview/soundcloud-preview-dark.png" width=30% min-width=300 />
-<img align="center" src="assets/preview/soundcloud-preview-light.png" width=30% min-width=300 />
+<img align="center" src="assets/preview/soundcloud-preview-dark.png" width=300 />
+<img align="center" src="assets/preview/soundcloud-preview-light.png" width=300 />
 </div>
 
 
