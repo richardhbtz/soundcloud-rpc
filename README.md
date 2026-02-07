@@ -1,10 +1,8 @@
 <div align="center">
 
-<picture>
-      <img src="assets/icons/soundcloud.png" width="200" />
-</picture>
+<img src="assets/icons/soundcloud.png" width="200" />
 
-# soundcloud-rpc
+# Soundcloud RPC
 
 A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm** and **AdBlock** support
 
