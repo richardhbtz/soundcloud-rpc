@@ -19,6 +19,8 @@ A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm
 <img align="left" src="assets/preview/soundcloud-preview-light.png" width=50% />
 </div>
 
+<div>
+
 <div align="left">
       <img align="left" src=".github/assets/run.png" width=80 /><h3>Quick start</h3>
 </div>
@@ -83,3 +85,5 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 
 [repo_logo_img]: https://github.com/create-go-app/cli/assets/11155743/95024afc-5e3b-4d6f-8c9c-5daaa51d080d
 [repo_url]: https://github.com/richardhbtz/soundcloud-rpc
+
+</div>
