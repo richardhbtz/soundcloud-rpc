@@ -4,11 +4,13 @@ import { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
 import { EventEmitter } from 'events';
 import { extractThemeColors, type ThemeColors } from '../utils/colorExtractor';
+import { parseMetadata, type FileMetadata } from '../utils/metadataParser';
 
 export interface CustomTheme {
     name: string;
     filePath: string;
     css: string;
+    metadata: FileMetadata;
 }
 
 export class ThemeService {
@@ -60,11 +62,14 @@ export class ThemeService {
                     try {
                         const css = readFileSync(filePath, 'utf-8');
                         const themeName = basename(file, '.css');
+                        const metadata = parseMetadata(css, 'css');
+                        if (!metadata.name) metadata.name = themeName;
 
                         this.customThemes.set(themeName, {
                             name: themeName,
                             filePath,
                             css,
+                            metadata,
                         });
 
                         console.log(`Loaded custom theme: ${themeName}`);
@@ -108,10 +113,11 @@ export class ThemeService {
                                 return;
                             }
                         } else if (eventType === 'change') {
-                            // Update just this file
                             if (existsSync(filePath)) {
                                 const css = readFileSync(filePath, 'utf-8');
-                                this.customThemes.set(themeName, { name: themeName, filePath, css });
+                                const metadata = parseMetadata(css, 'css');
+                                if (!metadata.name) metadata.name = themeName;
+                                this.customThemes.set(themeName, { name: themeName, filePath, css, metadata });
                             }
                         }
 
@@ -143,6 +149,7 @@ export class ThemeService {
             return Array.from(this.customThemes.values()).map((theme) => ({
                 name: theme.name,
                 filePath: theme.filePath,
+                metadata: theme.metadata,
             }));
         });
 
@@ -168,6 +175,7 @@ export class ThemeService {
             return Array.from(this.customThemes.values()).map((theme) => ({
                 name: theme.name,
                 filePath: theme.filePath,
+                metadata: theme.metadata,
             }));
         });
 

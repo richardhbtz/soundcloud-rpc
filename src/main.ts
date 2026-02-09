@@ -13,6 +13,7 @@ import { ThumbarService } from './services/thumbarService';
 import { WebhookService } from './services/webhookService';
 import { ThemeService } from './services/themeService';
 import { ShortcutService } from './services/shortcutService';
+import { PluginService } from './services/pluginService';
 import { audioMonitorScript } from './services/audioMonitorService';
 import type { TrackInfo, TrackUpdateMessage } from './types';
 import path = require('path');
@@ -72,6 +73,7 @@ let translationService: TranslationService;
 let thumbarService: ThumbarService;
 let themeService: ThemeService;
 let shortcutService: ShortcutService;
+let pluginService: PluginService;
 let tray: Tray | null = null;
 let isQuitting = false;
 const devMode = process.argv.includes('--dev');
@@ -478,6 +480,8 @@ async function init() {
     // Initialize services
     translationService = new TranslationService();
     themeService = new ThemeService(store);
+    pluginService = new PluginService(store);
+    pluginService.setContentView(contentView);
     // Hot-reload custom theme CSS when files change
     themeService.onCustomThemeUpdated(() => {
         applyThemeToContent(isDarkTheme);
@@ -641,6 +645,11 @@ async function init() {
             // Inject audio monitoring script
             await contentView.webContents.executeJavaScript(audioMonitorScript);
 
+            // Re-inject all enabled plugin content scripts
+            if (pluginService) {
+                pluginService.injectAllContentScripts();
+            }
+
             if (presenceService) {
                 await presenceService.updatePresence(lastTrackInfo as any);
             }
@@ -744,6 +753,10 @@ function setupThemeHandlers() {
         if (data.key === 'theme') {
             isDarkTheme = data.value === 'dark';
             store.set('theme', data.value);
+
+            if (pluginService) {
+                pluginService.notifyThemeChange(isDarkTheme);
+            }
 
             // Update all views
             if (headerView && headerView.webContents) {
@@ -1087,6 +1100,11 @@ function setupTranslationHandlers() {
             openThemesFolder: translationService.translate('openThemesFolder'),
             refreshThemes: translationService.translate('refreshThemes'),
             customThemeDescription: translationService.translate('customThemeDescription'),
+            plugins: translationService.translate('plugins'),
+            openPluginsFolder: translationService.translate('openPluginsFolder'),
+            refreshPlugins: translationService.translate('refreshPlugins'),
+            pluginsDescription: translationService.translate('pluginsDescription'),
+            noPluginsFound: translationService.translate('noPluginsFound'),
             pressF1ToOpenSettings: translationService.translate('pressF1ToOpenSettings'),
             closeSettings: translationService.translate('closeSettings'),
             noActivityToShow: translationService.translate('noActivityToShow'),
@@ -1101,6 +1119,10 @@ function setupAudioHandler() {
         console.debug(`Track update received: ${reason}`);
 
         lastTrackInfo = result;
+
+        if (pluginService) {
+            pluginService.notifyTrackChange(result as unknown as Record<string, unknown>);
+        }
 
         // Update services on track update
         if (result.title && result.author && result.duration) {

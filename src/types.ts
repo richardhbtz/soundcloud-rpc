@@ -112,6 +112,11 @@ export interface Translations {
     openThemesFolder: string;
     refreshThemes: string;
     customThemeDescription: string;
+    plugins: string;
+    openPluginsFolder: string;
+    refreshPlugins: string;
+    pluginsDescription: string;
+    noPluginsFound: string;
     pressF1ToOpenSettings: string;
     closeSettings: string;
     noActivityToShow: string;

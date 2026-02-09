@@ -451,6 +451,55 @@ export class SettingsManager {
                 border-color: var(--accent-muted);
             }
 
+            .plugin-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .plugin-card {
+                background: var(--bg-primary);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                padding: 10px 12px;
+                transition: border-color 0.2s;
+            }
+            .plugin-card:hover {
+                border-color: var(--accent-muted);
+            }
+            .plugin-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .plugin-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            .plugin-version {
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-left: 6px;
+            }
+            .plugin-desc {
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin-top: 4px;
+            }
+            .plugin-author {
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-top: 2px;
+                font-style: italic;
+            }
+            .no-plugins {
+                font-size: 13px;
+                color: var(--text-secondary);
+                text-align: center;
+                padding: 12px 0;
+            }
+
             /* Rich Presence Preview Styles */
             .preview-container {
                 margin-top: 12px;
@@ -982,6 +1031,23 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
+                <h2 data-i18n="plugins">
+                    ${this.translationService.translate('plugins')}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/>
+                    </svg>
+                </h2>
+                <div class="plugin-list" id="pluginList">
+                    <div class="no-plugins" data-i18n="noPluginsFound">${this.translationService.translate('noPluginsFound')}</div>
+                </div>
+                <div class="theme-controls">
+                    <button id="openPluginsFolder" class="theme-button" data-i18n="openPluginsFolder">${this.translationService.translate('openPluginsFolder')}</button>
+                    <button id="refreshPlugins" class="theme-button" data-i18n="refreshPlugins">${this.translationService.translate('refreshPlugins')}</button>
+                </div>
+                <div class="description" data-i18n="pluginsDescription">${this.translationService.translate('pluginsDescription')}</div>
+            </div>
+
+            <div class="setting-group">
                 <button class="button" id="applyChanges" data-i18n="applyChanges">${this.translationService.translate('applyChanges')}</button>
             </div>
         </div>
@@ -1075,6 +1141,67 @@ export class SettingsManager {
                     await loadCustomThemes();
                 } catch (error) {
                     console.error('Failed to refresh themes:', error);
+                }
+            });
+
+            async function loadPlugins() {
+                try {
+                    const plugins = await ipcRenderer.invoke('get-plugins');
+                    const list = document.getElementById('pluginList');
+                    list.innerHTML = '';
+
+                    if (!plugins || plugins.length === 0) {
+                        list.innerHTML = '<div class="no-plugins" data-i18n="noPluginsFound">No plugins found</div>';
+                        return;
+                    }
+
+                    plugins.forEach(p => {
+                        const card = document.createElement('div');
+                        card.className = 'plugin-card';
+                        card.innerHTML = \`
+                            <div class="plugin-header">
+                                <span>
+                                    <span class="plugin-name">\${p.metadata.name || p.id}</span>
+                                    <span class="plugin-version">v\${p.metadata.version || '?'}</span>
+                                </span>
+                                <label class="toggle">
+                                    <input type="checkbox" data-plugin-id="\${p.id}" \${p.enabled ? 'checked' : ''}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            \${p.metadata.description ? '<div class="plugin-desc">' + p.metadata.description + '</div>' : ''}
+                            \${p.metadata.author && p.metadata.author !== 'Unknown' ? '<div class="plugin-author">by ' + p.metadata.author + '</div>' : ''}
+                        \`;
+
+                        card.querySelector('input[type="checkbox"]').addEventListener('change', async (e) => {
+                            const enabled = e.target.checked;
+                            await ipcRenderer.invoke('set-plugin-enabled', p.id, enabled);
+                        });
+
+                        list.appendChild(card);
+                    });
+                } catch (error) {
+                    console.error('Failed to load plugins:', error);
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', loadPlugins);
+
+            document.getElementById('openPluginsFolder').addEventListener('click', async () => {
+                try {
+                    const pluginsPath = await ipcRenderer.invoke('get-plugins-folder-path');
+                    shell.openPath(pluginsPath);
+                } catch (error) {
+                    console.error('Failed to open plugins folder:', error);
+                }
+            });
+
+            document.getElementById('refreshPlugins').addEventListener('click', async () => {
+                try {
+                    await ipcRenderer.invoke('refresh-plugins');
+                    await loadPlugins();
+                } catch (error) {
+                    console.error('Failed to refresh plugins:', error);
                 }
             });
 
