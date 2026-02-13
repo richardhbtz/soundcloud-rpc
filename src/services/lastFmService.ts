@@ -13,6 +13,7 @@ export interface ScrobbleState {
     scrobbled: boolean;
     isPaused: boolean;
     pausedTime: number;
+    lastElapsedSeconds: number;
 }
 
 function timeStringToSeconds(timeStr: string | undefined): number {
@@ -252,7 +253,7 @@ export class LastFmService {
             this.currentScrobbleState &&
             this.currentScrobbleState.artist === currentTrack.author &&
             this.currentScrobbleState.title === currentTrack.title &&
-            elapsedSeconds <= 3;
+            elapsedSeconds <= this.currentScrobbleState.lastElapsedSeconds - 3;
 
         if (
             !this.currentScrobbleState ||
@@ -280,6 +281,7 @@ export class LastFmService {
                 scrobbled: false,
                 isPaused: !isPlaying,
                 pausedTime: 0,
+                lastElapsedSeconds: elapsedSeconds,
             };
             if (!isPlaying) {
                 this.pauseStartTime = Date.now();
@@ -295,6 +297,10 @@ export class LastFmService {
                 title: this.currentScrobbleState.title,
             });
             this.currentScrobbleState.scrobbled = true;
+        }
+
+        if (this.currentScrobbleState) {
+            this.currentScrobbleState.lastElapsedSeconds = elapsedSeconds;
         }
     }
 
