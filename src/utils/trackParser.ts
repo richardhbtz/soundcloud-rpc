@@ -3,7 +3,6 @@ import type { ParsedTrackInfo, NormalizedTrackInfo } from '../types';
 // Characters: - (hyphen U+002D), – (en dash U+2013), — (em dash U+2014), ― (horizontal bar U+2015)
 const SEPARATOR_REGEX = /(\s+[\u002D\u2013\u2014\u2015]+\s+|[\u002D\u2013\u2014\u2015]{2,})/;
 const INVALID_PATTERNS = [
-    /^[^a-zA-Z]*$/,
     /^\s*$/,
     /^[\u002D\u2013\u2014\u2015]/,
     /[\u002D\u2013\u2014\u2015]$/,
@@ -18,8 +17,7 @@ export function parseSoundCloudTitle(title: string): ParsedTrackInfo {
         return { artist: null, track: '' };
     }
 
-    const cleanTitle = title.replace(/\n.*/, '').trim();
-    if (hasInvalidPatterns(cleanTitle)) return { artist: null, track: cleanTitle };
+    const cleanTitle = title.split('\n')[0].trim();
 
     const match = cleanTitle.match(SEPARATOR_REGEX);
     if (match && match.index && match.index > 0) {
@@ -46,7 +44,7 @@ export function normalizeTrackInfo(
         // Fallback to original behavior
         return {
             artist: authorFromPage || 'Unknown Artist',
-            track: titleFromPage.replace(/\n.*/, '').trim() || 'Unknown Track',
+            track: titleFromPage.split('\n')[0].trim() || 'Unknown Track',
         };
     }
 
