@@ -477,6 +477,14 @@ export class SettingsManager {
                 font-weight: 600;
                 color: var(--text-primary);
             }
+            .plugin-name.has-homepage {
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .plugin-name.has-homepage:hover {
+                color: var(--link-color);
+                text-decoration: underline;
+            }
             .plugin-version {
                 font-size: 11px;
                 color: var(--text-secondary);
@@ -1158,10 +1166,13 @@ export class SettingsManager {
                     plugins.forEach(p => {
                         const card = document.createElement('div');
                         card.className = 'plugin-card';
+                        const hasHomepage = p.metadata.homepage && p.metadata.homepage.trim() !== '';
+                        const nameClass = hasHomepage ? 'plugin-name has-homepage' : 'plugin-name';
+                        const nameAttr = hasHomepage ? ' data-homepage="' + p.metadata.homepage.replace(/"/g, '&quot;') + '" title="Open homepage"' : '';
                         card.innerHTML = \`
                             <div class="plugin-header">
                                 <span>
-                                    <span class="plugin-name">\${p.metadata.name || p.id}</span>
+                                    <span class="\${nameClass}"\${nameAttr}>\${p.metadata.name || p.id}</span>
                                     <span class="plugin-version">v\${p.metadata.version || '?'}</span>
                                 </span>
                                 <label class="toggle">
@@ -1177,6 +1188,14 @@ export class SettingsManager {
                             const enabled = e.target.checked;
                             await ipcRenderer.invoke('set-plugin-enabled', p.id, enabled);
                         });
+
+                        const nameEl = card.querySelector('.plugin-name.has-homepage');
+                        if (nameEl) {
+                            nameEl.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                ipcRenderer.send('show-plugin-homepage-dialog', nameEl.dataset.homepage);
+                            });
+                        }
 
                         list.appendChild(card);
                     });

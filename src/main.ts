@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage, shell } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -15,6 +15,7 @@ import { ThemeService } from './services/themeService';
 import { ShortcutService } from './services/shortcutService';
 import { PluginService } from './services/pluginService';
 import { audioMonitorScript } from './services/audioMonitorService';
+import { showHomepageConfirmDialog, updateDialogBounds } from './settings/confirmPopup';
 import type { TrackInfo, TrackUpdateMessage } from './types';
 import path = require('path');
 import { platform } from 'os';
@@ -317,6 +318,8 @@ function setupWindowControls() {
             width,
             height: height - HEADER_HEIGHT,
         });
+
+        updateDialogBounds(mainWindow);
     }
 
     ipcMain.on('title-bar-double-click', () => {
@@ -499,6 +502,30 @@ async function init() {
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
         settingsManager.toggle();
+    });
+
+    ipcMain.handle('confirm-open-homepage', async (_event, url: string) => {
+        if (!url || typeof url !== 'string') return false;
+        const normalizedUrl = url.trim();
+        if (!/^https?:\/\//i.test(normalizedUrl)) return false;
+
+        const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
+        if (confirmed) {
+            await shell.openExternal(normalizedUrl);
+        }
+
+        return confirmed;
+    });
+
+    ipcMain.on('show-plugin-homepage-dialog', async (_event, url: string) => {
+        if (!url || typeof url !== 'string') return;
+        const normalizedUrl = url.trim();
+        if (!/^https?:\/\//i.test(normalizedUrl)) return;
+
+        const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
+        if (confirmed) {
+            await shell.openExternal(normalizedUrl);
+        }
     });
 
     setupWindowControls();
