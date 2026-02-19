@@ -1143,7 +1143,9 @@ function setupTranslationHandlers() {
 // Setup audio event handler for track updates
 function setupAudioHandler() {
     ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
-        console.debug(`Track update received: ${reason}`);
+        if (devMode) {
+            console.debug(`Track update received: ${reason}`);
+        }
 
         lastTrackInfo = result;
 

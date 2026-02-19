@@ -228,11 +228,14 @@ export class SettingsManager {
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                line-height: 1;
             }
             h2 svg {
                 width: 18px;
                 height: 18px;
                 fill: var(--text-primary);
+                display: block;
+                flex-shrink: 0;
             }
             .setting-item {
                 display: flex;
@@ -472,10 +475,17 @@ export class SettingsManager {
                 align-items: center;
                 justify-content: space-between;
             }
+            .plugin-header > span {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 6px;
+            }
             .plugin-name {
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--text-primary);
+                line-height: 1;
             }
             .plugin-name.has-homepage {
                 cursor: pointer;
@@ -488,7 +498,7 @@ export class SettingsManager {
             .plugin-version {
                 font-size: 11px;
                 color: var(--text-secondary);
-                margin-left: 6px;
+                line-height: 1;
             }
             .plugin-desc {
                 font-size: 12px;
@@ -499,7 +509,6 @@ export class SettingsManager {
                 font-size: 11px;
                 color: var(--text-secondary);
                 margin-top: 2px;
-                font-style: italic;
             }
             .no-plugins {
                 font-size: 13px;
@@ -1020,9 +1029,8 @@ export class SettingsManager {
             <div class="setting-group">
                 <h2 data-i18n="customThemes">
                     ${this.translationService.translate('customThemes')}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
-                        <path d="M12 7c-2.757 0-5 2.243-5 5s2.243 5 5 5 5-2.243 5-5-2.243-5-5-5z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
                     </svg>
                 </h2>
                 <div class="setting-item">
