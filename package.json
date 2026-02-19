@@ -1,7 +1,7 @@
 {
     "name": "soundcloud-rpc",
-    "version": "0.1.6",
-    "description": "🎵 A Soundcloud client with Discord Rich Presence support",
+    "version": "0.1.7",
+    "description": "🎵 A SoundCloud Client with Discord Rich Presence, Dark Mode, Last.fm and AdBlock support",
     "author": {
         "name": "Richard Habitzreuter",
         "email": "richardhabitzreuter@icloud.com"
