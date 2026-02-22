@@ -1,22 +1,47 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import type { ThemeColors } from '../utils/colorExtractor';
 
+const isMac = process.platform === 'darwin';
+
 export class NotificationManager {
-    private view: BrowserView;
+    private view: BrowserView | null = null;
     private queue: string[] = [];
     private isDisplaying = false;
     private parentWindow: BrowserWindow;
     private themeColors: ThemeColors | null = null;
+    private devMode = process.argv.includes('--dev');
+    private useMacOptimizations = process.platform === 'darwin';
 
     constructor(parentWindow: BrowserWindow) {
         this.parentWindow = parentWindow;
+    }
+
+    private ensureView(): BrowserView {
+        if (this.view) return this.view;
         this.view = new BrowserView({
             webPreferences: {
                 nodeIntegration: true,
                 contextIsolation: false,
-                transparent: true,
+                sandbox: false,
+                devTools: this.devMode,
+                ...(isMac ? { spellcheck: false } : {}),
             },
         });
+        return this.view;
+    }
+
+    private teardownView(): void {
+        if (!this.view) return;
+        const view = this.view;
+        try {
+            this.parentWindow.removeBrowserView(view);
+        } catch {}
+        if (this.useMacOptimizations) {
+            try {
+                (view.webContents as any).destroy();
+            } catch {}
+            this.view = null;
+        }
     }
 
     public setThemeColors(colors: ThemeColors | null): void {
@@ -33,7 +58,7 @@ export class NotificationManager {
     private displayNext(): void {
         if (this.queue.length === 0) {
             this.isDisplaying = false;
-            this.parentWindow.removeBrowserView(this.view);
+            this.teardownView();
             return;
         }
 
@@ -43,8 +68,9 @@ export class NotificationManager {
         const width = 400; // increased from 300
         const height = 70; // increased from 50
 
-        this.parentWindow.addBrowserView(this.view);
-        this.view.setBounds({
+        const view = this.ensureView();
+        this.parentWindow.addBrowserView(view);
+        view.setBounds({
             x: Math.floor((bounds.width - width) / 2),
             y: bounds.height - height - 100, // increased from 20 to move it up
             width,
@@ -115,6 +141,6 @@ export class NotificationManager {
             setTimeout(() => this.displayNext(), 100);
         });
 
-        this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+        view.webContents.loadURL(`data:text/html,${encodeURIComponent(html)}`);
     }
 }
