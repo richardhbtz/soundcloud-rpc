@@ -9,6 +9,7 @@ export class SettingsManager {
     private parentWindow: BrowserWindow;
     private store: ElectronStore;
     private translationService: TranslationService;
+    private devMode = process.argv.includes('--dev');
 
     constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
         this.parentWindow = parentWindow;
@@ -17,6 +18,10 @@ export class SettingsManager {
             webPreferences: {
                 nodeIntegration: true,
                 contextIsolation: false,
+                sandbox: false,
+                spellcheck: false,
+                devTools: this.devMode,
+                affinity: 'ui',
             },
         });
         this.translationService = translationService;

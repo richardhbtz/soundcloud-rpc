@@ -77,6 +77,7 @@ let shortcutService: ShortcutService;
 let pluginService: PluginService;
 let tray: Tray | null = null;
 let isQuitting = false;
+let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 // Header height for header BrowserView
 const HEADER_HEIGHT = 32;
@@ -236,6 +237,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             plugins: true,
             experimentalFeatures: false,
             devTools: devMode,
+            spellcheck: false,
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
@@ -450,6 +452,10 @@ async function init() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
+            sandbox: false,
+            spellcheck: false,
+            devTools: devMode,
+            affinity: 'ui',
         },
     });
 
@@ -464,6 +470,7 @@ async function init() {
             contextIsolation: true,
             devTools: devMode,
             preload: path.join(__dirname, 'preload.js'),
+            spellcheck: false,
         },
     });
 
@@ -498,6 +505,8 @@ async function init() {
     shortcutService = new ShortcutService(mainWindow);
     shortcutService.attachToWebContents(contentView.webContents);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
+
+    setupMemoryPressureHandler();
 
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
@@ -758,6 +767,35 @@ async function init() {
             await presenceService.updatePresence(lastTrackInfo as any);
         } else {
             presenceService.clearActivity();
+        }
+    });
+}
+
+function setupMemoryPressureHandler() {
+    if (memoryPressureHandlerRegistered) return;
+    memoryPressureHandlerRegistered = true;
+
+    app.on('memory-pressure', async (_event, details) => {
+        const level = typeof details === 'string' ? details : 'unknown';
+        console.warn(`Memory pressure detected (${level}). Clearing caches and history.`);
+
+        if (contentView) {
+            contentView.webContents.clearHistory();
+        }
+
+        const session = contentView?.webContents.session;
+        if (!session) return;
+
+        try {
+            await session.clearCache();
+        } catch (error) {
+            console.warn('Failed to clear HTTP cache:', error);
+        }
+
+        try {
+            await session.clearStorageData({ storages: ['cachestorage'] });
+        } catch (error) {
+            console.warn('Failed to clear Cache Storage:', error);
         }
     });
 }

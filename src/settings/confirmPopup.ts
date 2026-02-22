@@ -1,6 +1,7 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 
 let confirmPopupView: BrowserView | null = null;
+const devMode = process.argv.includes('--dev');
 
 function escapeHtml(value: string): string {
     return value
@@ -34,6 +35,9 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
             nodeIntegration: true,
             contextIsolation: false,
             sandbox: false,
+            spellcheck: false,
+            devTools: devMode,
+            affinity: 'ui',
         },
     });
 

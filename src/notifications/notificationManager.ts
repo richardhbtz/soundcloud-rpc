@@ -7,6 +7,7 @@ export class NotificationManager {
     private isDisplaying = false;
     private parentWindow: BrowserWindow;
     private themeColors: ThemeColors | null = null;
+    private devMode = process.argv.includes('--dev');
 
     constructor(parentWindow: BrowserWindow) {
         this.parentWindow = parentWindow;
@@ -14,7 +15,10 @@ export class NotificationManager {
             webPreferences: {
                 nodeIntegration: true,
                 contextIsolation: false,
-                transparent: true,
+                sandbox: false,
+                spellcheck: false,
+                devTools: this.devMode,
+                affinity: 'ui',
             },
         });
     }
