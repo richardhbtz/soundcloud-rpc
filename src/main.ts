@@ -79,6 +79,28 @@ let tray: Tray | null = null;
 let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
+const isMac = process.platform === 'darwin';
+
+function applyMacMemoryOptimizations(): void {
+    if (!isMac) return;
+
+    const existingDisableFeatures = app.commandLine.getSwitchValue('disable-features');
+    const features = new Set(
+        existingDisableFeatures
+            .split(',')
+            .map((feature) => feature.trim())
+            .filter(Boolean),
+    );
+    features.add('BackForwardCache');
+
+    app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
+    app.commandLine.appendSwitch('renderer-process-limit', '1');
+    app.commandLine.appendSwitch('disk-cache-size', '1');
+    app.commandLine.appendSwitch('media-cache-size', '1');
+    app.commandLine.appendSwitch('enable-low-end-device-mode');
+}
+
+applyMacMemoryOptimizations();
 // Header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -237,7 +259,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             plugins: true,
             experimentalFeatures: false,
             devTools: devMode,
-            spellcheck: false,
+            ...(isMac ? { spellcheck: false } : {}),
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
@@ -453,9 +475,8 @@ async function init() {
             nodeIntegration: true,
             contextIsolation: false,
             sandbox: false,
-            spellcheck: false,
             devTools: devMode,
-            affinity: 'ui',
+            ...(isMac ? { spellcheck: false } : {}),
         },
     });
 
@@ -470,7 +491,7 @@ async function init() {
             contextIsolation: true,
             devTools: devMode,
             preload: path.join(__dirname, 'preload.js'),
-            spellcheck: false,
+            ...(isMac ? { spellcheck: false } : {}),
         },
     });
 
@@ -511,6 +532,7 @@ async function init() {
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
         settingsManager.toggle();
+        applyThemeToContent(isDarkTheme);
     });
 
     ipcMain.handle('confirm-open-homepage', async (_event, url: string) => {
@@ -773,9 +795,10 @@ async function init() {
 
 function setupMemoryPressureHandler() {
     if (memoryPressureHandlerRegistered) return;
+    if (!isMac) return;
     memoryPressureHandlerRegistered = true;
 
-    app.on('memory-pressure', async (_event, details) => {
+    app.on('memory-pressure' as any, async (_event: unknown, details: unknown) => {
         const level = typeof details === 'string' ? details : 'unknown';
         console.warn(`Memory pressure detected (${level}). Clearing caches and history.`);
 
@@ -809,7 +832,7 @@ function setupThemeHandlers() {
         headerView.webContents.send('theme-changed', isDarkTheme);
     }
     if (settingsManager) {
-        settingsManager.getView().webContents.send('theme-changed', isDarkTheme);
+        settingsManager.getView()?.webContents.send('theme-changed', isDarkTheme);
     }
     applyThemeToContent(isDarkTheme);
 
@@ -828,7 +851,7 @@ function setupThemeHandlers() {
                 headerView.webContents.send('theme-changed', isDarkTheme);
             }
             if (settingsManager) {
-                settingsManager.getView().webContents.send('theme-changed', isDarkTheme);
+                settingsManager.getView()?.webContents.send('theme-changed', isDarkTheme);
             }
             applyThemeToContent(isDarkTheme);
         }
@@ -1003,7 +1026,7 @@ function applyThemeToContent(isDark: boolean) {
                 } catch(e){ console.error('Settings theme inject error:', e); }
             })();
         `;
-        settingsManager.getView().webContents.executeJavaScript(settingsScript).catch(console.error);
+        settingsManager.getView()?.webContents.executeJavaScript(settingsScript).catch(console.error);
     }
 }
 
@@ -1222,7 +1245,7 @@ function setupAudioHandler() {
 
         // Update the rich presence preview in settings
         if (settingsManager) {
-            settingsManager.getView().webContents.send('presence-preview-update', result);
+            settingsManager.getView()?.webContents.send('presence-preview-update', result);
         }
 
         if (thumbarService) {
