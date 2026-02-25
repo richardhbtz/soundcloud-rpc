@@ -3,27 +3,21 @@ import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
 import type { ThemeColors } from '../utils/colorExtractor';
 
+const isMac = process.platform === 'darwin';
+
 export class SettingsManager {
-    private view: BrowserView;
+    private view: BrowserView | null = null;
     private isVisible = false;
     private parentWindow: BrowserWindow;
     private store: ElectronStore;
     private translationService: TranslationService;
+    private devMode = process.argv.includes('--dev');
+    private useMacOptimizations = process.platform === 'darwin';
 
     constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
         this.parentWindow = parentWindow;
         this.store = store;
-        this.view = new BrowserView({
-            webPreferences: {
-                nodeIntegration: true,
-                contextIsolation: false,
-            },
-        });
         this.translationService = translationService;
-
-        // Add view immediately but keep it off-screen
-        this.parentWindow.addBrowserView(this.view);
-        this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
 
         // Add resize listener
         this.parentWindow.on('resize', () => {
@@ -31,17 +25,9 @@ export class SettingsManager {
                 this.updateBounds();
             }
         });
-
-        // Preload content
-        this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
-
-        // Listen for hide message from the panel
-        this.view.webContents.on('console-message', (_, __, message) => {
-            if (message === 'hidePanel') {
-                this.isVisible = false;
-                this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
-            }
-        });
+        if (!this.useMacOptimizations) {
+            this.createView();
+        }
     }
 
     public toggle(): void {
@@ -52,7 +38,54 @@ export class SettingsManager {
         }
     }
 
+    private createView(): BrowserView {
+        if (this.view) return this.view;
+
+        this.view = new BrowserView({
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false,
+                sandbox: false,
+                devTools: this.devMode,
+                ...(isMac ? { spellcheck: false } : {}),
+            },
+        });
+
+        // Add view immediately but keep it off-screen until shown
+        this.parentWindow.addBrowserView(this.view);
+        this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+
+        // Preload content
+        this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
+
+        // Listen for hide message from the panel
+        this.view.webContents.on('console-message', (_, __, message) => {
+            if (message === 'hidePanel') {
+                this.isVisible = false;
+                if (this.useMacOptimizations) {
+                    this.teardownView();
+                } else if (this.view) {
+                    this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+                }
+            }
+        });
+
+        return this.view;
+    }
+
+    private teardownView(): void {
+        if (!this.view) return;
+        try {
+            this.parentWindow.removeBrowserView(this.view);
+        } catch {}
+        try {
+            (this.view.webContents as any).destroy();
+        } catch {}
+        this.view = null;
+    }
+
     private updateBounds(): void {
+        if (!this.view) return;
         const bounds = this.parentWindow.getBounds();
         const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
         const HEADER_HEIGHT = 32; // Height of the window controls
@@ -1782,18 +1815,31 @@ export class SettingsManager {
     }
 
     private show(): void {
+        const wasCreated = this.view === null;
+        const view = this.createView();
         this.isVisible = true;
         this.updateBounds();
-        this.view.webContents.executeJavaScript(`
-            // Force a reflow to ensure animation works
-            document.body.style.opacity;
-            document.body.classList.add('visible');
-        `);
-        // Trigger translation updates when panel is shown
-        this.getView().webContents.send('update-translations');
+        const applyShowState = () => {
+            view.webContents.executeJavaScript(`
+                // Force a reflow to ensure animation works
+                document.body.style.opacity;
+                document.body.classList.add('visible');
+            `);
+            // Trigger translation updates when panel is shown
+            view.webContents.send('update-translations');
+            const isDark = this.store.get('theme', 'dark') === 'dark';
+            view.webContents.send('theme-changed', isDark);
+        };
+
+        if (wasCreated) {
+            view.webContents.once('did-finish-load', applyShowState);
+        } else {
+            applyShowState();
+        }
     }
 
     private hide(): void {
+        if (!this.view) return;
         this.view.webContents.executeJavaScript(`
             document.body.classList.remove('visible');
             setTimeout(() => {
@@ -1803,6 +1849,7 @@ export class SettingsManager {
     }
 
     public setThemeColors(colors: ThemeColors | null): void {
+        if (!this.view) return;
         if (!colors) {
             // Reset to default theme colors
             this.view.webContents.executeJavaScript(`
@@ -1827,15 +1874,13 @@ export class SettingsManager {
             .catch(console.error);
     }
 
-    public getView(): BrowserView {
-        if (!this.view) {
-            throw new Error('Settings view is not initialized');
-        }
+    public getView(): BrowserView | null {
         return this.view;
     }
 
     public updateTranslations(translationService: TranslationService): void {
         this.translationService = translationService;
-        this.getView().webContents.send('update-translations');
+        if (!this.view) return;
+        this.view.webContents.send('update-translations');
     }
 }

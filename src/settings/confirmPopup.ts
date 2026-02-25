@@ -1,6 +1,8 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 
 let confirmPopupView: BrowserView | null = null;
+const devMode = process.argv.includes('--dev');
+const isMac = process.platform === 'darwin';
 
 function escapeHtml(value: string): string {
     return value
@@ -34,6 +36,8 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
             nodeIntegration: true,
             contextIsolation: false,
             sandbox: false,
+            devTools: devMode,
+            ...(isMac ? { spellcheck: false } : {}),
         },
     });
 
