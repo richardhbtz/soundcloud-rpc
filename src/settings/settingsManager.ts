@@ -7,106 +7,106 @@ import { join } from 'path';
 const isMac = process.platform === 'darwin';
 
 export class SettingsManager {
-	private view: BrowserView | null = null;
-	private isVisible = false;
-	private parentWindow: BrowserWindow;
-	private store: ElectronStore;
-	private translationService: TranslationService;
+    private view: BrowserView | null = null;
+    private isVisible = false;
+    private parentWindow: BrowserWindow;
+    private store: ElectronStore;
+    private translationService: TranslationService;
     private devMode = process.argv.includes('--dev');
     private useMacOptimizations = process.platform === 'darwin';
 
     constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
-		this.parentWindow = parentWindow;
-		this.store = store;
-		this.translationService = translationService;
+        this.parentWindow = parentWindow;
+        this.store = store;
+        this.translationService = translationService;
 
-		// Add resize listener
-		this.parentWindow.on('resize', () => {
-			if (this.isVisible) {
-				this.updateBounds();
-			}
-		});
-		if (!this.useMacOptimizations) {
-			this.createView();
-		}
-	}
+        // Add resize listener
+        this.parentWindow.on('resize', () => {
+            if (this.isVisible) {
+                this.updateBounds();
+            }
+        });
+        if (!this.useMacOptimizations) {
+            this.createView();
+        }
+    }
 
-	public toggle(): void {
-		if (this.isVisible) {
-			this.hide();
-		} else {
-			this.show();
-		}
-	}
+    public toggle(): void {
+        if (this.isVisible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
 
-	private createView(): BrowserView {
-		if (this.view) return this.view;
+    private createView(): BrowserView {
+        if (this.view) return this.view;
 
-		this.view = new BrowserView({
-			webPreferences: {
-				nodeIntegration: false,
-				contextIsolation: true,
-				sandbox: true,
-				webSecurity: true,
-				allowRunningInsecureContent: false,
-				nodeIntegrationInSubFrames: false,
-				nodeIntegrationInWorker: false,
-				preload: join(__dirname, "settingsPreload.js"),
-				devTools: this.devMode,
-				...(isMac ? { spellcheck: false } : {}),
-			},
-		});
+        this.view = new BrowserView({
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+                webSecurity: true,
+                allowRunningInsecureContent: false,
+                nodeIntegrationInSubFrames: false,
+                nodeIntegrationInWorker: false,
+                preload: join(__dirname, 'settingsPreload.js'),
+                devTools: this.devMode,
+                ...(isMac ? { spellcheck: false } : {}),
+            },
+        });
 
-		// Add view immediately but keep it off-screen until shown
-		this.parentWindow.addBrowserView(this.view);
-		this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+        // Add view immediately but keep it off-screen until shown
+        this.parentWindow.addBrowserView(this.view);
+        this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
 
-		// Preload content
+        // Preload content
         this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
 
-		// Listen for hide message from the panel
+        // Listen for hide message from the panel
         this.view.webContents.on('console-message', (_, __, message) => {
             if (message === 'hidePanel') {
-				this.isVisible = false;
-				if (this.useMacOptimizations) {
-					this.teardownView();
-				} else if (this.view) {
-					this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
-				}
-			}
-		});
+                this.isVisible = false;
+                if (this.useMacOptimizations) {
+                    this.teardownView();
+                } else if (this.view) {
+                    this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+                }
+            }
+        });
 
-		return this.view;
-	}
+        return this.view;
+    }
 
-	private teardownView(): void {
-		if (!this.view) return;
-		try {
-			this.parentWindow.removeBrowserView(this.view);
-		} catch {}
-		try {
-			(this.view.webContents as any).destroy();
-		} catch {}
-		this.view = null;
-	}
+    private teardownView(): void {
+        if (!this.view) return;
+        try {
+            this.parentWindow.removeBrowserView(this.view);
+        } catch {}
+        try {
+            (this.view.webContents as any).destroy();
+        } catch {}
+        this.view = null;
+    }
 
-	private updateBounds(): void {
-		if (!this.view) return;
-		const bounds = this.parentWindow.getBounds();
-		const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
-		const HEADER_HEIGHT = 32; // Height of the window controls
+    private updateBounds(): void {
+        if (!this.view) return;
+        const bounds = this.parentWindow.getBounds();
+        const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
+        const HEADER_HEIGHT = 32; // Height of the window controls
 
-		this.view.setBounds({
-			x: bounds.width - width,
-			y: HEADER_HEIGHT,
-			width,
-			height: bounds.height - HEADER_HEIGHT,
-		});
-	}
+        this.view.setBounds({
+            x: bounds.width - width,
+            y: HEADER_HEIGHT,
+            width,
+            height: bounds.height - HEADER_HEIGHT,
+        });
+    }
 
-	private getHtml(): string {
+    private getHtml(): string {
         const theme = this.store.get('theme', 'dark');
-		return `
+        return `
         <style>
             @font-face {
                 font-family: 'SC-Font';
@@ -890,13 +890,13 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
-								}">
+                }">
                     <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${
                         this.store.get('proxyHost') || ''
-										}">
+                    }">
                     <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${
                         this.store.get('proxyPort') || ''
-										}">
+                    }">
                 </div>
             </div>
 
@@ -916,13 +916,13 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
-								}">
+                }">
                     <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${
                         this.store.get('lastFmApiKey') || ''
-										}">
+                    }">
                     <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${
                         this.store.get('lastFmSecret') || ''
-										}">
+                    }">
                 </div>
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link" data-i18n="createApiKeyLastFm">${this.translationService.translate('createApiKeyLastFm')}</a>
@@ -946,16 +946,16 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="webhookFields" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
-								}">
+                }">
                     <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${
                         this.store.get('webhookUrl') || ''
-										}">
+                    }">
                     <div class="setting-item">
                         <span data-i18n="webhookTrigger">${this.translationService.translate('webhookTrigger')}</span>
                         <div class="input-with-unit">
                             <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
                                 this.store.get('webhookTriggerPercentage') || 50
-														}">
+                            }">
                             <span class="unit-symbol">%</span>
                         </div>
                     </div>
@@ -965,7 +965,7 @@ export class SettingsManager {
                 </div>
                 <div class="webhook-example-container" id="webhookFields2" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
-								}">
+                }">
                     <div class="example-toggle" id="webhookExampleToggle">
                         <span class="example-toggle-text" data-i18n="showWebhookExample">${this.translationService.translate('showWebhookExample')}</span>
                         <svg class="example-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -997,7 +997,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="discordRichPresence" ${
                             this.store.get('discordRichPresence') ? 'checked' : ''
-												}>
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1006,7 +1006,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="displayWhenIdling" ${
                             this.store.get('displayWhenIdling') ? 'checked' : ''
-												}>
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1015,7 +1015,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="displaySCSmallIcon" ${
                             this.store.get('displaySCSmallIcon') ? 'checked' : ''
-												}>
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1031,7 +1031,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="useArtistInStatusLineToggle" ${
                             (this.store.get('statusDisplayType') as number) === 1 ? 'checked' : ''
-												}>
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1040,7 +1040,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="richPresencePreviewEnabled" ${
                             this.store.get('richPresencePreviewEnabled', false) ? 'checked' : ''
-												}>
+                        }>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1049,7 +1049,7 @@ export class SettingsManager {
                 <!-- Rich Presence Preview -->
                 <div class="preview-container" id="presencePreviewContainer" style="display: ${
                     this.store.get('richPresencePreviewEnabled', false) ? 'block' : 'none'
-								}">
+                }">
                     <div class="preview-panel">
                         <div class="preview-header-inline">
                             <span class="preview-title-inline" data-i18n="richPresencePreviewTitle">${this.translationService.translate('richPresencePreviewTitle')}</span>
@@ -1132,10 +1132,10 @@ export class SettingsManager {
                 }
             });
         </script>`;
-	}
+    }
 
-	private getJavaScript(): string {
-		return `
+    private getJavaScript(): string {
+        return `
             const ipcRenderer = {
                 send: (channel, ...args) => window.settingsAPI.send(channel, ...args),
                 invoke: (channel, ...args) => window.settingsAPI.invoke(channel, ...args),
@@ -1858,75 +1858,75 @@ export class SettingsManager {
                 });
             });
         `;
-	}
+    }
 
-	private show(): void {
-		const wasCreated = this.view === null;
-		const view = this.createView();
-		this.isVisible = true;
-		this.updateBounds();
-		const applyShowState = () => {
-			view.webContents.executeJavaScript(`
+    private show(): void {
+        const wasCreated = this.view === null;
+        const view = this.createView();
+        this.isVisible = true;
+        this.updateBounds();
+        const applyShowState = () => {
+            view.webContents.executeJavaScript(`
                 // Force a reflow to ensure animation works
                 document.body.style.opacity;
                 document.body.classList.add('visible');
             `);
-			// Trigger translation updates when panel is shown
+            // Trigger translation updates when panel is shown
             view.webContents.send('update-translations');
             const isDark = this.store.get('theme', 'dark') === 'dark';
             view.webContents.send('theme-changed', isDark);
-		};
+        };
 
-		if (wasCreated) {
+        if (wasCreated) {
             view.webContents.once('did-finish-load', applyShowState);
-		} else {
-			applyShowState();
-		}
-	}
+        } else {
+            applyShowState();
+        }
+    }
 
-	private hide(): void {
-		if (!this.view) return;
-		this.view.webContents.executeJavaScript(`
+    private hide(): void {
+        if (!this.view) return;
+        this.view.webContents.executeJavaScript(`
             document.body.classList.remove('visible');
             setTimeout(() => {
                 window.postMessage('hidePanel', '*');
             }, 300);
         `);
-	}
+    }
 
-	public setThemeColors(colors: ThemeColors | null): void {
-		if (!this.view) return;
-		if (!colors) {
-			// Reset to default theme colors
-			this.view.webContents.executeJavaScript(`
+    public setThemeColors(colors: ThemeColors | null): void {
+        if (!this.view) return;
+        if (!colors) {
+            // Reset to default theme colors
+            this.view.webContents.executeJavaScript(`
                 document.documentElement.style.removeProperty('--bg-primary');
                 document.documentElement.style.removeProperty('--bg-secondary');
                 document.documentElement.style.removeProperty('--text-primary');
                 document.documentElement.style.removeProperty('--accent');
             `);
-			return;
-		}
+            return;
+        }
 
-		// Apply custom theme colors
-		this.view.webContents
-			.executeJavaScript(
-				`
+        // Apply custom theme colors
+        this.view.webContents
+            .executeJavaScript(
+                `
             document.documentElement.style.setProperty('--bg-primary', '${colors.surface || colors.background}');
             document.documentElement.style.setProperty('--bg-secondary', '${colors.background}');
             document.documentElement.style.setProperty('--text-primary', '${colors.text}');
             document.documentElement.style.setProperty('--accent', '${colors.accent || colors.primary}');
         `,
-			)
-			.catch(console.error);
-	}
+            )
+            .catch(console.error);
+    }
 
-	public getView(): BrowserView | null {
-		return this.view;
-	}
+    public getView(): BrowserView | null {
+        return this.view;
+    }
 
-	public updateTranslations(translationService: TranslationService): void {
-		this.translationService = translationService;
-		if (!this.view) return;
+    public updateTranslations(translationService: TranslationService): void {
+        this.translationService = translationService;
+        if (!this.view) return;
         this.view.webContents.send('update-translations');
-	}
+    }
 }

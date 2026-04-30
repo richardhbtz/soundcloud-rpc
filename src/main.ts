@@ -361,7 +361,9 @@ function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
     const frameUrl = event.senderFrame?.url || event.sender.getURL();
     try {
         const url = new URL(frameUrl);
-        return url.protocol === 'https:' && (url.hostname === 'soundcloud.com' || url.hostname.endsWith('.soundcloud.com'));
+        return (
+            url.protocol === 'https:' && (url.hostname === 'soundcloud.com' || url.hostname.endsWith('.soundcloud.com'))
+        );
     } catch {
         return false;
     }
@@ -372,7 +374,8 @@ function validateTrackUpdatePayload(payload: unknown): TrackUpdateMessage | null
     const input = payload as Partial<TrackUpdateMessage>;
     const data = validateTrackInfo(input.data);
     if (!data) return null;
-    const reason = typeof input.reason === 'string' && TRACK_UPDATE_REASONS.has(input.reason) ? input.reason : 'track-change';
+    const reason =
+        typeof input.reason === 'string' && TRACK_UPDATE_REASONS.has(input.reason) ? input.reason : 'track-change';
 
     return { data, reason } as TrackUpdateMessage;
 }

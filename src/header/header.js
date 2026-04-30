@@ -1,5 +1,5 @@
 /* eslint-disable */
-const ipcRenderer  = {
+const ipcRenderer = {
     send: (channel, ...args) => window.headerAPI.send(channel, ...args),
     invoke: (channel, ...args) => window.headerAPI.invoke(channel, ...args),
     on: (channel, listener) => window.headerAPI.on(channel, (...args) => listener(null, ...args)),

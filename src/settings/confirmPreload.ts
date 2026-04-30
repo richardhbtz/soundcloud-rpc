@@ -6,4 +6,3 @@ contextBridge.exposeInMainWorld('homepageConfirmAPI', {
         ipcRenderer.send('homepage-confirm-result', { requestId, result });
     },
 });
-
