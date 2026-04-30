@@ -1,5 +1,10 @@
 /* eslint-disable */
-const { ipcRenderer } = require('electron');
+const ipcRenderer  = {
+    send: (channel, ...args) => window.headerAPI.send(channel, ...args),
+    invoke: (channel, ...args) => window.headerAPI.invoke(channel, ...args),
+    on: (channel, listener) => window.headerAPI.on(channel, (...args) => listener(null, ...args)),
+};
+const platform = window.headerAPI.platform;
 
 let isMaximized = false;
 let isDarkTheme = true;
@@ -77,7 +82,7 @@ function updateNavigationState(state = {}) {
 
 // Helper function to update window controls
 function updateWindowControls() {
-    if (process.platform === 'win32') {
+    if (platform === 'win32') {
         if (!maximizeGlyphEl) {
             maximizeGlyphEl = document.querySelector('#maximize-btn .icon-glyph');
         }
@@ -100,7 +105,7 @@ function setIconGlyph(element, glyph) {
 function initializeIcons() {
     try {
         // Only initialize SVG icons if we're on Windows
-        if (process.platform === 'win32') {
+        if (platform === 'win32') {
             minimizeGlyphEl = document.querySelector('#minimize-btn .icon-glyph');
             maximizeGlyphEl = document.querySelector('#maximize-btn .icon-glyph');
             closeGlyphEl = document.querySelector('#close-btn .icon-glyph');
@@ -131,7 +136,7 @@ function handleForcedColorsChange() {
 }
 
 // Set platform class on body
-document.body.classList.add(`platform-${process.platform}`);
+document.body.classList.add(`platform-${platform}`);
 
 // Navigation event delegation
 document.querySelector('.navigation-controls')?.addEventListener('click', (e) => {

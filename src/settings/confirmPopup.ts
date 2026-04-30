@@ -1,11 +1,12 @@
-import { BrowserView, BrowserWindow, ipcMain } from 'electron';
+import { BrowserView, BrowserWindow, ipcMain } from "electron";
+import { join } from "path";
 
 let confirmPopupView: BrowserView | null = null;
-const devMode = process.argv.includes('--dev');
-const isMac = process.platform === 'darwin';
+const devMode = process.argv.includes("--dev");
+const isMac = process.platform === "darwin";
 
 function escapeHtml(value: string): string {
-    return value
+	return value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -14,38 +15,43 @@ function escapeHtml(value: string): string {
 }
 
 function updateHomepageConfirmBounds(mainWindow: BrowserWindow): void {
-    if (!mainWindow || !confirmPopupView) return;
-    const { width, height } = mainWindow.getContentBounds();
-    confirmPopupView.setBounds({ x: 0, y: 0, width, height });
+	if (!mainWindow || !confirmPopupView) return;
+	const { width, height } = mainWindow.getContentBounds();
+	confirmPopupView.setBounds({ x: 0, y: 0, width, height });
 }
 
 export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: string): Promise<boolean> {
-    if (!mainWindow) return false;
+	if (!mainWindow) return false;
 
-    if (confirmPopupView) {
-        mainWindow.removeBrowserView(confirmPopupView);
-        (confirmPopupView as any).webContents.destroy();
-        confirmPopupView = null;
-    }
+	if (confirmPopupView) {
+		mainWindow.removeBrowserView(confirmPopupView);
+		(confirmPopupView as any).webContents.destroy();
+		confirmPopupView = null;
+	}
 
-    const requestId = `homepage-confirm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const safeUrl = escapeHtml(url);
+	const requestId = `homepage-confirm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const safeUrl = escapeHtml(url);
 
-    confirmPopupView = new BrowserView({
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            sandbox: false,
+	confirmPopupView = new BrowserView({
+		webPreferences: {
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: true,
+			webSecurity: true,
+			allowRunningInsecureContent: false,
+			nodeIntegrationInSubFrames: false,
+			nodeIntegrationInWorker: false,
+			preload: join(__dirname, "confirmPreload.js"),
             devTools: devMode,
-            ...(isMac ? { spellcheck: false } : {}),
-        },
-    });
+			...(isMac ? { spellcheck: false } : {}),
+		},
+	});
 
-    mainWindow.addBrowserView(confirmPopupView);
-    updateHomepageConfirmBounds(mainWindow);
-    confirmPopupView.setAutoResize({ width: true, height: true });
+	mainWindow.addBrowserView(confirmPopupView);
+	updateHomepageConfirmBounds(mainWindow);
+	confirmPopupView.setAutoResize({ width: true, height: true });
 
-    const html = `
+	const html = `
         <style>
             @font-face {
                 font-family: 'SC-Font';
@@ -147,13 +153,12 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
                 </div>
             </div>
             <script>
-                const { ipcRenderer } = require('electron');
                 requestAnimationFrame(() => {
                     document.body.classList.add('visible');
                 });
 
                 function submit(result) {
-                    ipcRenderer.send('homepage-confirm-result', { requestId: '${requestId}', result });
+                    window.homepageConfirmAPI.submit('${requestId}', result);
                 }
 
                 document.getElementById('cancelBtn').addEventListener('click', () => submit(false));
@@ -176,25 +181,25 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
     `;
 
     await confirmPopupView.webContents.loadURL(`data:text/html,${encodeURIComponent(html)}`);
-    confirmPopupView.webContents.focus();
+	confirmPopupView.webContents.focus();
 
-    return new Promise((resolve) => {
+	return new Promise((resolve) => {
         ipcMain.once('homepage-confirm-result', (_event, data: { requestId: string; result: boolean }) => {
-            if (data?.requestId !== requestId) {
-                resolve(false);
-                return;
-            }
+				if (data?.requestId !== requestId) {
+					resolve(false);
+					return;
+				}
 
-            if (confirmPopupView && mainWindow) {
-                mainWindow.removeBrowserView(confirmPopupView);
-                (confirmPopupView as any).webContents.destroy();
-                confirmPopupView = null;
-            }
-            resolve(!!data.result);
+				if (confirmPopupView && mainWindow) {
+					mainWindow.removeBrowserView(confirmPopupView);
+					(confirmPopupView as any).webContents.destroy();
+					confirmPopupView = null;
+				}
+				resolve(!!data.result);
         });
-    });
+	});
 }
 
 export function updateDialogBounds(mainWindow: BrowserWindow): void {
-    updateHomepageConfirmBounds(mainWindow);
+	updateHomepageConfirmBounds(mainWindow);
 }

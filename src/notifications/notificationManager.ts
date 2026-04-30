@@ -1,5 +1,6 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import type { ThemeColors } from '../utils/colorExtractor';
+import { join } from 'path/win32';
 
 const isMac = process.platform === 'darwin';
 
@@ -20,9 +21,14 @@ export class NotificationManager {
         if (this.view) return this.view;
         this.view = new BrowserView({
             webPreferences: {
-                nodeIntegration: true,
-                contextIsolation: false,
-                sandbox: false,
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+                webSecurity: true,
+                allowRunningInsecureContent: false,
+                nodeIntegrationInSubFrames: false,
+                nodeIntegrationInWorker: false,
+                preload: join(__dirname, 'notificationPreload.js'),
                 devTools: this.devMode,
                 ...(isMac ? { spellcheck: false } : {}),
             },
@@ -129,8 +135,7 @@ export class NotificationManager {
                     document.body.classList.add('fade-out');
                     document.body.style.opacity = '0';
                     setTimeout(() => {
-                        const { ipcRenderer } = require('electron');
-                        ipcRenderer.send('notification-done');
+                        window.notificationAPI.done();
                     }, 300);
                 }, 4500);
             </script>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage, shell, type IpcMainEvent } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -307,6 +307,76 @@ let lastTrackInfo: TrackInfo = {
     url: '',
 };
 
+const TRACK_UPDATE_REASONS = new Set([
+    'playback-state-change',
+    'track-change',
+    'seek-change',
+    'initial-state',
+    'waveform-seek',
+    'timeline-seek',
+]);
+
+function cleanTrackString(value: unknown, maxLength: number): string {
+    if (typeof value !== 'string') return '';
+    return Array.from(value)
+        .filter((char) => {
+            const code = char.charCodeAt(0);
+            return code >= 32 && code !== 127;
+        })
+        .join('')
+        .trim()
+        .slice(0, maxLength);
+}
+
+function cleanTrackUrl(value: unknown): string {
+    const raw = cleanTrackString(value, 2048);
+    if (!raw) return '';
+
+    try {
+        const url = new URL(raw);
+        return url.protocol === 'https:' ? url.toString() : '';
+    } catch {
+        return '';
+    }
+}
+
+function validateTrackInfo(data: unknown): TrackInfo | null {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    const input = data as Partial<Record<keyof TrackInfo, unknown>>;
+
+    return {
+        title: cleanTrackString(input.title, 300),
+        author: cleanTrackString(input.author, 200),
+        artwork: cleanTrackUrl(input.artwork),
+        elapsed: cleanTrackString(input.elapsed, 32),
+        duration: cleanTrackString(input.duration, 32),
+        isPlaying: typeof input.isPlaying === 'boolean' ? input.isPlaying : false,
+        url: cleanTrackUrl(input.url),
+    };
+}
+
+function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
+    if (!contentView || event.sender.id !== contentView.webContents.id) return false;
+
+    const frameUrl = event.senderFrame?.url || event.sender.getURL();
+    try {
+        const url = new URL(frameUrl);
+        return url.protocol === 'https:' && (url.hostname === 'soundcloud.com' || url.hostname.endsWith('.soundcloud.com'));
+    } catch {
+        return false;
+    }
+}
+
+function validateTrackUpdatePayload(payload: unknown): TrackUpdateMessage | null {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+    const input = payload as Partial<TrackUpdateMessage>;
+    const data = validateTrackInfo(input.data);
+    if (!data) return null;
+    const reason = typeof input.reason === 'string' && TRACK_UPDATE_REASONS.has(input.reason) ? input.reason : 'track-change';
+
+    return { data, reason } as TrackUpdateMessage;
+}
+
 function setupWindowControls() {
     if (!mainWindow) return;
 
@@ -472,9 +542,14 @@ async function init() {
 
     headerView = new BrowserView({
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            sandbox: false,
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            nodeIntegrationInSubFrames: false,
+            nodeIntegrationInWorker: false,
+            preload: path.join(__dirname, 'header', 'headerPreload.js'),
             devTools: devMode,
             ...(isMac ? { spellcheck: false } : {}),
         },
@@ -489,6 +564,11 @@ async function init() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            nodeIntegrationInSubFrames: false,
+            nodeIntegrationInWorker: false,
             devTools: devMode,
             preload: path.join(__dirname, 'preload.js'),
             ...(isMac ? { spellcheck: false } : {}),
@@ -557,6 +637,31 @@ async function init() {
         if (confirmed) {
             await shell.openExternal(normalizedUrl);
         }
+    });
+
+    ipcMain.handle('open-external-url', async (_event, url: string) => {
+        if (!url || typeof url !== 'string') return '';
+        const normalizedUrl = url.trim();
+
+        try {
+            const parsed = new URL(normalizedUrl);
+            if (parsed.protocol !== 'https:') return '';
+            await shell.openExternal(parsed.toString());
+            return '';
+        } catch {
+            return '';
+        }
+    });
+
+    ipcMain.handle('open-path', async (_event, targetPath: string) => {
+        if (!targetPath || typeof targetPath !== 'string') return 'Invalid path';
+        const allowedPaths = [themeService.getThemesPath(), pluginService.getPluginsPath()].map((allowedPath) =>
+            path.resolve(allowedPath),
+        );
+        const normalizedPath = path.resolve(targetPath);
+        if (!allowedPaths.includes(normalizedPath)) return 'Blocked path';
+
+        return shell.openPath(targetPath);
     });
 
     setupWindowControls();
@@ -1203,7 +1308,20 @@ function setupTranslationHandlers() {
 
 // Setup audio event handler for track updates
 function setupAudioHandler() {
-    ipcMain.on('soundcloud:track-update', async (_event, { data: result, reason }: TrackUpdateMessage) => {
+    ipcMain.on('soundcloud:track-update', async (event, payload: unknown) => {
+        if (!isTrustedSoundCloudSender(event)) {
+            console.warn('Rejected track update from untrusted sender');
+            return;
+        }
+
+        const update = validateTrackUpdatePayload(payload);
+        if (!update) {
+            console.warn('Rejected invalid track update payload');
+            return;
+        }
+
+        const { data: result, reason } = update;
+
         if (devMode) {
             console.debug(`Track update received: ${reason}`);
         }

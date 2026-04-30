@@ -2,105 +2,111 @@ import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
 import type { ThemeColors } from '../utils/colorExtractor';
+import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
 
 export class SettingsManager {
-    private view: BrowserView | null = null;
-    private isVisible = false;
-    private parentWindow: BrowserWindow;
-    private store: ElectronStore;
-    private translationService: TranslationService;
+	private view: BrowserView | null = null;
+	private isVisible = false;
+	private parentWindow: BrowserWindow;
+	private store: ElectronStore;
+	private translationService: TranslationService;
     private devMode = process.argv.includes('--dev');
     private useMacOptimizations = process.platform === 'darwin';
 
     constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
-        this.parentWindow = parentWindow;
-        this.store = store;
-        this.translationService = translationService;
+		this.parentWindow = parentWindow;
+		this.store = store;
+		this.translationService = translationService;
 
-        // Add resize listener
-        this.parentWindow.on('resize', () => {
-            if (this.isVisible) {
-                this.updateBounds();
-            }
-        });
-        if (!this.useMacOptimizations) {
-            this.createView();
-        }
-    }
+		// Add resize listener
+		this.parentWindow.on('resize', () => {
+			if (this.isVisible) {
+				this.updateBounds();
+			}
+		});
+		if (!this.useMacOptimizations) {
+			this.createView();
+		}
+	}
 
-    public toggle(): void {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show();
-        }
-    }
+	public toggle(): void {
+		if (this.isVisible) {
+			this.hide();
+		} else {
+			this.show();
+		}
+	}
 
-    private createView(): BrowserView {
-        if (this.view) return this.view;
+	private createView(): BrowserView {
+		if (this.view) return this.view;
 
-        this.view = new BrowserView({
-            webPreferences: {
-                nodeIntegration: true,
-                contextIsolation: false,
-                sandbox: false,
-                devTools: this.devMode,
-                ...(isMac ? { spellcheck: false } : {}),
-            },
-        });
+		this.view = new BrowserView({
+			webPreferences: {
+				nodeIntegration: false,
+				contextIsolation: true,
+				sandbox: true,
+				webSecurity: true,
+				allowRunningInsecureContent: false,
+				nodeIntegrationInSubFrames: false,
+				nodeIntegrationInWorker: false,
+				preload: join(__dirname, "settingsPreload.js"),
+				devTools: this.devMode,
+				...(isMac ? { spellcheck: false } : {}),
+			},
+		});
 
-        // Add view immediately but keep it off-screen until shown
-        this.parentWindow.addBrowserView(this.view);
-        this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+		// Add view immediately but keep it off-screen until shown
+		this.parentWindow.addBrowserView(this.view);
+		this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
 
-        // Preload content
+		// Preload content
         this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
 
-        // Listen for hide message from the panel
+		// Listen for hide message from the panel
         this.view.webContents.on('console-message', (_, __, message) => {
             if (message === 'hidePanel') {
-                this.isVisible = false;
-                if (this.useMacOptimizations) {
-                    this.teardownView();
-                } else if (this.view) {
-                    this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
-                }
-            }
-        });
+				this.isVisible = false;
+				if (this.useMacOptimizations) {
+					this.teardownView();
+				} else if (this.view) {
+					this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
+				}
+			}
+		});
 
-        return this.view;
-    }
+		return this.view;
+	}
 
-    private teardownView(): void {
-        if (!this.view) return;
-        try {
-            this.parentWindow.removeBrowserView(this.view);
-        } catch {}
-        try {
-            (this.view.webContents as any).destroy();
-        } catch {}
-        this.view = null;
-    }
+	private teardownView(): void {
+		if (!this.view) return;
+		try {
+			this.parentWindow.removeBrowserView(this.view);
+		} catch {}
+		try {
+			(this.view.webContents as any).destroy();
+		} catch {}
+		this.view = null;
+	}
 
-    private updateBounds(): void {
-        if (!this.view) return;
-        const bounds = this.parentWindow.getBounds();
-        const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
-        const HEADER_HEIGHT = 32; // Height of the window controls
+	private updateBounds(): void {
+		if (!this.view) return;
+		const bounds = this.parentWindow.getBounds();
+		const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
+		const HEADER_HEIGHT = 32; // Height of the window controls
 
-        this.view.setBounds({
-            x: bounds.width - width,
-            y: HEADER_HEIGHT,
-            width,
-            height: bounds.height - HEADER_HEIGHT,
-        });
-    }
+		this.view.setBounds({
+			x: bounds.width - width,
+			y: HEADER_HEIGHT,
+			width,
+			height: bounds.height - HEADER_HEIGHT,
+		});
+	}
 
-    private getHtml(): string {
+	private getHtml(): string {
         const theme = this.store.get('theme', 'dark');
-        return `
+		return `
         <style>
             @font-face {
                 font-family: 'SC-Font';
@@ -884,13 +890,13 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
-                }">
+								}">
                     <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${
                         this.store.get('proxyHost') || ''
-                    }">
+										}">
                     <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${
                         this.store.get('proxyPort') || ''
-                    }">
+										}">
                 </div>
             </div>
 
@@ -910,13 +916,13 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
-                }">
+								}">
                     <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${
                         this.store.get('lastFmApiKey') || ''
-                    }">
+										}">
                     <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${
                         this.store.get('lastFmSecret') || ''
-                    }">
+										}">
                 </div>
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link" data-i18n="createApiKeyLastFm">${this.translationService.translate('createApiKeyLastFm')}</a>
@@ -940,16 +946,16 @@ export class SettingsManager {
                 </div>
                 <div class="input-group" id="webhookFields" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
-                }">
+								}">
                     <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${
                         this.store.get('webhookUrl') || ''
-                    }">
+										}">
                     <div class="setting-item">
                         <span data-i18n="webhookTrigger">${this.translationService.translate('webhookTrigger')}</span>
                         <div class="input-with-unit">
                             <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
                                 this.store.get('webhookTriggerPercentage') || 50
-                            }">
+														}">
                             <span class="unit-symbol">%</span>
                         </div>
                     </div>
@@ -959,7 +965,7 @@ export class SettingsManager {
                 </div>
                 <div class="webhook-example-container" id="webhookFields2" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
-                }">
+								}">
                     <div class="example-toggle" id="webhookExampleToggle">
                         <span class="example-toggle-text" data-i18n="showWebhookExample">${this.translationService.translate('showWebhookExample')}</span>
                         <svg class="example-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -991,7 +997,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="discordRichPresence" ${
                             this.store.get('discordRichPresence') ? 'checked' : ''
-                        }>
+												}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1000,7 +1006,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="displayWhenIdling" ${
                             this.store.get('displayWhenIdling') ? 'checked' : ''
-                        }>
+												}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1009,7 +1015,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="displaySCSmallIcon" ${
                             this.store.get('displaySCSmallIcon') ? 'checked' : ''
-                        }>
+												}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1025,7 +1031,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="useArtistInStatusLineToggle" ${
                             (this.store.get('statusDisplayType') as number) === 1 ? 'checked' : ''
-                        }>
+												}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1034,7 +1040,7 @@ export class SettingsManager {
                     <label class="toggle">
                         <input type="checkbox" id="richPresencePreviewEnabled" ${
                             this.store.get('richPresencePreviewEnabled', false) ? 'checked' : ''
-                        }>
+												}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1043,7 +1049,7 @@ export class SettingsManager {
                 <!-- Rich Presence Preview -->
                 <div class="preview-container" id="presencePreviewContainer" style="display: ${
                     this.store.get('richPresencePreviewEnabled', false) ? 'block' : 'none'
-                }">
+								}">
                     <div class="preview-panel">
                         <div class="preview-header-inline">
                             <span class="preview-title-inline" data-i18n="richPresencePreviewTitle">${this.translationService.translate('richPresencePreviewTitle')}</span>
@@ -1126,11 +1132,19 @@ export class SettingsManager {
                 }
             });
         </script>`;
-    }
+	}
 
-    private getJavaScript(): string {
-        return `
-            const { ipcRenderer, shell } = require('electron');
+	private getJavaScript(): string {
+		return `
+            const ipcRenderer = {
+                send: (channel, ...args) => window.settingsAPI.send(channel, ...args),
+                invoke: (channel, ...args) => window.settingsAPI.invoke(channel, ...args),
+                on: (channel, listener) => window.settingsAPI.on(channel, (...args) => listener(null, ...args)),
+            };
+            const shell = {
+                openExternal: (url) => window.settingsAPI.openExternal(url),
+                openPath: (targetPath) => window.settingsAPI.openPath(targetPath),
+            };
 
             // Load custom themes on initialization
             async function loadCustomThemes() {
@@ -1442,6 +1456,136 @@ export class SettingsManager {
                 return \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
             }
 
+            function safeText(value, fallback) {
+                return typeof value === 'string' && value.trim() ? value : fallback;
+            }
+
+            function safeRemoteUrl(value) {
+                if (typeof value !== 'string' || !value.trim()) return '';
+                try {
+                    const parsed = new URL(value);
+                    return parsed.protocol === 'https:' ? parsed.href : '';
+                } catch {
+                    return '';
+                }
+            }
+
+            function createTextElement(className, text) {
+                const el = document.createElement('div');
+                el.className = className;
+                el.textContent = text;
+                return el;
+            }
+
+            function createPlayingPreview(trackInfo, options) {
+                const fragment = document.createDocumentFragment();
+                fragment.appendChild(createTextElement('activity-header-preview', 'Listening to SoundCloud'));
+
+                const row = document.createElement('div');
+                if (options.inlineRow) {
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'flex-start';
+                    row.style.gap = '12px';
+                } else {
+                    row.className = 'activity-row-preview';
+                }
+
+                const imageWrap = document.createElement('div');
+                imageWrap.className = 'activity-image-preview';
+                const artworkUrl = safeRemoteUrl(trackInfo.artwork).replace('50x50.', '300x300.');
+                if (artworkUrl) {
+                    const img = document.createElement('img');
+                    img.src = artworkUrl;
+                    img.alt = 'Track artwork';
+                    img.addEventListener('error', () => {
+                        img.style.display = 'none';
+                    });
+                    imageWrap.appendChild(img);
+                }
+
+                if (options.displaySCSmallIcon) {
+                    const smallIcon = document.createElement('div');
+                    smallIcon.className = 'small-icon-preview';
+                    const icon = document.createElement('img');
+                    icon.src = 'https://cdn.discordapp.com/app-assets/1090770350251458592/1090771481627197580.png?size=160';
+                    icon.alt = 'SoundCloud';
+                    icon.style.width = '16px';
+                    icon.style.height = '16px';
+                    icon.style.borderRadius = '50%';
+                    smallIcon.appendChild(icon);
+                    imageWrap.appendChild(smallIcon);
+                }
+
+                const details = document.createElement('div');
+                details.className = 'activity-details-preview';
+                details.appendChild(createTextElement('activity-name-preview', safeText(trackInfo.title, 'Unknown Track')));
+                details.appendChild(createTextElement('activity-details-text-preview', 'by ' + safeText(trackInfo.author, 'Unknown Artist')));
+
+                const progressContainer = document.createElement('div');
+                progressContainer.className = 'progress-bar-container-preview';
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar-preview';
+                const progressFill = document.createElement('div');
+                progressFill.className = 'progress-bar-fill-preview';
+                progressFill.id = 'progressFillPreview';
+                progressBar.appendChild(progressFill);
+                progressContainer.appendChild(progressBar);
+
+                const timeDisplay = document.createElement('div');
+                timeDisplay.className = 'time-display-preview';
+                const currentTime = document.createElement('span');
+                currentTime.id = 'currentTimePreview';
+                currentTime.textContent = safeText(trackInfo.elapsed, '0:00');
+                const totalTime = document.createElement('span');
+                totalTime.id = 'totalTimePreview';
+                totalTime.textContent = safeText(trackInfo.duration, '0:00');
+                timeDisplay.appendChild(currentTime);
+                timeDisplay.appendChild(totalTime);
+                progressContainer.appendChild(timeDisplay);
+                details.appendChild(progressContainer);
+
+                const trackUrl = safeRemoteUrl(trackInfo.url);
+                if (options.displayButtons && trackUrl) {
+                    const buttons = document.createElement('div');
+                    buttons.className = 'activity-buttons-preview';
+                    const button = document.createElement('button');
+                    button.className = 'activity-button-preview';
+                    button.textContent = 'Listen on SoundCloud';
+                    button.addEventListener('click', () => shell.openExternal(trackUrl));
+                    buttons.appendChild(button);
+                    details.appendChild(buttons);
+                }
+
+                row.appendChild(imageWrap);
+                row.appendChild(details);
+                fragment.appendChild(row);
+                return fragment;
+            }
+
+            function createPausedPreview(options) {
+                const fragment = document.createDocumentFragment();
+                fragment.appendChild(createTextElement('activity-header-preview', 'Using SoundCloud'));
+
+                const row = document.createElement('div');
+                if (options.inlineRow) {
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'flex-start';
+                    row.style.gap = '12px';
+                } else {
+                    row.className = 'activity-row-preview';
+                }
+
+                const imageWrap = document.createElement('div');
+                imageWrap.className = 'activity-image-preview';
+                const details = document.createElement('div');
+                details.className = 'activity-details-preview';
+                details.appendChild(createTextElement('activity-details-text-preview', 'Paused'));
+                row.appendChild(imageWrap);
+                row.appendChild(details);
+                fragment.appendChild(row);
+                return fragment;
+            }
+
             function updatePreview(trackInfo) {
                 currentTrack = trackInfo;
                 const activitySection = document.getElementById('activitySectionPreview');
@@ -1475,64 +1619,16 @@ export class SettingsManager {
                 activityContent.className = 'activity-content-preview';
 
                 if (trackInfo.isPlaying) {
-                    activityContent.innerHTML = \`
-                        <div class="activity-header-preview">
-                            Listening to <strong>SoundCloud</strong>
-                        </div>
-                        <div class="activity-row-preview">
-                            <div class="activity-image-preview">
-                                <img src="\${trackInfo.artwork ? trackInfo.artwork.replace('50x50.', '300x300.') : ''}" alt="Track artwork" onerror="this.style.display='none'">
-                                \${displaySCSmallIcon ? \`
-                                    <div class="small-icon-preview">
-                                        <img src="https://cdn.discordapp.com/app-assets/1090770350251458592/1090771481627197580.png?size=160" alt="SoundCloud" style="width: 16px; height: 16px; border-radius: 50%;">
-                                    </div>
-                                \` : ''}
-                            </div>
-                            <div class="activity-details-preview">
-                                <div class="activity-name-preview">\${trackInfo.title || 'Unknown Track'}</div>
-                                <div class="activity-details-text-preview">by \${trackInfo.author || 'Unknown Artist'}</div>
-                                <div class="progress-bar-container-preview">
-                                    <div class="progress-bar-preview">
-                                        <div class="progress-bar-fill-preview" id="progressFillPreview"></div>
-                                    </div>
-                                    <div class="time-display-preview">
-                                        <span id="currentTimePreview">\${trackInfo.elapsed || '0:00'}</span>
-                                        <span id="totalTimePreview">\${trackInfo.duration || '0:00'}</span>
-                                    </div>
-                                </div>
-                                \${displayButtons && trackInfo.url ? \`
-                                    <div class="activity-buttons-preview">
-                                        <button class="activity-button-preview" onclick="window.open('\${trackInfo.url}', '_blank')">
-                                             Listen on SoundCloud
-                                        </button>
-                                    </div>
-                                \` : ''}
-                            </div>
-                        </div>
-                    \`;
-
+                    activityContent.appendChild(createPlayingPreview(trackInfo, {
+                        displaySCSmallIcon,
+                        displayButtons,
+                        inlineRow: true,
+                    }));
                     // Start progress update
                     startProgressUpdate(trackInfo);
                 } else if (displayWhenIdling) {
                     // Paused/idle state
-                    activityContent.innerHTML = \`
-                        <div class="activity-header-preview">
-                            <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
-                                <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
-                            </svg>
-                            Using <strong>SoundCloud</strong>
-                        </div>
-                        <div class="activity-row-preview">
-                            <div class="activity-image-preview">
-                                <svg class="soundcloud-icon-preview" viewBox="0 0 24 24" style="width: 30px; height: 30px; margin: 15px;">
-                                    <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
-                                </svg>
-                            </div>
-                            <div class="activity-details-preview">
-                                <div class="activity-details-text-preview">Paused</div>
-                            </div>
-                        </div>
-                    \`;
+                    activityContent.appendChild(createPausedPreview({ inlineRow: false }));
                 }
 
                 activitySection.appendChild(activityContent);
@@ -1632,66 +1728,16 @@ export class SettingsManager {
                 activityContent.className = 'activity-content-preview';
 
                 if (trackInfo.isPlaying) {
-                    activityContent.innerHTML = \`
-                        <div class="activity-header-preview">
-                            Listening to <strong>SoundCloud</strong>
-                        </div>
-                        <div style="display: flex; align-items: flex-start; gap: 12px;">
-                            <div class="activity-image-preview">
-                                <img src="\${trackInfo.artwork ? trackInfo.artwork.replace('50x50.', '300x300.') : ''}" alt="Track artwork" onerror="this.style.display='none'">
-                                \${${this.store.get('displaySCSmallIcon', false)} ? \`
-                                    <div class="small-icon-preview">
-                                        <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
-                                            <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
-                                        </svg>
-                                    </div>
-                                \` : ''}
-                            </div>
-                            <div class="activity-details-preview">
-                                <div class="activity-name-preview">\${trackInfo.title || 'Unknown Track'}</div>
-                                <div class="activity-details-text-preview">by \${trackInfo.author || 'Unknown Artist'}</div>
-                                <div class="progress-bar-container-preview">
-                                    <div class="progress-bar-preview">
-                                        <div class="progress-bar-fill-preview" id="progressFillPreview"></div>
-                                    </div>
-                                    <div class="time-display-preview">
-                                        <span id="currentTimePreview">\${trackInfo.elapsed || '0:00'}</span>
-                                        <span id="totalTimePreview">\${trackInfo.duration || '0:00'}</span>
-                                    </div>
-                                </div>
-                                \${${this.store.get('displayButtons', false)} && trackInfo.url ? \`
-                                    <div class="activity-buttons-preview">
-                                        <button class="activity-button-preview" onclick="require('electron').shell.openExternal('\${trackInfo.url}')">
-                                             Listen on SoundCloud
-                                        </button>
-                                    </div>
-                                \` : ''}
-                            </div>
-                        </div>
-                    \`;
-
+                    activityContent.appendChild(createPlayingPreview(trackInfo, {
+                        displaySCSmallIcon,
+                        displayButtons,
+                        inlineRow: false,
+                    }));
                     // Start progress update for preview
                     startPreviewProgressUpdate(trackInfo);
                 } else {
                     // Paused/idle state
-                    activityContent.innerHTML = \`
-                        <div class="activity-header-preview">
-                            <svg class="soundcloud-icon-preview" viewBox="0 0 24 24">
-                                <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
-                            </svg>
-                            Using <strong>SoundCloud</strong>
-                        </div>
-                        <div style="display: flex; align-items: flex-start; gap: 12px;">
-                            <div class="activity-image-preview">
-                                <svg class="soundcloud-icon-preview" viewBox="0 0 24 24" style="width: 30px; height: 30px; margin: 15px;">
-                                    <path d="M7.443 17.22c0 .333-.069.606-.207.816-.138.211-.33.316-.574.316-.245 0-.437-.105-.575-.316-.137-.21-.206-.483-.206-.816v-5.148c0-.02-.014-.035-.031-.048L3.72 10.63c-.138-.083-.277-.124-.417-.124-.14 0-.279.041-.417.124-.138.083-.207.207-.207.372v6.418c0 .373.1.684.3.933.201.248.487.372.86.372.372 0 .658-.124.859-.372.2-.249.301-.56.301-.933v-4.98l2.444-1.444zM12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"/>
-                                </svg>
-                            </div>
-                            <div class="activity-details-preview">
-                                <div class="activity-details-text-preview">Paused</div>
-                            </div>
-                        </div>
-                    \`;
+                    activityContent.appendChild(createPausedPreview({ inlineRow: false }));
                 }
 
                 if (activitySection) {
@@ -1812,75 +1858,75 @@ export class SettingsManager {
                 });
             });
         `;
-    }
+	}
 
-    private show(): void {
-        const wasCreated = this.view === null;
-        const view = this.createView();
-        this.isVisible = true;
-        this.updateBounds();
-        const applyShowState = () => {
-            view.webContents.executeJavaScript(`
+	private show(): void {
+		const wasCreated = this.view === null;
+		const view = this.createView();
+		this.isVisible = true;
+		this.updateBounds();
+		const applyShowState = () => {
+			view.webContents.executeJavaScript(`
                 // Force a reflow to ensure animation works
                 document.body.style.opacity;
                 document.body.classList.add('visible');
             `);
-            // Trigger translation updates when panel is shown
+			// Trigger translation updates when panel is shown
             view.webContents.send('update-translations');
             const isDark = this.store.get('theme', 'dark') === 'dark';
             view.webContents.send('theme-changed', isDark);
-        };
+		};
 
-        if (wasCreated) {
+		if (wasCreated) {
             view.webContents.once('did-finish-load', applyShowState);
-        } else {
-            applyShowState();
-        }
-    }
+		} else {
+			applyShowState();
+		}
+	}
 
-    private hide(): void {
-        if (!this.view) return;
-        this.view.webContents.executeJavaScript(`
+	private hide(): void {
+		if (!this.view) return;
+		this.view.webContents.executeJavaScript(`
             document.body.classList.remove('visible');
             setTimeout(() => {
                 window.postMessage('hidePanel', '*');
             }, 300);
         `);
-    }
+	}
 
-    public setThemeColors(colors: ThemeColors | null): void {
-        if (!this.view) return;
-        if (!colors) {
-            // Reset to default theme colors
-            this.view.webContents.executeJavaScript(`
+	public setThemeColors(colors: ThemeColors | null): void {
+		if (!this.view) return;
+		if (!colors) {
+			// Reset to default theme colors
+			this.view.webContents.executeJavaScript(`
                 document.documentElement.style.removeProperty('--bg-primary');
                 document.documentElement.style.removeProperty('--bg-secondary');
                 document.documentElement.style.removeProperty('--text-primary');
                 document.documentElement.style.removeProperty('--accent');
             `);
-            return;
-        }
+			return;
+		}
 
-        // Apply custom theme colors
-        this.view.webContents
-            .executeJavaScript(
-                `
+		// Apply custom theme colors
+		this.view.webContents
+			.executeJavaScript(
+				`
             document.documentElement.style.setProperty('--bg-primary', '${colors.surface || colors.background}');
             document.documentElement.style.setProperty('--bg-secondary', '${colors.background}');
             document.documentElement.style.setProperty('--text-primary', '${colors.text}');
             document.documentElement.style.setProperty('--accent', '${colors.accent || colors.primary}');
         `,
-            )
-            .catch(console.error);
-    }
+			)
+			.catch(console.error);
+	}
 
-    public getView(): BrowserView | null {
-        return this.view;
-    }
+	public getView(): BrowserView | null {
+		return this.view;
+	}
 
-    public updateTranslations(translationService: TranslationService): void {
-        this.translationService = translationService;
-        if (!this.view) return;
+	public updateTranslations(translationService: TranslationService): void {
+		this.translationService = translationService;
+		if (!this.view) return;
         this.view.webContents.send('update-translations');
-    }
+	}
 }
