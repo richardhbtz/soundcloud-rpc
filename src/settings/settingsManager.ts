@@ -1207,6 +1207,11 @@ export class SettingsManager {
                 }
             });
 
+            function escapeHtml(str) {
+                if (typeof str !== 'string') return '';
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+            }
+
             async function loadPlugins() {
                 try {
                     const plugins = await ipcRenderer.invoke('get-plugins');
@@ -1223,33 +1228,59 @@ export class SettingsManager {
                         card.className = 'plugin-card';
                         const hasHomepage = p.metadata.homepage && p.metadata.homepage.trim() !== '';
                         const nameClass = hasHomepage ? 'plugin-name has-homepage' : 'plugin-name';
-                        const nameAttr = hasHomepage ? ' data-homepage="' + p.metadata.homepage.replace(/"/g, '&quot;') + '" title="Open homepage"' : '';
-                        card.innerHTML = \`
-                            <div class="plugin-header">
-                                <span>
-                                    <span class="\${nameClass}"\${nameAttr}>\${p.metadata.name || p.id}</span>
-                                    <span class="plugin-version">v\${p.metadata.version || '?'}</span>
-                                </span>
-                                <label class="toggle">
-                                    <input type="checkbox" data-plugin-id="\${p.id}" \${p.enabled ? 'checked' : ''}>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            \${p.metadata.description ? '<div class="plugin-desc">' + p.metadata.description + '</div>' : ''}
-                            \${p.metadata.author && p.metadata.author !== 'Unknown' ? '<div class="plugin-author">by ' + p.metadata.author + '</div>' : ''}
-                        \`;
 
-                        card.querySelector('input[type="checkbox"]').addEventListener('change', async (e) => {
-                            const enabled = e.target.checked;
-                            await ipcRenderer.invoke('set-plugin-enabled', p.id, enabled);
-                        });
+                        const header = document.createElement('div');
+                        header.className = 'plugin-header';
 
-                        const nameEl = card.querySelector('.plugin-name.has-homepage');
-                        if (nameEl) {
+                        const spanWrapper = document.createElement('span');
+                        const nameEl = document.createElement('span');
+                        nameEl.className = nameClass;
+                        nameEl.textContent = p.metadata.name || p.id;
+                        if (hasHomepage) {
+                            nameEl.dataset.homepage = p.metadata.homepage;
+                            nameEl.title = 'Open homepage';
                             nameEl.addEventListener('click', (e) => {
                                 e.stopPropagation();
                                 ipcRenderer.send('show-plugin-homepage-dialog', nameEl.dataset.homepage);
                             });
+                        }
+                        spanWrapper.appendChild(nameEl);
+
+                        const versionEl = document.createElement('span');
+                        versionEl.className = 'plugin-version';
+                        versionEl.textContent = 'v' + (p.metadata.version || '?');
+                        spanWrapper.appendChild(versionEl);
+                        header.appendChild(spanWrapper);
+
+                        const toggle = document.createElement('label');
+                        toggle.className = 'toggle';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.dataset.pluginId = p.id;
+                        checkbox.checked = p.enabled;
+                        checkbox.addEventListener('change', async (e) => {
+                            const enabled = e.target.checked;
+                            await ipcRenderer.invoke('set-plugin-enabled', p.id, enabled);
+                        });
+                        const slider = document.createElement('span');
+                        slider.className = 'slider';
+                        toggle.appendChild(checkbox);
+                        toggle.appendChild(slider);
+                        header.appendChild(toggle);
+                        card.appendChild(header);
+
+                        if (p.metadata.description) {
+                            const descEl = document.createElement('div');
+                            descEl.className = 'plugin-desc';
+                            descEl.textContent = p.metadata.description;
+                            card.appendChild(descEl);
+                        }
+
+                        if (p.metadata.author && p.metadata.author !== 'Unknown') {
+                            const authorEl = document.createElement('div');
+                            authorEl.className = 'plugin-author';
+                            authorEl.textContent = 'by ' + p.metadata.author;
+                            card.appendChild(authorEl);
                         }
 
                         list.appendChild(card);
