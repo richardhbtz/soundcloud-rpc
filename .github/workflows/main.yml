@@ -5,10 +5,14 @@ on: push
 jobs:
     release:
         runs-on: ${{ matrix.os }}
+        env:
+            EVS_USERNAME: ${{ secrets.EVS_USERNAME }}
+            EVS_PASSWORD: ${{ secrets.EVS_PASSWORD }}
+            STRICT_VMP_SIGNING: true
 
         strategy:
             matrix:
-                os: [macos-latest, ubuntu-latest, windows-latest]
+                os: [macos-latest, windows-latest]
 
         steps:
             - name: Check out Git repository
@@ -25,6 +29,17 @@ jobs:
                   node-version: 24
                   cache: 'pnpm'
 
+            - name: Install Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.11'
+
+            - name: Install EVS client
+              run: python -m pip install castlabs_evs
+
+            - name: Authenticate EVS (non-interactive)
+              run: python scripts/evs-auth.py
+
             - name: Install dependencies
               run: pnpm install
 
@@ -40,3 +55,7 @@ jobs:
                   github_token: ${{ secrets.github_token }}
                   package_manager: 'pnpm'
                   release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+              env:
+                  EVS_USERNAME: ${{ env.EVS_USERNAME }}
+                  EVS_PASSWORD: ${{ env.EVS_PASSWORD }}
+                  STRICT_VMP_SIGNING: ${{ env.STRICT_VMP_SIGNING }}

@@ -40,12 +40,21 @@
             "tsc/**/*"
         ],
         "directories": {
+            "buildResources": "build-resources",
             "output": "build"
         },
+        "electronDownload": {
+            "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+        },
+        "afterSign": "scripts/sign-vmp.js",
         "mac": {
             "target": "dmg",
             "icon": "assets/icons/soundcloud-mac.icns",
-            "artifactName": "soundcloud-${version}-mac.${ext}"
+            "artifactName": "soundcloud-${version}-mac.${ext}",
+            "hardenedRuntime": true,
+            "gatekeeperAssess": false,
+            "entitlements": "build-resources/entitlements.mac.plist",
+            "entitlementsInherit": "build-resources/entitlements.mac.inherit.plist"
         },
         "win": {
             "target": "nsis",
@@ -65,8 +74,8 @@
         "@types/semver": "^7.5.8",
         "@typescript-eslint/eslint-plugin": "^8.54.0",
         "@typescript-eslint/parser": "^8.54.0",
-        "electron": "^37.0.0",
-        "electron-builder": "^26.0.12",
+        "electron": "https://github.com/castlabs/electron-releases#v41.1.1+wvcus",
+        "electron-builder": "^26.7.0",
         "eslint": "^9.33.0",
         "prettier": "3.6.2",
         "typescript": "^5.9.2",

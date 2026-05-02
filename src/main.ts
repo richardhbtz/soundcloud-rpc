@@ -1,4 +1,15 @@
-import { app, BrowserWindow, Menu, ipcMain, BrowserView, Tray, nativeImage, shell, type IpcMainEvent } from 'electron';
+import {
+    app,
+    BrowserWindow,
+    Menu,
+    ipcMain,
+    BrowserView,
+    Tray,
+    nativeImage,
+    shell,
+    components,
+    type IpcMainEvent,
+} from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'cross-fetch';
@@ -457,6 +468,14 @@ let contentView: BrowserView;
 
 // Main initialization
 async function init() {
+    // Wait for Widevine CDM to be ready
+    try {
+        await components.whenReady();
+        console.log('Components ready:', components.status());
+    } catch (error) {
+        console.error('Failed to initialize components:', error);
+    }
+
     setupUpdater();
     setupTray(); // Call setupTray here
 
