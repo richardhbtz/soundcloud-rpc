@@ -112,20 +112,55 @@ export class WebhookService {
             return;
         }
 
+        const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
+        let payload: any;
+
+        if (isDiscord) {
+            const artistUrl = trackData.originUrl.substring(0, trackData.originUrl.lastIndexOf('/'));
+            payload = {
+                username: "SoundCloud RPC",
+                avatar_url: "https://raw.githubusercontent.com/richardhbtz/soundcloud-rpc/refs/heads/main/assets/icons/soundcloud.png",
+                embeds: trackData.trackArt ? [{
+                    title: `${trackData.track}`,
+                    url: trackData.originUrl,
+                    color: 0xFF5500,
+                    thumbnail: {
+                        url: trackData.trackArt
+                    },
+                    fields: [
+                        {
+                            name: "Artist",
+                            value: `[${trackData.artist}](${artistUrl})`,
+                            inline: true
+                        },
+                        {
+                            name: "Duration",
+                            value: `${Math.floor(trackData.duration / 60)}:${(trackData.duration % 60).toString().padStart(2, '0')}`,
+                            inline: true
+                        }
+                    ],
+                    timestamp: new Date().toISOString()
+                }] : []
+                };
+        }
+        else {
+            payload = {
+                timestamp: new Date().toISOString(),
+                ...trackData,
+            };
+        }
         try {
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    ...trackData,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
-                console.error('Webhook failed:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error(`Webhook failed (${response.status}):`, errorText);
             } else {
                 console.log(`Webhook sent for ${trackData.artist} - ${trackData.track}`);
             }

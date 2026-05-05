@@ -463,6 +463,29 @@ function setupWindowControls() {
     adjustContentViews();
 }
 
+function setupBackspaceNavigation() {
+    if (!contentView) return;
+
+    contentView.webContents.on('before-input-event', (event, input) => {
+        if (input.type === 'keyDown' && input.key === 'Backspace') {
+            // Check if we can go back in history
+            if (contentView.webContents.navigationHistory.canGoBack()) {
+                event.preventDefault();
+                contentView.webContents.navigationHistory.goBack();
+                
+                // Update header navigation buttons
+                if (headerView && headerView.webContents) {
+                    const state = {
+                        canGoBack: contentView.webContents.navigationHistory.canGoBack(),
+                        canGoForward: contentView.webContents.navigationHistory.canGoForward(),
+                    };
+                    headerView.webContents.send('navigation-state-changed', state);
+                }
+            }
+        }
+    });
+}
+
 let headerView: BrowserView | null;
 let contentView: BrowserView;
 
@@ -629,7 +652,7 @@ async function init() {
     });
 
     setupWindowControls();
-
+    setupBackspaceNavigation();
     initializeShortcuts();
 
     setupThemeHandlers();
