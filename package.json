@@ -1,6 +1,6 @@
 {
     "name": "soundcloud-rpc",
-    "version": "0.1.9",
+    "version": "0.2.0",
     "description": "🎵 A SoundCloud Client with Discord Rich Presence, Dark Mode, Last.fm and AdBlock support",
     "author": {
         "name": "Richard Habitzreuter",
@@ -37,7 +37,8 @@
             }
         ],
         "files": [
-            "tsc/**/*"
+            "tsc/**/*",
+            "!node_modules/electron/**/*"
         ],
         "directories": {
             "buildResources": "build-resources",
