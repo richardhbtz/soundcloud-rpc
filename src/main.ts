@@ -1203,6 +1203,12 @@ app.on('second-instance', () => {
     if (mainWindow.isMinimized()) {
         mainWindow.restore();
     }
+    // When minimize-to-tray is active the window is hidden (not minimized),
+    // so we must show it before focusing — otherwise focusing a hidden window
+    // causes a crash when the user clicks the pinned taskbar icon.
+    if (!mainWindow.isVisible()) {
+        mainWindow.show();
+    }
     mainWindow.focus();
 });
 
