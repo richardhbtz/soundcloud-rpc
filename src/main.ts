@@ -195,7 +195,8 @@ function setupTray() {
             label: 'SoundCloud',
             click: () => {
                 if (mainWindow) {
-                    mainWindow.show();
+                    if (!mainWindow.isVisible()) mainWindow.show();
+                    if (mainWindow.isMinimized()) mainWindow.restore();
                     mainWindow.focus();
                 }
             },
@@ -222,7 +223,12 @@ function setupTray() {
     // Handle tray icon click (show window)
     tray.on('click', () => {
         if (mainWindow) {
-            mainWindow.show();
+            if (!mainWindow.isVisible()) {
+                mainWindow.show();
+            }
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
             mainWindow.focus();
         }
     });
@@ -230,7 +236,12 @@ function setupTray() {
     // Handle tray icon double-click (show window)
     tray.on('double-click', () => {
         if (mainWindow) {
-            mainWindow.show();
+            if (!mainWindow.isVisible()) {
+                mainWindow.show();
+            }
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
             mainWindow.focus();
         }
     });
@@ -271,6 +282,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             plugins: true,
             experimentalFeatures: false,
             devTools: devMode,
+            backgroundThrottling: false,
             ...(isMac ? { spellcheck: false } : {}),
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
@@ -337,7 +349,13 @@ function setupWindowControls() {
     if (!mainWindow) return;
 
     ipcMain.on('minimize-window', () => {
-        if (mainWindow) mainWindow.minimize();
+        if (!mainWindow) return;
+        const minimizeToTray = store.get('minimizeToTray', true);
+        if (minimizeToTray) {
+            mainWindow.hide();
+        } else {
+            mainWindow.minimize();
+        }
     });
 
     ipcMain.on('maximize-window', () => {
@@ -1200,9 +1218,17 @@ app.on('second-instance', () => {
     if (!mainWindow) {
         return;
     }
+    
+    // When minimize-to-tray is active, the window is hidden.
+    // We MUST show it before restoring or focusing — otherwise restoring
+    // a hidden window causes a renderer crash on Windows.
+    if (!mainWindow.isVisible()) {
+        mainWindow.show();
+    }
     if (mainWindow.isMinimized()) {
         mainWindow.restore();
     }
+    
     mainWindow.focus();
 });
 
