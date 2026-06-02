@@ -1,5 +1,6 @@
 {
     "listenOnSoundcloud": "Ouvir no SoundCloud",
+	"listeningToSoundcloud": "Ouvindo SoundCloud",
     "previous": "Anterior",
     "next": "Próxima",
     "play": "Reproduzir",
@@ -54,5 +55,8 @@
     "pressF1ToOpenSettings": "Pressione 'F1' para abrir configurações",
     "closeSettings": "Fechar configurações",
     "noActivityToShow": "Nenhuma atividade para mostrar",
-    "richPresencePreviewTitle": "Visualização do Rich Presence"
+    "richPresencePreviewTitle": "Visualização do Rich Presence",
+	"hidePromotions": "Ocultar Promoções",
+    "hideEventsNearYou": "Ocultar Eventos Perto de Você",
+    "hideArtistUpsells": "Ocultar Promoções do Artist Pro"
 }

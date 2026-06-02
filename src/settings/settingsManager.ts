@@ -20,7 +20,7 @@ export class SettingsManager {
         this.store = store;
         this.translationService = translationService;
 
-        // Add resize listener
+        // add resize listener
         this.parentWindow.on('resize', () => {
             if (this.isVisible) {
                 this.updateBounds();
@@ -57,14 +57,14 @@ export class SettingsManager {
             },
         });
 
-        // Add view immediately but keep it off-screen until shown
+        // add view immediately but keep off-screen until shown
         this.parentWindow.addBrowserView(this.view);
         this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
 
-        // Preload content
+        // preload content
         this.view.webContents.loadURL(`data:text/html,${encodeURIComponent(this.getHtml())}`);
 
-        // Listen for hide message from the panel
+        // listen for hide message from panel
         this.view.webContents.on('console-message', (_, __, message) => {
             if (message === 'hidePanel') {
                 this.isVisible = false;
@@ -93,8 +93,8 @@ export class SettingsManager {
     private updateBounds(): void {
         if (!this.view) return;
         const bounds = this.parentWindow.getBounds();
-        const width = Math.min(500, Math.floor(bounds.width * 0.4)); // 40% of window width, max 500px
-        const HEADER_HEIGHT = 32; // Height of the window controls
+        const width = Math.min(500, Math.floor(bounds.width * 0.4));
+        const HEADER_HEIGHT = 32;
 
         this.view.setBounds({
             x: bounds.width - width,
@@ -145,7 +145,7 @@ export class SettingsManager {
                 transform: translateX(0);
             }
             body.is-scrollable {
-                padding-right: 20px; /* Reduce padding when scroll is visible */
+                padding-right: 20px;
             }
             ::-webkit-scrollbar {
                 -webkit-appearance: none;
@@ -185,7 +185,7 @@ export class SettingsManager {
             .close-btn {
                 position: absolute;
                 top: 5px;
-                right: 28px; /* Default position when scroll is not visible */
+                right: 28px;
                 width: 32px;
                 height: 32px;
                 border-radius: 4px;
@@ -199,7 +199,7 @@ export class SettingsManager {
                 transition: background-color 0.2s;
             }
             body.is-scrollable .close-btn {
-                right: 20px; /* Adjust position when scroll is visible */
+                right: 20px;
             }
             .close-btn:hover {
                 background-color: var(--bg-hover);
@@ -400,19 +400,16 @@ export class SettingsManager {
             #createLastFmApiKey:hover {
                 color: var(--link-hover);
             }
-            /* Hide scrollbar for Chrome, Safari and Opera */
             body::-webkit-scrollbar {
                 width: 8px;
             }
             
-            /* Enable overlay scrollbar */
-            @media screen and (min-width: 0\0) {
+            @media screen and (min-width: 0\\0) {
                 body {
                     overflow-y: auto;
                 }
             }
 
-            /* Webhook example styles */
             .webhook-example-container {
                 margin-top: 8px;
             }
@@ -456,7 +453,6 @@ export class SettingsManager {
                 white-space: pre-wrap;
                 line-height: 1.4;
             }
-            /* Custom Theme Styles */
             .theme-selector {
                 min-width: 150px;
                 padding: 8px 12px;
@@ -556,7 +552,6 @@ export class SettingsManager {
                 padding: 12px 0;
             }
 
-            /* Rich Presence Preview Styles */
             .preview-container {
                 margin-top: 12px;
                 animation: slideIn 0.3s ease;
@@ -868,6 +863,60 @@ export class SettingsManager {
             </div>
 
             <div class="setting-group">
+                <h2>
+                    UI Customization
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span data-i18n="hidePromotions">${this.translationService.translate('hidePromotions')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="hidePromotions" ${this.store.get('hidePromotions', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="hideEventsNearYou">${this.translationService.translate('hideEventsNearYou')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="hideEventsNearYou" ${this.store.get('hideEventsNearYou', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="hideArtistUpsells">${this.translationService.translate('hideArtistUpsells')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="hideArtistUpsells" ${this.store.get('hideArtistUpsells', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+			
+			<div class="setting-group">
+                <h2>
+                    Account Manager
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span>Switch Account</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="accountSelector" class="theme-selector" style="min-width: 120px;">
+                        </select>
+                        <button id="addAccountBtn" class="theme-button" style="padding: 8px; flex: 0; min-width: 36px; display: flex; justify-content: center;" title="Add Account">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="setting-item" style="margin-top: 4px;">
+                    <span></span>
+                    <button id="logoutBtn" class="theme-button" style="background: var(--bg-hover); color: #ff5500;">Log Out of Current Account</button>
+                </div>
+                <div class="description">App will restart to load new session safely.</div>
+            </div>
+
+            <div class="setting-group">
                 <h2 data-i18n="adBlocker">${this.translationService.translate('adBlocker')}</h2>
                 <div class="setting-item">
                     <span data-i18n="enableAdBlocker">${this.translationService.translate('enableAdBlocker')}</span>
@@ -1046,7 +1095,6 @@ export class SettingsManager {
                 </div>
                 <div class="description" data-i18n="richPresencePreviewDescription">${this.translationService.translate('richPresencePreviewDescription')}</div>
                 
-                <!-- Rich Presence Preview -->
                 <div class="preview-container" id="presencePreviewContainer" style="display: ${
                     this.store.get('richPresencePreviewEnabled', false) ? 'block' : 'none'
                 }">
@@ -1110,13 +1158,12 @@ export class SettingsManager {
             ${this.getJavaScript()}
         </script>
         <script>
-            // Animation handling
+            // animation handling
             document.addEventListener('DOMContentLoaded', () => {
-                // Ensure initial state is set
                 document.body.classList.remove('visible');
             });
 
-            // Handle close button animation
+            // handle close button animation
             document.getElementById('close-settings').addEventListener('click', (e) => {
                 e.preventDefault();
                 document.body.classList.remove('visible');
@@ -1125,7 +1172,7 @@ export class SettingsManager {
                 }, 300);
             });
 
-            // Listen for messages
+            // listen for messages
             window.addEventListener('message', (event) => {
                 if (event.data === 'hidePanel') {
                     console.log('hidePanel');
@@ -1146,19 +1193,18 @@ export class SettingsManager {
                 openPath: (targetPath) => window.settingsAPI.openPath(targetPath),
             };
 
-            // Load custom themes on initialization
+            // 1. Data Loader Functions
             async function loadCustomThemes() {
                 try {
                     const themes = await ipcRenderer.invoke('get-custom-themes');
                     const currentTheme = await ipcRenderer.invoke('get-current-custom-theme');
                     const selector = document.getElementById('customThemeSelector');
+                    if (!selector) return;
                     
-                    // Clear existing options except "No Theme"
                     while (selector.children.length > 1) {
                         selector.removeChild(selector.lastChild);
                     }
                     
-                    // Add theme options
                     themes.forEach(theme => {
                         const option = document.createElement('option');
                         option.value = theme.name;
@@ -1166,56 +1212,18 @@ export class SettingsManager {
                         selector.appendChild(option);
                     });
                     
-                    // Set current theme
                     selector.value = currentTheme || 'none';
                 } catch (error) {
                     console.error('Failed to load custom themes:', error);
                 }
             }
 
-            // Initialize themes on page load
-            document.addEventListener('DOMContentLoaded', loadCustomThemes);
-
-            // Custom theme selector
-            document.getElementById('customThemeSelector').addEventListener('change', async (e) => {
-                const themeName = e.target.value;
-                try {
-                    await ipcRenderer.invoke('apply-custom-theme', themeName);
-                    ipcRenderer.send('setting-changed', { key: 'customTheme', value: themeName });
-                } catch (error) {
-                    console.error('Failed to apply custom theme:', error);
-                }
-            });
-
-            // Open themes folder
-            document.getElementById('openThemesFolder').addEventListener('click', async () => {
-                try {
-                    const themesPath = await ipcRenderer.invoke('get-themes-folder-path');
-                    shell.openPath(themesPath);
-                } catch (error) {
-                    console.error('Failed to open themes folder:', error);
-                }
-            });
-
-            // Refresh themes
-            document.getElementById('refreshThemes').addEventListener('click', async () => {
-                try {
-                    await ipcRenderer.invoke('refresh-custom-themes');
-                    await loadCustomThemes();
-                } catch (error) {
-                    console.error('Failed to refresh themes:', error);
-                }
-            });
-
-            function escapeHtml(str) {
-                if (typeof str !== 'string') return '';
-                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
-            }
-
             async function loadPlugins() {
                 try {
                     const plugins = await ipcRenderer.invoke('get-plugins');
                     const list = document.getElementById('pluginList');
+                    if (!list) return;
+                    
                     list.innerHTML = '';
 
                     if (!plugins || plugins.length === 0) {
@@ -1290,9 +1298,91 @@ export class SettingsManager {
                 }
             }
 
-            document.addEventListener('DOMContentLoaded', loadPlugins);
+            async function loadAccounts() {
+                try {
+                    const data = await ipcRenderer.invoke('get-accounts');
+                    const selector = document.getElementById('accountSelector');
+                    if (!selector) return;
+                    
+                    selector.innerHTML = '';
+                    data.accounts.forEach(acc => {
+                        const option = document.createElement('option');
+                        option.value = acc.id;
+                        option.textContent = acc.name;
+                        selector.appendChild(option);
+                    });
+                    selector.value = data.currentAccountId || 'default';
+                } catch(e) { 
+                    console.error('Failed to load accounts:', e); 
+                }
+            }
 
-            document.getElementById('openPluginsFolder').addEventListener('click', async () => {
+            // 2. Single Unified Initialization
+            document.addEventListener('DOMContentLoaded', () => {
+                loadCustomThemes();
+                loadPlugins();
+                loadAccounts();
+            });
+
+            // 3. Account Manager Event Listeners
+            ipcRenderer.on('accounts-updated', loadAccounts);
+
+            const accSelector = document.getElementById('accountSelector');
+            if (accSelector) {
+                accSelector.addEventListener('change', (e) => {
+                    ipcRenderer.send('switch-account', e.target.value);
+                });
+            }
+
+            const addBtn = document.getElementById('addAccountBtn');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    ipcRenderer.send('add-account');
+                });
+            }
+
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    ipcRenderer.send('logout-account');
+                });
+            }
+
+            // 4. Standard UI Event Listeners
+            document.getElementById('customThemeSelector')?.addEventListener('change', async (e) => {
+                const themeName = e.target.value;
+                try {
+                    await ipcRenderer.invoke('apply-custom-theme', themeName);
+                    ipcRenderer.send('setting-changed', { key: 'customTheme', value: themeName });
+                } catch (error) {
+                    console.error('Failed to apply custom theme:', error);
+                }
+            });
+
+            document.getElementById('openThemesFolder')?.addEventListener('click', async () => {
+                try {
+                    const themesPath = await ipcRenderer.invoke('get-themes-folder-path');
+                    shell.openPath(themesPath);
+                } catch (error) {
+                    console.error('Failed to open themes folder:', error);
+                }
+            });
+
+            document.getElementById('refreshThemes')?.addEventListener('click', async () => {
+                try {
+                    await ipcRenderer.invoke('refresh-custom-themes');
+                    await loadCustomThemes();
+                } catch (error) {
+                    console.error('Failed to refresh themes:', error);
+                }
+            });
+
+            function escapeHtml(str) {
+                if (typeof str !== 'string') return '';
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+            }
+
+            document.getElementById('openPluginsFolder')?.addEventListener('click', async () => {
                 try {
                     const pluginsPath = await ipcRenderer.invoke('get-plugins-folder-path');
                     shell.openPath(pluginsPath);
@@ -1301,7 +1391,7 @@ export class SettingsManager {
                 }
             });
 
-            document.getElementById('refreshPlugins').addEventListener('click', async () => {
+            document.getElementById('refreshPlugins')?.addEventListener('click', async () => {
                 try {
                     await ipcRenderer.invoke('refresh-plugins');
                     await loadPlugins();
@@ -1310,71 +1400,74 @@ export class SettingsManager {
                 }
             });
 
-            // Toggle visibility of Proxy fields
-            document.getElementById('proxyEnabled').addEventListener('change', (e) => {
+            // UI Customization Toggles
+            document.getElementById('hidePromotions')?.addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'hidePromotions', value: e.target.checked });
+            });
+
+            document.getElementById('hideEventsNearYou')?.addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'hideEventsNearYou', value: e.target.checked });
+            });
+
+            document.getElementById('hideArtistUpsells')?.addEventListener('change', (e) => {
+                ipcRenderer.send('setting-changed', { key: 'hideArtistUpsells', value: e.target.checked });
+            });
+
+            document.getElementById('proxyEnabled')?.addEventListener('change', (e) => {
                 const isEnabled = e.target.checked;
                 document.getElementById('proxyFields').style.display = isEnabled ? 'block' : 'none';
                 ipcRenderer.send('setting-changed', { key: 'proxyEnabled', value: isEnabled });
             });
 
-            // Handle proxy host and port changes
-            document.getElementById('proxyHost').addEventListener('change', (e) => {
+            document.getElementById('proxyHost')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'proxyHost', value: e.target.value });
             });
 
-            document.getElementById('proxyPort').addEventListener('change', (e) => {
+            document.getElementById('proxyPort')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'proxyPort', value: e.target.value });
             });
 
-            // Toggle visibility of Last.fm fields
-            document.getElementById('lastFmEnabled').addEventListener('change', (e) => {
+            document.getElementById('lastFmEnabled')?.addEventListener('change', (e) => {
                 const isEnabled = e.target.checked;
                 document.getElementById('lastFmFields').style.display = isEnabled ? 'block' : 'none';
                 ipcRenderer.send('setting-changed', { key: 'lastFmEnabled', value: isEnabled });
             });
 
-            // Handle Last.fm API key and secret changes
-            document.getElementById('lastFmApiKey').addEventListener('change', (e) => {
+            document.getElementById('lastFmApiKey')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'lastFmApiKey', value: e.target.value });
             });
 
-            document.getElementById('lastFmSecret').addEventListener('change', (e) => {
+            document.getElementById('lastFmSecret')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'lastFmSecret', value: e.target.value });
             });
 
-            // Open Last.fm API key creation link in the user's default browser
-            document.getElementById('createLastFmApiKey').addEventListener('click', (e) => {
+            document.getElementById('createLastFmApiKey')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 shell.openExternal('https://www.last.fm/api/account/create');
             });
 
-            // Toggle visibility of webhook fields
-            document.getElementById('webhookEnabled').addEventListener('change', (e) => {
+            document.getElementById('webhookEnabled')?.addEventListener('change', (e) => {
                 const isEnabled = e.target.checked;
                 document.getElementById('webhookFields').style.display = isEnabled ? 'block' : 'none';
                 document.getElementById('webhookFields2').style.display = isEnabled ? 'block' : 'none';
                 ipcRenderer.send('setting-changed', { key: 'webhookEnabled', value: isEnabled });
             });
 
-            // Handle webhook URL changes
-            document.getElementById('webhookUrl').addEventListener('change', (e) => {
+            document.getElementById('webhookUrl')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'webhookUrl', value: e.target.value });
             });
 
-            // Handle webhook trigger percentage changes
-            document.getElementById('webhookTriggerPercentage').addEventListener('input', (e) => {
+            document.getElementById('webhookTriggerPercentage')?.addEventListener('input', (e) => {
                 let value = parseInt(e.target.value);
-                // Clamp value between 0 and 100
                 if (value < 0) value = 0;
                 if (value > 100) value = 100;
-                if (isNaN(value)) value = 50; // Default fallback
+                if (isNaN(value)) value = 50;
                 
-                e.target.value = value; // Update the input field
+                e.target.value = value;
                 ipcRenderer.send('setting-changed', { key: 'webhookTriggerPercentage', value: value });
             });
 
-            // Handle webhook example toggle
-            document.getElementById('webhookExampleToggle').addEventListener('click', (e) => {
+            document.getElementById('webhookExampleToggle')?.addEventListener('click', (e) => {
                 const toggle = e.currentTarget;
                 const content = document.getElementById('webhookExampleContent');
                 const isExpanded = content.style.display === 'block';
@@ -1388,32 +1481,30 @@ export class SettingsManager {
                 }
             });
 
-            // Basic settings
-            document.getElementById('darkMode').addEventListener('change', (e) => {
+            document.getElementById('darkMode')?.addEventListener('change', (e) => {
                 const isDark = e.target.checked;
                 ipcRenderer.send('setting-changed', { key: 'theme', value: isDark ? 'dark' : 'light' });
                 document.documentElement.classList.toggle('theme-light', !isDark);
                 document.documentElement.classList.toggle('theme-dark', isDark);
             });
 
-            document.getElementById('minimizeToTray').addEventListener('change', (e) => {
+            document.getElementById('minimizeToTray')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
             });
 
-            document.getElementById('navigationControlsEnabled').addEventListener('change', (e) => {
+            document.getElementById('navigationControlsEnabled')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'navigationControlsEnabled', value: e.target.checked });
             });
 
-            document.getElementById('trackParserEnabled').addEventListener('change', (e) => {
+            document.getElementById('trackParserEnabled')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
             });
 
-            document.getElementById('autoUpdaterEnabled').addEventListener('change', (e) => {
+            document.getElementById('autoUpdaterEnabled')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'autoUpdaterEnabled', value: e.target.checked });
             });
 
-            // Rich Presence Preview
-            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
+            document.getElementById('richPresencePreviewEnabled')?.addEventListener('change', (e) => {
                 const isEnabled = e.target.checked;
                 const container = document.getElementById('presencePreviewContainer');
                 if (container) {
@@ -1422,48 +1513,36 @@ export class SettingsManager {
                 ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
             });
 
-            document.getElementById('displayWhenIdling').addEventListener('change', (e) => {
+            document.getElementById('displayWhenIdling')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'displayWhenIdling', value: e.target.checked });
             });
 
-            document.getElementById('displaySCSmallIcon').addEventListener('change', (e) => {
+            document.getElementById('displaySCSmallIcon')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'displaySCSmallIcon', value: e.target.checked });
             });
 
-            document.getElementById('adBlocker').addEventListener('change', (e) => {
+            document.getElementById('adBlocker')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'adBlocker', value: e.target.checked });
             });
 
-            // Discord settings
-            document.getElementById('discordRichPresence').addEventListener('change', (e) => {
+            document.getElementById('discordRichPresence')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'discordRichPresence', value: e.target.checked });
             });
 
-            document.getElementById('displayButtons').addEventListener('change', (e) => {
+            document.getElementById('displayButtons')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'displayButtons', value: e.target.checked });
             });
 
-            // Toggle status display type (STATE uses artist, NAME uses app name)
-            document.getElementById('useArtistInStatusLineToggle').addEventListener('change', (e) => {
-                const useState = e.target.checked; // true -> STATE (1), false -> NAME (0)
+            document.getElementById('useArtistInStatusLineToggle')?.addEventListener('change', (e) => {
+                const useState = e.target.checked;
                 ipcRenderer.send('setting-changed', { key: 'statusDisplayType', value: useState ? 1 : 0 });
             });
 
-            // Rich Presence Preview toggle
-            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
-                const isEnabled = e.target.checked;
-                document.getElementById('presencePreviewContainer').style.display = isEnabled ? 'block' : 'none';
-                ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
+            document.getElementById('applyChanges')?.addEventListener('click', () => {
+                ipcRenderer.send('apply-changes');
             });
 
-            // Rich Presence Preview
-            document.getElementById('richPresencePreviewEnabled').addEventListener('change', (e) => {
-                const isEnabled = e.target.checked;
-                document.getElementById('presencePreviewContainer').style.display = isEnabled ? 'block' : 'none';
-                ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
-            });
-
-            // Rich Presence Preview Update Functions
+            // 5. Rich Presence Preview Logic
             let currentTrack = null;
             let progressInterval = null;
 
@@ -1622,30 +1701,23 @@ export class SettingsManager {
                 const activitySection = document.getElementById('activitySectionPreview');
                 const noActivity = document.getElementById('noActivityPreview');
 
-                // Get current settings
-                const displayWhenIdling = document.getElementById('displayWhenIdling').checked;
-                const displaySCSmallIcon = document.getElementById('displaySCSmallIcon').checked;
-                const displayButtons = document.getElementById('displayButtons').checked;
+                const displayWhenIdling = document.getElementById('displayWhenIdling')?.checked || false;
+                const displaySCSmallIcon = document.getElementById('displaySCSmallIcon')?.checked || false;
+                const displayButtons = document.getElementById('displayButtons')?.checked || false;
 
                 if (!trackInfo || (!trackInfo.isPlaying && !displayWhenIdling)) {
-                    noActivity.style.display = 'block';
-                    const existingContent = activitySection.querySelector('.activity-content-preview');
-                    if (existingContent) {
-                        existingContent.remove();
-                    }
+                    if (noActivity) noActivity.style.display = 'block';
+                    const existingContent = activitySection?.querySelector('.activity-content-preview');
+                    if (existingContent) existingContent.remove();
                     clearInterval(progressInterval);
                     return;
                 }
 
-                noActivity.style.display = 'none';
+                if (noActivity) noActivity.style.display = 'none';
 
-                // Remove existing activity content
-                const existingContent = activitySection.querySelector('.activity-content-preview');
-                if (existingContent) {
-                    existingContent.remove();
-                }
+                const existingContent = activitySection?.querySelector('.activity-content-preview');
+                if (existingContent) existingContent.remove();
 
-                // Create activity content
                 const activityContent = document.createElement('div');
                 activityContent.className = 'activity-content-preview';
 
@@ -1655,22 +1727,18 @@ export class SettingsManager {
                         displayButtons,
                         inlineRow: true,
                     }));
-                    // Start progress update
                     startProgressUpdate(trackInfo);
                 } else if (displayWhenIdling) {
-                    // Paused/idle state
                     activityContent.appendChild(createPausedPreview({ inlineRow: false }));
                 }
 
-                activitySection.appendChild(activityContent);
+                if (activitySection) activitySection.appendChild(activityContent);
             }
 
             function startProgressUpdate(trackInfo) {
                 clearInterval(progressInterval);
                 
-                if (!trackInfo.isPlaying || !trackInfo.elapsed || !trackInfo.duration) {
-                    return;
-                }
+                if (!trackInfo.isPlaying || !trackInfo.elapsed || !trackInfo.duration) return;
 
                 const startTime = Date.now();
                 const elapsedMs = parseTimeToMs(trackInfo.elapsed);
@@ -1684,184 +1752,33 @@ export class SettingsManager {
                     const progressFill = document.getElementById('progressFillPreview');
                     const currentTimeEl = document.getElementById('currentTimePreview');
 
-                    if (progressFill) {
-                        progressFill.style.width = \`\${progress}%\`;
-                    }
-                    
-                    if (currentTimeEl) {
-                        currentTimeEl.textContent = formatTime(currentElapsed);
-                    }
+                    if (progressFill) progressFill.style.width = \`\${progress}%\`;
+                    if (currentTimeEl) currentTimeEl.textContent = formatTime(currentElapsed);
 
-                    // Stop when track ends
-                    if (progress >= 100) {
-                        clearInterval(progressInterval);
-                    }
+                    if (progress >= 100) clearInterval(progressInterval);
                 }
 
-                // Update immediately
                 updateProgress();
-                
-                // Update every second
                 progressInterval = setInterval(updateProgress, 1000);
             }
 
-            // Listen for track updates
+            // 6. External Event Triggers
             ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
                 updatePreview(trackInfo);
             });
 
-            // Update preview when display settings change
-            document.getElementById('displayWhenIdling').addEventListener('change', () => {
-                if (currentTrack) {
-                    setTimeout(() => updatePreview(currentTrack), 100);
-                }
-            });
-
-            document.getElementById('displaySCSmallIcon').addEventListener('change', () => {
-                if (currentTrack) {
-                    setTimeout(() => updatePreview(currentTrack), 100);
-                }
-            });
-
-            document.getElementById('displayButtons').addEventListener('change', () => {
-                if (currentTrack) {
-                    setTimeout(() => updatePreview(currentTrack), 100);
-                }
-            });
-
-            // Initialize preview with current track if available
-            let currentPreviewTrack = null;
-            let previewProgressInterval = null;
-
-            function updatePreviewTrackInfo(trackInfo) {
-                currentPreviewTrack = trackInfo;
-                const activitySection = document.getElementById('activitySectionPreview');
-                const noActivity = document.getElementById('noActivityPreview');
-
-                if (!trackInfo || (!trackInfo.isPlaying && !${this.store.get('displayWhenIdling', false)})) {
-                    if (noActivity) noActivity.style.display = 'block';
-                    const existingContent = activitySection?.querySelector('.activity-content-preview');
-                    if (existingContent) existingContent.remove();
-                    clearInterval(previewProgressInterval);
-                    return;
-                }
-
-                if (noActivity) noActivity.style.display = 'none';
-
-                // Remove existing activity content
-                const existingContent = activitySection?.querySelector('.activity-content-preview');
-                if (existingContent) {
-                    existingContent.remove();
-                }
-
-                // Create activity content
-                const activityContent = document.createElement('div');
-                activityContent.className = 'activity-content-preview';
-
-                if (trackInfo.isPlaying) {
-                    activityContent.appendChild(createPlayingPreview(trackInfo, {
-                        displaySCSmallIcon,
-                        displayButtons,
-                        inlineRow: false,
-                    }));
-                    // Start progress update for preview
-                    startPreviewProgressUpdate(trackInfo);
-                } else {
-                    // Paused/idle state
-                    activityContent.appendChild(createPausedPreview({ inlineRow: false }));
-                }
-
-                if (activitySection) {
-                    activitySection.appendChild(activityContent);
-                }
-            }
-
-            function parseTimeToMsPreview(time) {
-                if (!time) return 0;
-                const isNegative = time.trim().startsWith('-');
-                const raw = isNegative ? time.trim().slice(1) : time.trim();
-                const parts = raw.split(':').map(p => Number(p));
-                let seconds = 0;
-                for (const part of parts) {
-                    seconds = seconds * 60 + (isNaN(part) ? 0 : part);
-                }
-                const ms = seconds * 1000;
-                return isNegative ? -ms : ms;
-            }
-
-            function formatTimePreview(ms) {
-                const totalSeconds = Math.floor(ms / 1000);
-                const minutes = Math.floor(totalSeconds / 60);
-                const seconds = totalSeconds % 60;
-                return \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
-            }
-
-            function startPreviewProgressUpdate(trackInfo) {
-                clearInterval(previewProgressInterval);
-                
-                if (!trackInfo.isPlaying || !trackInfo.elapsed || !trackInfo.duration) {
-                    return;
-                }
-
-                const startTime = Date.now();
-                const elapsedMs = parseTimeToMsPreview(trackInfo.elapsed);
-                const totalMs = parseTimeToMsPreview(trackInfo.duration);
-
-                function updatePreviewProgress() {
-                    const now = Date.now();
-                    const currentElapsed = elapsedMs + (now - startTime);
-                    const progress = Math.min((currentElapsed / totalMs) * 100, 100);
-
-                    const progressFill = document.getElementById('progressFillPreview');
-                    const currentTimeEl = document.getElementById('currentTimePreview');
-
-                    if (progressFill) {
-                        progressFill.style.width = \`\${progress}%\`;
-                    }
-                    
-                    if (currentTimeEl) {
-                        currentTimeEl.textContent = formatTimePreview(currentElapsed);
-                    }
-
-                    // Stop when track ends
-                    if (progress >= 100) {
-                        clearInterval(previewProgressInterval);
-                    }
-                }
-
-                // Update immediately
-                updatePreviewProgress();
-                
-                // Update every second
-                previewProgressInterval = setInterval(updatePreviewProgress, 1000);
-            }
-
-            // Listen for track updates from main process
-            ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
-                updatePreviewTrackInfo(trackInfo);
-            });
-
-            // Apply all changes
-            document.getElementById('applyChanges').addEventListener('click', () => {
-                ipcRenderer.send('apply-changes');
-            });
-
-            // Listen for theme changes from main process
             ipcRenderer.on('theme-changed', (_, isDark) => {
-                document.getElementById('darkMode').checked = isDark;
+                const dm = document.getElementById('darkMode');
+                if (dm) dm.checked = isDark;
                 document.documentElement.classList.toggle('theme-light', !isDark);
             });
 
-            // Request translations from the main process
             ipcRenderer.on('update-translations', () => {
                 ipcRenderer.invoke('get-translations').then((translations) => {
-                    // Update all elements with data-i18n attributes
                     document.querySelectorAll('[data-i18n]').forEach(element => {
                         const key = element.getAttribute('data-i18n');
                         if (key && translations[key]) {
-                            // Special handling for h2 elements that might contain SVG
                             if (element.tagName === 'H2' && element.querySelector('svg')) {
-                                // Update only the text node, preserve SVG
                                 const svg = element.querySelector('svg');
                                 element.textContent = translations[key];
                                 if (svg) element.appendChild(svg);
@@ -1871,7 +1788,6 @@ export class SettingsManager {
                         }
                     });
 
-                    // Update placeholder attributes
                     document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
                         const key = element.getAttribute('data-i18n-placeholder');
                         if (key && translations[key]) {
@@ -1879,7 +1795,6 @@ export class SettingsManager {
                         }
                     });
 
-                    // Update title attributes (for tooltips)
                     document.querySelectorAll('[data-i18n-title]').forEach(element => {
                         const key = element.getAttribute('data-i18n-title');
                         if (key && translations[key]) {
@@ -1898,11 +1813,11 @@ export class SettingsManager {
         this.updateBounds();
         const applyShowState = () => {
             view.webContents.executeJavaScript(`
-                // Force a reflow to ensure animation works
+                // force reflow to ensure animation works
                 document.body.style.opacity;
                 document.body.classList.add('visible');
             `);
-            // Trigger translation updates when panel is shown
+            // trigger translation updates when panel is shown
             view.webContents.send('update-translations');
             const isDark = this.store.get('theme', 'dark') === 'dark';
             view.webContents.send('theme-changed', isDark);
@@ -1928,7 +1843,7 @@ export class SettingsManager {
     public setThemeColors(colors: ThemeColors | null): void {
         if (!this.view) return;
         if (!colors) {
-            // Reset to default theme colors
+            // reset to default theme colors
             this.view.webContents.executeJavaScript(`
                 document.documentElement.style.removeProperty('--bg-primary');
                 document.documentElement.style.removeProperty('--bg-secondary');
@@ -1938,7 +1853,7 @@ export class SettingsManager {
             return;
         }
 
-        // Apply custom theme colors
+        // apply custom theme colors
         this.view.webContents
             .executeJavaScript(
                 `

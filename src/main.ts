@@ -67,6 +67,11 @@ const store = new Store({
         trackParserEnabled: true,
         richPresencePreviewEnabled: false,
         autoUpdaterEnabled: true,
+        hidePromotions: true,
+        hideEventsNearYou: true,
+        hideArtistUpsells: true,
+		accounts: [{ id: 'default', name: 'Main Account' }],
+		currentAccountId: 'default',
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -269,6 +274,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         height: windowState.height,
         x: windowState.x,
         y: windowState.y,
+        title: 'SoundCloud',
         frame: process.platform === 'darwin',
         titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
         trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 10 } : undefined,
@@ -542,8 +548,13 @@ async function init() {
     headerView.setAutoResize({ width: true, height: false });
     headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
 
+	// get selected account and define partition
+    const currentAccountId = store.get('currentAccountId', 'default');
+    const sessionPartition = currentAccountId === 'default' ? undefined : `persist:sc_${currentAccountId}`;
+
     contentView = new BrowserView({
         webPreferences: {
+			...(sessionPartition ? { partition: sessionPartition } : {}),
             nodeIntegration: false,
             contextIsolation: true,
             sandbox: false,
@@ -779,6 +790,7 @@ async function init() {
 
         // Reinitialize after page load/refresh
         await reinitializeAfterPageLoad();
+		
     });
 
     // Reinitialize everything after page load/refresh
@@ -854,9 +866,59 @@ async function init() {
             }
             // Re-apply the theme to all content
             applyThemeToContent(isDarkTheme);
+        } else if (key === 'hidePromotions' || key === 'hideEventsNearYou' || key === 'hideArtistUpsells') {
+            applyThemeToContent(isDarkTheme);
         }
     });
+	
+	// handle account switching
+    ipcMain.handle('get-accounts', () => {
+        return {
+            accounts: store.get('accounts', [{ id: 'default', name: 'Main Account' }]),
+            currentAccountId: store.get('currentAccountId', 'default')
+        };
+    });
 
+    ipcMain.on('switch-account', (_, accountId) => {
+        store.set('currentAccountId', accountId);
+        app.relaunch();
+        app.quit();
+    });
+
+    ipcMain.on('add-account', () => {
+        const newId = `acc_${Date.now()}`;
+        const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+        accounts.push({ id: newId, name: 'New Account' });
+        store.set('accounts', accounts);
+        store.set('currentAccountId', newId);
+        app.relaunch();
+        app.quit();
+    });
+
+	ipcMain.on('logout-account', async () => {
+        const currentId = store.get('currentAccountId', 'default');
+        
+        if (contentView) {
+            // Log out of the session
+            await contentView.webContents.session.clearStorageData();
+        }
+
+        // If it's not the default account, remove it from the list
+        if (currentId !== 'default') {
+            const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+            const filteredAccounts = accounts.filter((a: any) => a.id !== currentId);
+            
+            store.set('accounts', filteredAccounts);
+            store.set('currentAccountId', 'default'); // Switch back to main
+            
+            app.relaunch();
+            app.quit();
+        } else {
+            // If it IS the default account, just reload the page logged out
+            if (contentView) contentView.webContents.reload();
+        }
+    });
+	
     // Handle applying all changes
     ipcMain.on('apply-changes', async () => {
         if (store.get('proxyEnabled')) {
@@ -878,6 +940,56 @@ async function init() {
             presenceService.clearActivity();
         }
     });
+	
+	// Background username poller (handles dynamic logins and window resizing)
+	setInterval(async () => {
+		if (!contentView) return;
+		try {
+			const username = await contentView.webContents.executeJavaScript(`
+				(() => {
+					try {
+						// Look for the main profile button in the nav
+						const profileBtn = document.querySelector('.header__userNav [data-menu-name="profile"]');
+						if (profileBtn && profileBtn.href) {
+							// href is "https://soundcloud.com/elricfd"
+							const parts = profileBtn.href.split('/');
+							return parts[parts.length - 1]; // returns "elricfd"
+						}
+						
+						// Fallback selector
+						const userBtn = document.querySelector('.header__userNavUsernameButton');
+						if (userBtn && userBtn.href) {
+							const parts = userBtn.href.split('/');
+							return parts[parts.length - 1];
+						}
+						
+						return null;
+					} catch(err) {
+						return null;
+					}
+				})()
+			`);
+			
+			if (username && typeof username === 'string' && username.trim() !== '') {
+				const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+				const currentId = store.get('currentAccountId', 'default');
+				const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
+				
+				if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
+					console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
+					
+					accounts[accountIndex].name = username;
+					store.set('accounts', [...accounts]); // Write to disk
+					
+					if (settingsManager && settingsManager.getView()) {
+						settingsManager.getView()?.webContents.send('accounts-updated');
+					}
+				}
+			}
+		} catch (e) {
+			// Silently ignore if page is navigating
+		}
+	}, 5000);
 }
 
 function setupMemoryPressureHandler() {
@@ -961,6 +1073,11 @@ function applyThemeToContent(isDark: boolean) {
     if (headerView && headerView.webContents) {
         headerView.webContents.send('theme-colors-changed', themeColors);
     }
+    
+    // fetch settings for component toggles
+    const hidePromotions = store.get('hidePromotions', true);
+    const hideEventsNearYou = store.get('hideEventsNearYou', true);
+    const hideArtistUpsells = store.get('hideArtistUpsells', true);
 
     // Split CSS into sections using comment markers in the theme file:
     // /* @target all|content|header|settings */ ... /* @end */
@@ -1034,6 +1151,12 @@ function applyThemeToContent(isDark: boolean) {
                     ::-webkit-scrollbar-corner {
                         background-color: transparent;
                     }
+                    
+                    ${hidePromotions ? '.banner.m-promotion { display: none !important; }' : ''}
+                    
+                    ${hideEventsNearYou ? '.velvetCakeModule { display: none !important; }' : ''}
+                    
+					${hideArtistUpsells ? '.creatorSubscriptionsButton.header__creatorUpsell, .artistConnectItem.m-upsellNextPro, .dropdownMenu [href*="checkout.soundcloud.com"], .dropdownMenu *:has(> svg.profileMenu__icon path[fill="#F50"]), .spotlight:has(.spotlight__upsellBanner), .spotlight__upsellBanner, .spotlight__upsellCTA, .sidebarContent:has(.velvetCakeIframe), .artistConnectContainer .tileGallery__sliderPeekForward, .artistConnectContainer .tileGallery__sliderPeekBackward, .MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }' : ''}
                 \`;
                 
                 const existingStyle = document.getElementById('custom-scrollbar-style');
@@ -1041,6 +1164,38 @@ function applyThemeToContent(isDark: boolean) {
                     existingStyle.remove();
                 }
                 document.head.appendChild(style);
+				
+				// Handle iframe-based artist upsells
+                if (window._artistUpsellInterval) clearInterval(window._artistUpsellInterval);
+                window._artistUpsellInterval = setInterval(() => {
+                    // Grab both Artist tools AND Sidebar modules iframes
+                    document.querySelectorAll('iframe[title="Artist tools"], iframe[title="Sidebar modules"]').forEach(iframe => {
+                        try {
+                            const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                            const container = iframe.closest('.webiEmbeddedModuleContainer');
+                            
+                            if (container && doc) {
+                                // 1. Inject CSS directly INSIDE the iframe to hide the waitlist card
+                                if (!doc.getElementById('custom-iframe-style')) {
+                                    const iframeStyle = doc.createElement('style');
+                                    iframeStyle.id = 'custom-iframe-style';
+                                    // Notice the single quotes so it evaluates to a valid JS string
+                                    iframeStyle.textContent = ${hideArtistUpsells ? "'.MuiBox-root:has(a[href*=\"getstarted/fan-support\"]) { display: none !important; }'" : "''"};
+                                    doc.head.appendChild(iframeStyle);
+                                }
+
+                                // 2. If we find a paywall lock, hide the entire parent wrapper
+                                if (${hideArtistUpsells} && doc.querySelector('svg[aria-label="Paywalled feature"]')) {
+                                    container.style.display = 'none';
+                                } else {
+                                    container.style.display = '';
+                                }
+                            }
+                        } catch(e) {
+                            // Silently fail if iframe hasn't fully loaded yet
+                        }
+                    });
+                }, 1000);
 
                 // Apply custom theme CSS (content section + all) if available
                 const contentCSS = \`${sections.all + (sections.all && sections.content ? '\n' : '') + sections.content || ''}\`;
@@ -1292,6 +1447,9 @@ function setupTranslationHandlers() {
             closeSettings: translationService.translate('closeSettings'),
             noActivityToShow: translationService.translate('noActivityToShow'),
             richPresencePreviewTitle: translationService.translate('richPresencePreviewTitle'),
+            hidePromotions: translationService.translate('hidePromotions'),
+            hideEventsNearYou: translationService.translate('hideEventsNearYou'),
+            hideArtistUpsells: translationService.translate('hideArtistUpsells'),
         };
     });
 }

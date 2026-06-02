@@ -55,5 +55,8 @@
     "pressF1ToOpenSettings": "Press 'F1' to open settings",
     "closeSettings": "Close settings",
     "noActivityToShow": "No activity to show",
-    "richPresencePreviewTitle": "Rich Presence Preview"
+    "richPresencePreviewTitle": "Rich Presence Preview",
+	"hidePromotions": "Hide Promotions",
+	"hideEventsNearYou": "Hide Events Near You",
+	"hideArtistUpsells": "Hide Artist Pro Upsells"
 }
