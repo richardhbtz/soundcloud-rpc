@@ -188,7 +188,7 @@ function setupTray() {
     );
     const icon = nativeImage.createFromPath(iconPath);
 
-    // Resize icon for tray (16x16 is standard for most systems)
+    // Resize icon
     const trayIcon = icon.resize({ width: 16, height: 16 });
 
     tray = new Tray(trayIcon);
@@ -225,31 +225,26 @@ function setupTray() {
 
     tray.setContextMenu(contextMenu);
 
-    // Handle tray icon click (show window)
-    tray.on('click', () => {
-        if (mainWindow) {
-            if (!mainWindow.isVisible()) {
-                mainWindow.show();
-            }
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
-            }
-            mainWindow.focus();
-        }
-    });
+   // Prevent rendering engine deadlocks when waking hidden/minimized windows from the tray
+	tray.on('click', () => {
+		if (mainWindow) {
+			const isMinimized = mainWindow.isMinimized();
+			const isVisible = mainWindow.isVisible();
 
-    // Handle tray icon double-click (show window)
-    tray.on('double-click', () => {
-        if (mainWindow) {
-            if (!mainWindow.isVisible()) {
-                mainWindow.show();
-            }
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
-            }
-            mainWindow.focus();
-        }
-    });
+			if (isMinimized) {
+				mainWindow.restore();
+			}
+			
+			if (!isVisible) {
+				mainWindow.show();
+			}
+
+			mainWindow.focus();
+			
+			// This can now be called directly without throwing a compilation error
+			adjustContentViews();
+		}
+	});
 }
 
 // Update the language when retrieved from the web page
@@ -351,6 +346,30 @@ function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
     }
 }
 
+// Defer bounds adjustments if the window frame cannot process rendering dimensions
+function adjustContentViews() {
+    if (!mainWindow || !contentView || !headerView) return;
+    if (!mainWindow.isVisible() || mainWindow.isMinimized()) return;
+
+    const { width, height } = mainWindow.getContentBounds();
+
+    headerView.setBounds({
+        x: 0,
+        y: 0,
+        width,
+        height: HEADER_HEIGHT,
+    });
+
+    contentView.setBounds({
+        x: 0,
+        y: HEADER_HEIGHT,
+        width,
+        height: height - HEADER_HEIGHT,
+    });
+
+    updateDialogBounds(mainWindow);
+}
+
 function setupWindowControls() {
     if (!mainWindow) return;
 
@@ -373,28 +392,6 @@ function setupWindowControls() {
             }
         }
     });
-
-    function adjustContentViews() {
-        if (!mainWindow || !contentView || !headerView) return;
-
-        const { width, height } = mainWindow.getContentBounds();
-
-        headerView.setBounds({
-            x: 0,
-            y: 0,
-            width,
-            height: HEADER_HEIGHT,
-        });
-
-        contentView.setBounds({
-            x: 0,
-            y: HEADER_HEIGHT,
-            width,
-            height: height - HEADER_HEIGHT,
-        });
-
-        updateDialogBounds(mainWindow);
-    }
 
     ipcMain.on('title-bar-double-click', () => {
         if (mainWindow) {
