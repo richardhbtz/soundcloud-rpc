@@ -10,7 +10,7 @@ function signPackage(appOutDir) {
         process.exit(1);
     }
 
-    // Resolve the full path to the packaged app directory
+    // resolve full path to packaged app dir
     const packageDir = path.resolve(appOutDir);
 
     if (!fs.existsSync(packageDir)) {
@@ -24,20 +24,20 @@ function signPackage(appOutDir) {
     console.log(`VMP Signing Application at ${packageDir}`);
 
     try {
-        // Sign the package using EVS via safe binary spawning
-        // For Windows: sign after code-signing (if any)
-        // For macOS: sign before code-signing
+        // sign package using EVS via safe binary spawning
+        // for win: sign after code signing (if any)
+        // for mac: sign before code signing
         const subprocess = spawnSync('python', ['-m', 'castlabs_evs.vmp', 'sign-pkg', packageDir], {
             encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'] // Explicitly separate streams safely
+            stdio: ['pipe', 'pipe', 'pipe'], // explicitly separate streams safely
         });
 
-        // Check if the subprocess threw an internal operational system error
+        // check if subprocess threw internal operational system error
         if (subprocess.error) {
             throw subprocess.error;
         }
 
-        // If python returned a non-zero exit code, manually throw it to trigger our catch safety block
+        // if python returned a non-zero exit code, manually throw it to trigger catch safety block
         if (subprocess.status !== 0) {
             const customError = new Error(`Process exited with code ${subprocess.status}`);
             customError.stdout = subprocess.stdout;
@@ -53,15 +53,15 @@ function signPackage(appOutDir) {
         if (error.stdout) console.error('stdout:', error.stdout);
         if (error.stderr) console.error('stderr:', error.stderr);
 
-        // ENFORCE: Only crash the build if strictly requested by environment variables
+        // ENFORCE: only crash build if strictly requested by env vars
         if (process.env.STRICT_VMP_SIGNING === 'true') {
             console.error('STRICT_VMP_SIGNING is enabled. Aborting build.');
             process.exit(1);
         }
 
-        // COMFORT FALLBACK: If strict mode is off, log it and exit gracefully with 0
+        // FALLBACK: if strict mode off, log it and exit w 0
         console.log('Continuing build without VMP signing...\n');
-        return; // Exit this function safely so the hook returns success
+        return;
     }
 }
 
@@ -72,7 +72,7 @@ module.exports = function (context) {
     signPackage(appOutDir);
 };
 
-// If called directly with a path argument (for manual signing)
+// if called directly w a path argument (for manual signing)
 if (require.main === module) {
     const appOutDir = process.argv[2];
     if (!appOutDir) {

@@ -70,8 +70,8 @@ const store = new Store({
         hidePromotions: true,
         hideEventsNearYou: true,
         hideArtistUpsells: true,
-		accounts: [{ id: 'default', name: 'Main Account' }],
-		currentAccountId: 'default',
+        accounts: [{ id: 'default', name: 'Main Account' }],
+        currentAccountId: 'default',
     },
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
@@ -97,6 +97,12 @@ let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
+const globalUserAgent = isMac
+    ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const globalPlatformHint = isMac ? '"macOS"' : '"Windows"';
+
+app.userAgentFallback = globalUserAgent;
 
 function applyMacMemoryOptimizations(): void {
     if (!isMac) return;
@@ -118,12 +124,12 @@ function applyMacMemoryOptimizations(): void {
 }
 
 applyMacMemoryOptimizations();
-// Header height for header BrowserView
+// header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
 const isMas = process.mas === true;
 
-// Add missing property to app
+// add missing property to app
 declare global {
     namespace NodeJS {
         interface Global {
@@ -132,7 +138,7 @@ declare global {
     }
 }
 
-// Multiple startup check
+// multiple startup check
 if (!isMas) {
     const gotTheLock = app.requestSingleInstanceLock();
     if (!gotTheLock) {
@@ -141,14 +147,14 @@ if (!isMas) {
     }
 }
 
-// Extend app with custom property
+// extend app w custom property
 Object.defineProperty(app, 'isQuitting', {
     value: false,
     writable: true,
     configurable: true,
 });
 
-// Display settings
+// display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
 let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
@@ -173,14 +179,14 @@ function setupUpdater() {
     autoUpdater.checkForUpdates();
 }
 
-// Tray setup
+// tray setup
 function setupTray() {
     if (tray) {
         tray.destroy();
         tray = null;
     }
 
-    // Create tray icon
+    // create tray icon
     const iconPath = path.join(
         RESOURCES_PATH,
         'icons',
@@ -188,13 +194,13 @@ function setupTray() {
     );
     const icon = nativeImage.createFromPath(iconPath);
 
-    // Resize icon
+    // resize icon
     const trayIcon = icon.resize({ width: 16, height: 16 });
 
     tray = new Tray(trayIcon);
     tray.setToolTip('SoundCloud RPC');
 
-    // Create tray menu
+    // create tray menu
     const contextMenu = Menu.buildFromTemplate([
         {
             label: 'SoundCloud',
@@ -225,29 +231,28 @@ function setupTray() {
 
     tray.setContextMenu(contextMenu);
 
-   // Prevent rendering engine deadlocks when waking hidden/minimized windows from the tray
-	tray.on('click', () => {
-		if (mainWindow) {
-			const isMinimized = mainWindow.isMinimized();
-			const isVisible = mainWindow.isVisible();
+    // prevent rendering engine deadlocks when waking hidden/minimized windows from tray
+    tray.on('click', () => {
+        if (mainWindow) {
+            const isMinimized = mainWindow.isMinimized();
+            const isVisible = mainWindow.isVisible();
 
-			if (isMinimized) {
-				mainWindow.restore();
-			}
-			
-			if (!isVisible) {
-				mainWindow.show();
-			}
+            if (isMinimized) {
+                mainWindow.restore();
+            }
 
-			mainWindow.focus();
-			
-			// This can now be called directly without throwing a compilation error
-			adjustContentViews();
-		}
-	});
+            if (!isVisible) {
+                mainWindow.show();
+            }
+
+            mainWindow.focus();
+
+            adjustContentViews();
+        }
+    });
 }
 
-// Update the language when retrieved from the web page
+// update language when retrieved from web page
 async function getLanguage() {
     if (!contentView) return;
     const langInfo = await contentView.webContents.executeJavaScript(`
@@ -262,7 +267,7 @@ async function getLanguage() {
     translationService.setLanguage(langInfo.lang);
 }
 
-// Browser window configuration
+// browser window config
 function createBrowserWindow(windowState: any): BrowserWindow {
     const window = new BrowserWindow({
         width: windowState.width,
@@ -289,14 +294,17 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
 
-    const userAgent =
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
-
-    window.webContents.setUserAgent(userAgent);
+    window.webContents.setUserAgent(globalUserAgent);
 
     const session = window.webContents.session;
     session.webRequest.onBeforeSendHeaders((details, callback) => {
-        if (details.url.includes('google') || details.url.includes('icloud') || details.url.includes('apple')) {
+        // bypass header tampering for google &&& apple &&& cobalt endpoints
+        if (
+            details.url.includes('google') ||
+            details.url.includes('icloud') ||
+            details.url.includes('apple') ||
+            details.url.includes('cobalt')
+        ) {
             callback({ requestHeaders: details.requestHeaders });
             return;
         }
@@ -307,9 +315,9 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
+            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
             'Upgrade-Insecure-Requests': '1',
-            'User-Agent': userAgent,
+            'User-Agent': globalUserAgent, // ensure all requests use same user agent
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-User': '?1',
@@ -346,7 +354,7 @@ function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
     }
 }
 
-// Defer bounds adjustments if the window frame cannot process rendering dimensions
+// defer bounds adjustments if window frame cannot process rendering dimensions
 function adjustContentViews() {
     if (!mainWindow || !contentView || !headerView) return;
     if (!mainWindow.isVisible() || mainWindow.isMinimized()) return;
@@ -426,7 +434,7 @@ function setupWindowControls() {
         }
     });
 
-    // Navigation handlers
+    // nav handlers
     ipcMain.on('navigate-back', () => {
         if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
             contentView.webContents.navigationHistory.goBack();
@@ -476,7 +484,7 @@ function setupWindowControls() {
         return store.get('minimizeToTray', true);
     });
 
-    // Handle navigation controls enabled setting
+    // handle nav controls enabled setting
     ipcMain.handle('get-navigation-controls-enabled', () => {
         return store.get('navigationControlsEnabled', false);
     });
@@ -498,7 +506,7 @@ async function init() {
     }
 
     setupUpdater();
-    setupTray(); // Call setupTray here
+    setupTray();
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
@@ -508,7 +516,7 @@ async function init() {
 
     windowState.manage(mainWindow);
 
-    // Handle window close event for minimize to tray
+    // handle window close event for minimize to tray
     mainWindow.on('close', (event) => {
         const minimizeToTray = store.get('minimizeToTray', true);
         if (minimizeToTray && !isQuitting) {
@@ -545,13 +553,13 @@ async function init() {
     headerView.setAutoResize({ width: true, height: false });
     headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
 
-	// get selected account and define partition
+    // get selected account and define partition
     const currentAccountId = store.get('currentAccountId', 'default');
     const sessionPartition = currentAccountId === 'default' ? undefined : `persist:sc_${currentAccountId}`;
 
     contentView = new BrowserView({
         webPreferences: {
-			...(sessionPartition ? { partition: sessionPartition } : {}),
+            ...(sessionPartition ? { partition: sessionPartition } : {}),
             nodeIntegration: false,
             contextIsolation: true,
             sandbox: false,
@@ -574,16 +582,14 @@ async function init() {
     });
     contentView.setAutoResize({ width: true, height: true });
 
-    contentView.webContents.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    );
+    contentView.webContents.setUserAgent(globalUserAgent);
 
     // Initialize services
     translationService = new TranslationService();
     themeService = new ThemeService(store);
     pluginService = new PluginService(store);
     pluginService.setContentView(contentView);
-    // Hot-reload custom theme CSS when files change
+    // hot reload custom theme CSS when files change
     themeService.onCustomThemeUpdated(() => {
         applyThemeToContent(isDarkTheme);
     });
@@ -669,10 +675,14 @@ async function init() {
 
     // Configure session
     const session = contentView.webContents.session;
-    const userAgent =
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     session.webRequest.onBeforeSendHeaders((details, callback) => {
-        if (details.url.includes('google')) {
+        // bypass header tampering for google &&& apple &&& cobalt endpoints
+        if (
+            details.url.includes('google') ||
+            details.url.includes('icloud') ||
+            details.url.includes('apple') ||
+            details.url.includes('cobalt')
+        ) {
             callback({ requestHeaders: details.requestHeaders });
             return;
         }
@@ -682,9 +692,9 @@ async function init() {
             Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
+            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
             'Upgrade-Insecure-Requests': '1',
-            'User-Agent': userAgent,
+            'User-Agent': globalUserAgent, // ensure all requests use the same user agent
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-User': '?1',
@@ -787,7 +797,6 @@ async function init() {
 
         // Reinitialize after page load/refresh
         await reinitializeAfterPageLoad();
-		
     });
 
     // Reinitialize everything after page load/refresh
@@ -867,12 +876,12 @@ async function init() {
             applyThemeToContent(isDarkTheme);
         }
     });
-	
-	// handle account switching
+
+    // handle account switching
     ipcMain.handle('get-accounts', () => {
         return {
             accounts: store.get('accounts', [{ id: 'default', name: 'Main Account' }]),
-            currentAccountId: store.get('currentAccountId', 'default')
+            currentAccountId: store.get('currentAccountId', 'default'),
         };
     });
 
@@ -892,31 +901,31 @@ async function init() {
         app.quit();
     });
 
-	ipcMain.on('logout-account', async () => {
+    ipcMain.on('logout-account', async () => {
         const currentId = store.get('currentAccountId', 'default');
-        
+
         if (contentView) {
-            // Log out of the session
+            // log out of session
             await contentView.webContents.session.clearStorageData();
         }
 
-        // If it's not the default account, remove it from the list
+        // if not default account, remove from list
         if (currentId !== 'default') {
             const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
             const filteredAccounts = accounts.filter((a: any) => a.id !== currentId);
-            
+
             store.set('accounts', filteredAccounts);
             store.set('currentAccountId', 'default'); // Switch back to main
-            
+
             app.relaunch();
             app.quit();
         } else {
-            // If it IS the default account, just reload the page logged out
+            // if default account, reload page logged out
             if (contentView) contentView.webContents.reload();
         }
     });
-	
-    // Handle applying all changes
+
+    // handle applying all changes
     ipcMain.on('apply-changes', async () => {
         if (store.get('proxyEnabled')) {
             await proxyService.apply();
@@ -937,12 +946,12 @@ async function init() {
             presenceService.clearActivity();
         }
     });
-	
-	// Background username poller (handles dynamic logins and window resizing)
-	setInterval(async () => {
-		if (!contentView) return;
-		try {
-			const username = await contentView.webContents.executeJavaScript(`
+
+    // bg username poller (handles dynamic logins and window resizing)
+    setInterval(async () => {
+        if (!contentView) return;
+        try {
+            const username = await contentView.webContents.executeJavaScript(`
 				(() => {
 					try {
 						// Look for the main profile button in the nav
@@ -966,27 +975,27 @@ async function init() {
 					}
 				})()
 			`);
-			
-			if (username && typeof username === 'string' && username.trim() !== '') {
-				const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
-				const currentId = store.get('currentAccountId', 'default');
-				const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
-				
-				if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
-					console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
-					
-					accounts[accountIndex].name = username;
-					store.set('accounts', [...accounts]); // Write to disk
-					
-					if (settingsManager && settingsManager.getView()) {
-						settingsManager.getView()?.webContents.send('accounts-updated');
-					}
-				}
-			}
-		} catch (e) {
-			// Silently ignore if page is navigating
-		}
-	}, 5000);
+
+            if (username && typeof username === 'string' && username.trim() !== '') {
+                const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+                const currentId = store.get('currentAccountId', 'default');
+                const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
+
+                if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
+                    console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
+
+                    accounts[accountIndex].name = username;
+                    store.set('accounts', [...accounts]); // Write to disk
+
+                    if (settingsManager && settingsManager.getView()) {
+                        settingsManager.getView()?.webContents.send('accounts-updated');
+                    }
+                }
+            }
+        } catch (e) {
+            // silently ignore if page navigating
+        }
+    }, 5000);
 }
 
 function setupMemoryPressureHandler() {
@@ -1020,10 +1029,10 @@ function setupMemoryPressureHandler() {
 }
 
 function setupThemeHandlers() {
-    // Load initial theme from store
+    // load initial theme from store
     isDarkTheme = store.get('theme', 'dark') === 'dark';
 
-    // Send initial theme to all views
+    // send initial theme to all views
     if (headerView && headerView.webContents) {
         headerView.webContents.send('theme-changed', isDarkTheme);
     }
@@ -1070,13 +1079,12 @@ function applyThemeToContent(isDark: boolean) {
     if (headerView && headerView.webContents) {
         headerView.webContents.send('theme-colors-changed', themeColors);
     }
-    
+
     // fetch settings for component toggles
     const hidePromotions = store.get('hidePromotions', true);
     const hideEventsNearYou = store.get('hideEventsNearYou', true);
     const hideArtistUpsells = store.get('hideArtistUpsells', true);
 
-    // Split CSS into sections using comment markers in the theme file:
     // /* @target all|content|header|settings */ ... /* @end */
     const sections = (function splitSections(css: string | null) {
         const res = { all: '', content: '', header: '', settings: '' } as Record<string, string>;
@@ -1094,7 +1102,7 @@ function applyThemeToContent(isDark: boolean) {
             res[target] += (res[target] ? '\n' : '') + body;
         }
         if (!any) {
-            // No markers: treat entire CSS as content
+            // no markers: treat entire CSS as content
             res.content = css;
         }
         return res;
@@ -1172,12 +1180,12 @@ function applyThemeToContent(isDark: boolean) {
                             const container = iframe.closest('.webiEmbeddedModuleContainer');
                             
                             if (container && doc) {
-                                // 1. Inject CSS directly INSIDE the iframe to hide the waitlist card
+                                // inject CSS directly INSIDE iframe to hide waitlist card
                                 if (!doc.getElementById('custom-iframe-style')) {
                                     const iframeStyle = doc.createElement('style');
                                     iframeStyle.id = 'custom-iframe-style';
-                                    // Notice the single quotes so it evaluates to a valid JS string
-                                    iframeStyle.textContent = ${hideArtistUpsells ? "'.MuiBox-root:has(a[href*=\"getstarted/fan-support\"]) { display: none !important; }'" : "''"};
+                                    // notice single quotes so  evaluates to valid JS string
+                                    iframeStyle.textContent = '${hideArtistUpsells ? '.MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }' : ''}';
                                     doc.head.appendChild(iframeStyle);
                                 }
 
@@ -1189,12 +1197,12 @@ function applyThemeToContent(isDark: boolean) {
                                 }
                             }
                         } catch(e) {
-                            // Silently fail if iframe hasn't fully loaded yet
+                            // silently fail if iframe not fully loaded yet
                         }
                     });
                 }, 1000);
 
-                // Apply custom theme CSS (content section + all) if available
+                // apply custom theme CSS (content section + all) if available
                 const contentCSS = \`${sections.all + (sections.all && sections.content ? '\n' : '') + sections.content || ''}\`;
                 if (contentCSS.trim()) {
                     const customStyle = document.createElement('style');
@@ -1223,7 +1231,7 @@ function applyThemeToContent(isDark: boolean) {
 
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
 
-    // Also inject into header and settings views using their specific sections
+    // inject into header & settings views using specific sections
     const headerCSS = sections.all + (sections.all && sections.header ? '\n' : '') + sections.header || '';
     if (headerView && headerView.webContents) {
         const headerScript = `
@@ -1332,7 +1340,7 @@ function initializeShortcuts() {
     console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
 }
 
-// App lifecycle handlers
+// app lifecycle handlers
 app.on('ready', init);
 
 app.on('window-all-closed', function () {
@@ -1365,22 +1373,20 @@ app.on('will-quit', () => {
     }
 });
 
-// focus the window when the second instance is opened.
+// focus window when second instance opened
 app.on('second-instance', () => {
     if (!mainWindow) {
         return;
     }
-    
-    // When minimize-to-tray is active, the window is hidden.
-    // We MUST show it before restoring or focusing — otherwise restoring
-    // a hidden window causes a renderer crash on Windows.
+
+    // when minimize to tray active, window is hidden
     if (!mainWindow.isVisible()) {
         mainWindow.show();
     }
     if (mainWindow.isMinimized()) {
         mainWindow.restore();
     }
-    
+
     mainWindow.focus();
 });
 
@@ -1451,7 +1457,7 @@ function setupTranslationHandlers() {
     });
 }
 
-// Setup audio event handler for track updates
+// setup audio event handler for track updates
 function setupAudioHandler() {
     ipcMain.on('soundcloud:track-update', async (event, payload: unknown) => {
         if (!isTrustedSoundCloudSender(event)) {
@@ -1477,7 +1483,7 @@ function setupAudioHandler() {
             pluginService.notifyTrackChange(result as unknown as Record<string, unknown>);
         }
 
-        // Update services on track update
+        // update services on track update
         if (result.title && result.author && result.duration) {
             await Promise.all([
                 lastFmService.updateTrackInfo(
@@ -1506,7 +1512,7 @@ function setupAudioHandler() {
             await presenceService.updatePresence(result);
         }
 
-        // Update the rich presence preview in settings
+        // update rich presence preview in settings
         if (settingsManager) {
             settingsManager.getView()?.webContents.send('presence-preview-update', result);
         }

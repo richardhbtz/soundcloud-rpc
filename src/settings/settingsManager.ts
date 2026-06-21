@@ -1193,7 +1193,7 @@ export class SettingsManager {
                 openPath: (targetPath) => window.settingsAPI.openPath(targetPath),
             };
 
-            // 1. Data Loader Functions
+            // data loading functions
             async function loadCustomThemes() {
                 try {
                     const themes = await ipcRenderer.invoke('get-custom-themes');
@@ -1317,14 +1317,14 @@ export class SettingsManager {
                 }
             }
 
-            // 2. Single Unified Initialization
+            // initilization
             document.addEventListener('DOMContentLoaded', () => {
                 loadCustomThemes();
                 loadPlugins();
                 loadAccounts();
             });
 
-            // 3. Account Manager Event Listeners
+            // account manager event listeners
             ipcRenderer.on('accounts-updated', loadAccounts);
 
             const accSelector = document.getElementById('accountSelector');
@@ -1348,7 +1348,7 @@ export class SettingsManager {
                 });
             }
 
-            // 4. Standard UI Event Listeners
+            // standard UI event listeners
             document.getElementById('customThemeSelector')?.addEventListener('change', async (e) => {
                 const themeName = e.target.value;
                 try {
@@ -1400,7 +1400,7 @@ export class SettingsManager {
                 }
             });
 
-            // UI Customization Toggles
+            // UI customization toggles
             document.getElementById('hidePromotions')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'hidePromotions', value: e.target.checked });
             });
@@ -1542,7 +1542,7 @@ export class SettingsManager {
                 ipcRenderer.send('apply-changes');
             });
 
-            // 5. Rich Presence Preview Logic
+            // rich presence preview logic
             let currentTrack = null;
             let progressInterval = null;
 
@@ -1762,7 +1762,7 @@ export class SettingsManager {
                 progressInterval = setInterval(updateProgress, 1000);
             }
 
-            // 6. External Event Triggers
+            // external event triggers
             ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
                 updatePreview(trackInfo);
             });

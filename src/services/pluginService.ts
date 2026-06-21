@@ -1,6 +1,6 @@
 import { app, ipcMain, type BrowserView } from 'electron';
-import { readFileSync, existsSync, readdirSync, statSync, watch } from 'fs';
-import { join, basename, extname } from 'path';
+import { readFileSync, existsSync, readdirSync, statSync, watch, mkdirSync } from 'fs';
+import path, { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
 import { EventEmitter } from 'events';
 import { parseMetadata, type FileMetadata } from '../utils/metadataParser';
@@ -37,7 +37,8 @@ export class PluginService {
 
     constructor(store: ElectronStore) {
         this.store = store;
-        this.pluginsPath = join(app.getPath('userData'), 'plugins');
+        // assign dynamic environment path
+        this.pluginsPath = this.getPluginsPath();
         this.ensurePluginsDirectory();
         this.scanPlugins();
         this.setupIpcHandlers();
@@ -48,7 +49,7 @@ export class PluginService {
     private ensurePluginsDirectory(): void {
         try {
             if (!existsSync(this.pluginsPath)) {
-                require('fs').mkdirSync(this.pluginsPath, { recursive: true });
+                mkdirSync(this.pluginsPath, { recursive: true });
             }
         } catch (error) {
             console.error('Failed to create plugins directory:', error);
@@ -312,7 +313,8 @@ export class PluginService {
     }
 
     public getPluginsPath(): string {
-        return this.pluginsPath;
+        // route dev mode to workspace folder &&& production mode to user profile
+        return app.isPackaged ? path.join(app.getPath('userData'), 'plugins') : path.join(process.cwd(), 'plugins');
     }
 
     public onPluginsChanged(listener: () => void): () => void {

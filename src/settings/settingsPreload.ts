@@ -1,13 +1,13 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 const SEND_CHANNELS = new Set([
-    'apply-changes', 
-    'setting-changed', 
-    'show-plugin-homepage-dialog', 
-    'toggle-settings', 
+    'apply-changes',
+    'setting-changed',
+    'show-plugin-homepage-dialog',
+    'toggle-settings',
     'switch-account',
     'add-account',
-    'logout-account'
+    'logout-account',
 ]);
 
 const INVOKE_CHANNELS = new Set([
@@ -23,15 +23,10 @@ const INVOKE_CHANNELS = new Set([
     'refresh-custom-themes',
     'refresh-plugins',
     'set-plugin-enabled',
-	'get-accounts'
+    'get-accounts',
 ]);
 
-const ON_CHANNELS = new Set([
-    'presence-preview-update', 
-    'theme-changed', 
-    'update-translations', 
-    'accounts-updated'
-]);
+const ON_CHANNELS = new Set(['presence-preview-update', 'theme-changed', 'update-translations', 'accounts-updated']);
 
 function isHttpsUrl(value: string): boolean {
     try {
