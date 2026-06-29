@@ -13,6 +13,7 @@ export const audioMonitorScript = `
   let currentTrackUrl = '';
   let currentTrackElapsed = '';
   let currentTrackDuration = '';
+  let isCurrentTrackLiked = false;
   let elapsedObserver = null;
   
   function getTrackInfo() {
@@ -24,6 +25,7 @@ export const audioMonitorScript = `
     const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
     const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
     const urlEl = document.querySelector('.playbackSoundBadge__titleLink');
+    const likeButtonEl = document.querySelector('.playbackSoundBadge__like');
     
     return {
       title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
@@ -32,6 +34,7 @@ export const audioMonitorScript = `
       elapsed: elapsedEl ? elapsedEl.textContent.trim() : '',
       duration: durationEl ? durationEl.textContent.trim() : '',
       isPlaying: isPlaying,
+      isLiked: likeButtonEl ? likeButtonEl.classList.contains('sc-button-selected') : false,
       url: urlEl ? urlEl.href.split('?')[0] : ''
     };
   }
@@ -45,14 +48,16 @@ export const audioMonitorScript = `
       trackInfo.url !== currentTrackUrl;
     const elapsedChanged = trackInfo.elapsed !== currentTrackElapsed;
     const durationChanged = trackInfo.duration !== currentTrackDuration;
+    const likeChanged = trackInfo.isLiked !== isCurrentTrackLiked;
     
-    if (stateChanged || trackChanged || elapsedChanged || !window.__initialStateSent) {
+    if (stateChanged || trackChanged || elapsedChanged || likeChanged || !window.__initialStateSent) {
       isCurrentlyPlaying = trackInfo.isPlaying;
       currentTrackTitle = trackInfo.title;
       currentTrackAuthor = trackInfo.author;
       currentTrackUrl = trackInfo.url;
       currentTrackElapsed = trackInfo.elapsed;
       currentTrackDuration = trackInfo.duration;
+      isCurrentTrackLiked = trackInfo.isLiked;
       window.__initialStateSent = true;
       
       window.soundcloudAPI.sendTrackUpdate(trackInfo, 'playback-state-change');
@@ -114,6 +119,16 @@ export const audioMonitorScript = `
         currentTrackUrl = '';
         // Wait a bit longer for track to change
         setTimeout(notifyPlaybackStateChange, 300);
+      });
+    }
+
+    // Monitor like button interaction to instantly trigger UI mirror
+    const likeButton = document.querySelector('.playbackSoundBadge__like');
+    if (likeButton && !likeButton.__monitored) {
+      likeButton.__monitored = true;
+      likeButton.addEventListener('click', () => {
+        console.debug('Like button clicked');
+        setTimeout(notifyPlaybackStateChange, 50);
       });
     }
 
@@ -192,10 +207,12 @@ export const audioMonitorScript = `
         // 1. Track changed (title/author/url)
         // 2. Play state changed
         // 3. Elapsed time reset to start (loop detection)
+        // 4. Like state changed
         const trackChanged = trackInfo.title !== currentTrackTitle ||
                             trackInfo.author !== currentTrackAuthor ||
                             trackInfo.url !== currentTrackUrl;
         const playStateChanged = trackInfo.isPlaying !== isCurrentlyPlaying;
+        const likeChanged = trackInfo.isLiked !== isCurrentTrackLiked;
         
         // Check if it's near the start (0-3 seconds = loop)
         const parseTimeToSeconds = (time) => {
@@ -210,7 +227,7 @@ export const audioMonitorScript = `
         const elapsedSeconds = parseTimeToSeconds(trackInfo.elapsed);
         const isLoop = elapsedSeconds <= 3;
         
-        if (trackChanged || playStateChanged || isLoop) {
+        if (trackChanged || playStateChanged || likeChanged || isLoop) {
           notifyPlaybackStateChange();
         }
       });
@@ -291,6 +308,11 @@ export const audioMonitorScript = `
       
       const playPauseButton = document.querySelector('.playControl');
       if (playPauseButton && !playPauseButton.__monitored) {
+        monitorPlaybackControls();
+      }
+
+      const likeButton = document.querySelector('.playbackSoundBadge__like');
+      if (likeButton && !likeButton.__monitored) {
         monitorPlaybackControls();
       }
     });

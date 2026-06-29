@@ -5,6 +5,8 @@
     "next": "Próxima",
     "play": "Reproduzir",
     "pause": "Pausar",
+    "like": "Curtir",
+    "unlike": "Deixar de curtir",
     "client": "Cliente",
     "darkMode": "Modo Escuro",
     "adBlocker": "AdBlocker",

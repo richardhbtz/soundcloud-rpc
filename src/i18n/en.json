@@ -5,6 +5,8 @@
     "next": "Next",
     "play": "Play",
     "pause": "Pause",
+    "like": "Like",
+    "unlike": "Unlike",
     "client": "Client",
     "darkMode": "Enable Dark Mode",
     "adBlocker": "AdBlocker",

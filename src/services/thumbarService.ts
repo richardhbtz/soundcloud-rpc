@@ -9,13 +9,29 @@ export class ThumbarService {
         this.translationService = translationService;
     }
 
-    public updateThumbarButtons(win: BrowserWindow | null, isPlaying: boolean, mainWindow: BrowserView | null): void {
+    public updateThumbarButtons(win: BrowserWindow | null, isPlaying: boolean, isLiked: boolean, mainWindow: BrowserView | null): void {
         if (!win || !mainWindow) return;
         const backwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/backward.ico'));
         const playIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/play.ico'));
         const pauseIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/pause.ico'));
         const forwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/forward.ico'));
+        const likeIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/heart.ico'));
+        const unlikeIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/heart-filled.ico'));
+
         const buttons = [
+            {
+                tooltip: isLiked
+                    ? this.translationService.translate('unlike')
+                    : this.translationService.translate('like'),
+                icon: isLiked ? unlikeIcon : likeIcon,
+                click: () => {
+                    mainWindow.webContents.executeJavaScript(`
+                        (() => {
+                            document.querySelector('.playbackSoundBadge__like')?.click();
+                        })();
+                    `).catch(() => { });
+                },
+            },
             {
                 tooltip: this.translationService.translate('previous'),
                 icon: backwardIcon,
