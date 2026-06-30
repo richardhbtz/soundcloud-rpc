@@ -44,6 +44,7 @@ export function validateTrackInfo(data: unknown): TrackInfo | null {
         elapsed: cleanTrackString(input.elapsed, 32),
         duration: cleanTrackString(input.duration, 32),
         isPlaying: typeof input.isPlaying === 'boolean' ? input.isPlaying : false,
+        isLiked: typeof input.isLiked === 'boolean' ? input.isLiked : false,
         url: cleanTrackUrl(input.url),
     };
 }

@@ -5,6 +5,8 @@
     "next": "Siguiente",
     "play": "Reproducir",
     "pause": "Pausar",
+    "like": "Me gusta",
+    "unlike": "Ya no me gusta",
     "client": "Cliente",
     "darkMode": "Modo Oscuro",
     "adBlocker": "AdBlocker",

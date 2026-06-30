@@ -18,6 +18,8 @@ export interface TrackInfo {
     duration: string;
     /** Whether the track is currently playing */
     isPlaying: boolean;
+    /** Whether the track is liked by the user */
+    isLiked: boolean;
     /** SoundCloud URL of the track */
     url: string;
 }

@@ -337,6 +337,7 @@ let lastTrackInfo: TrackInfo = {
     elapsed: '',
     duration: '',
     isPlaying: false,
+    isLiked: false,
     url: '',
 };
 
@@ -1518,7 +1519,7 @@ function setupAudioHandler() {
         }
 
         if (thumbarService) {
-            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, contentView);
+            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, result.isLiked, contentView);
         }
     });
 }
