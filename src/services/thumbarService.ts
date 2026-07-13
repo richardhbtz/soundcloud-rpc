@@ -9,7 +9,12 @@ export class ThumbarService {
         this.translationService = translationService;
     }
 
-    public updateThumbarButtons(win: BrowserWindow | null, isPlaying: boolean, isLiked: boolean, mainWindow: BrowserView | null): void {
+    public updateThumbarButtons(
+        win: BrowserWindow | null,
+        isPlaying: boolean,
+        isLiked: boolean,
+        mainWindow: BrowserView | null,
+    ): void {
         if (!win || !mainWindow) return;
         const backwardIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/backward.ico'));
         const playIcon = nativeImage.createFromPath(path.join(RESOURCES_PATH, '/icons/play.ico'));
@@ -25,11 +30,15 @@ export class ThumbarService {
                     : this.translationService.translate('like'),
                 icon: isLiked ? unlikeIcon : likeIcon,
                 click: () => {
-                    mainWindow.webContents.executeJavaScript(`
+                    mainWindow.webContents
+                        .executeJavaScript(
+                            `
                         (() => {
                             document.querySelector('.playbackSoundBadge__like')?.click();
                         })();
-                    `).catch(() => { });
+                    `,
+                        )
+                        .catch(() => {});
                 },
             },
             {

@@ -65,8 +65,23 @@
             "artifactName": "soundcloud-${version}-installer-win.${ext}"
         },
         "linux": {
-            "target": "AppImage",
-            "artifactName": "soundcloud-${version}-installer-linux.${ext}"
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "icon": "assets/icons/soundcloud.png",
+            "category": "AudioVideo",
+            "executableName": "soundcloud-rpc",
+            "synopsis": "SoundCloud client with Discord Rich Presence",
+            "artifactName": "soundcloud-${version}-linux.${ext}",
+            "desktop": {
+                "entry": {
+                    "Name": "SoundCloud",
+                    "Comment": "SoundCloud client with Discord Rich Presence",
+                    "Categories": "AudioVideo;Audio;Music;",
+                    "StartupWMClass": "soundcloud-rpc"
+                }
+            }
         }
     },
     "devDependencies": {
