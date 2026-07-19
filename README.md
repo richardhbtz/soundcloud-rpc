@@ -8,6 +8,8 @@
 
 A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm** and **AdBlock** support
 
+Works on **Linux** (AppImage/deb), **Windows** and **macOS**
+
 </div>
 
 ## ⚡️ Quick start
@@ -27,6 +29,26 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 > ```
 >
 > After running this command, the app should launch without any problem.
+
+## 🐧 Linux
+
+Grab the AppImage or deb from the [releases](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
+
+```
+chmod +x soundcloud-*-linux.AppImage
+./soundcloud-*-linux.AppImage
+```
+
+The AppImage writes its own .desktop file + icon on first run, so the proper icon shows up in the taskbar/launcher from
+the second launch on (wayland compositors can't know the icon before that). Widevine (GO+ playback) works. Auto updates
+only work with the AppImage. Tray works out of the box on kde, gnome needs a systray extension.
+
+Or build it yourself:
+
+```
+npm install
+npm run build-linux-appimage   # or build-linux-deb
+```
 
 ## ⚙️‍ Building
 

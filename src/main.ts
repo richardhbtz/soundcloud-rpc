@@ -11,7 +11,7 @@ import {
     type IpcMainEvent,
 } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
@@ -165,6 +165,12 @@ function setupUpdater() {
         return;
     }
 
+    // updater only works from the appimage on linux
+    if (process.platform === 'linux' && !process.env.APPIMAGE) {
+        console.log('Not running from AppImage, skipping auto-updater');
+        return;
+    }
+
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
@@ -177,6 +183,46 @@ function setupUpdater() {
     });
 
     autoUpdater.checkForUpdates();
+}
+
+// appimages don't install a desktop file, so wayland compositors can't match the window
+// to an icon and you get the generic cog. write one to ~/.local/share on first run
+function installDesktopFile() {
+    if (process.platform !== 'linux' || !process.env.APPIMAGE) return;
+
+    try {
+        const dataHome = process.env.XDG_DATA_HOME || path.join(app.getPath('home'), '.local', 'share');
+        const desktopFilePath = path.join(dataHome, 'applications', 'soundcloud-rpc.desktop');
+        const iconFilePath = path.join(dataHome, 'icons', 'hicolor', '1024x1024', 'apps', 'soundcloud-rpc.png');
+
+        if (!existsSync(iconFilePath)) {
+            mkdirSync(path.dirname(iconFilePath), { recursive: true });
+            copyFileSync(path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'), iconFilePath);
+        }
+
+        const entry = [
+            '[Desktop Entry]',
+            'Name=SoundCloud',
+            'Comment=SoundCloud client with Discord Rich Presence',
+            `Exec="${process.env.APPIMAGE}" %U`,
+            'Icon=soundcloud-rpc',
+            'Type=Application',
+            'Categories=AudioVideo;Audio;Music;',
+            'StartupWMClass=soundcloud-rpc',
+            'Terminal=false',
+            '',
+        ].join('\n');
+
+        // rewrite if missing or the appimage moved
+        const existing = existsSync(desktopFilePath) ? readFileSync(desktopFilePath, 'utf8') : '';
+        if (existing !== entry) {
+            mkdirSync(path.dirname(desktopFilePath), { recursive: true });
+            writeFileSync(desktopFilePath, entry);
+            console.log(`Desktop file written to ${desktopFilePath}`);
+        }
+    } catch (error) {
+        console.error('Failed to write desktop file:', error);
+    }
 }
 
 // tray setup
@@ -275,6 +321,7 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         x: windowState.x,
         y: windowState.y,
         title: 'SoundCloud',
+        icon: path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'),
         frame: process.platform === 'darwin',
         titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
         trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 10 } : undefined,
@@ -507,6 +554,7 @@ async function init() {
     }
 
     setupUpdater();
+    installDesktopFile();
     setupTray();
 
     if (process.platform === 'darwin') setupDarwinMenu();

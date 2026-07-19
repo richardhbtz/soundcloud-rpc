@@ -69,6 +69,13 @@ function signPackage(appOutDir) {
 // electron-builder passes context object with: appOutDir, packager
 module.exports = function (context) {
     const { appOutDir } = context;
+
+    // vmp signing isn't a thing on linux, widevine works without it there
+    if (context.electronPlatformName === 'linux') {
+        console.log('linux build, skipping VMP signing');
+        return;
+    }
+
     signPackage(appOutDir);
 };
 

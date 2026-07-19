@@ -1,6 +1,6 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import type { ThemeColors } from '../utils/colorExtractor';
-import { join } from 'path/win32';
+import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
 
