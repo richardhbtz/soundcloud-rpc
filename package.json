@@ -111,5 +111,14 @@
         "electron-store": "^8.1.0",
         "electron-updater": "^6.3.4",
         "electron-window-state": "^5.0.3"
+    },
+    "allowScripts": {
+        "core-js@2.6.12": true,
+        "github:castlabs/electron-releases#57d9d041d3e810a8a4cf817a2a10659769c0dffc": true,
+        "electron-winstaller@5.4.0": true,
+        "esbuild@0.28.2": true,
+        "fsevents@1.2.13": true,
+        "fsevents@2.3.3": true,
+        "github:devsnek/node-register-scheme#e7cc9a63a1f512565da44cb57316d9fb10750e17": true
     }
 }
