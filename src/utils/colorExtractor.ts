@@ -16,10 +16,36 @@ export interface ThemeColors {
  * Extract color values from CSS content
  * Looks for common CSS variable patterns used in themes
  */
+/**
+ * Extraction runs a dozen regexes over the whole stylesheet, and the result is requested
+ * on every theme application -- which happens on each content-view load. Themes change
+ * rarely, so results are memoized against the stylesheet text.
+ */
+const extractionCache = new Map<string, ThemeColors | null>();
+const EXTRACTION_CACHE_LIMIT = 16;
+
 export function extractThemeColors(cssContent: string): ThemeColors | null {
     if (!cssContent || cssContent.trim() === '') {
         return null;
     }
+
+    const cached = extractionCache.get(cssContent);
+    if (cached !== undefined) return cached;
+
+    const result = extractThemeColorsUncached(cssContent);
+
+    // themes are swapped by hand, so this never grows meaningfully; the bound just stops
+    // a pathological case from pinning every stylesheet ever loaded
+    if (extractionCache.size >= EXTRACTION_CACHE_LIMIT) {
+        const oldest = extractionCache.keys().next().value;
+        if (oldest !== undefined) extractionCache.delete(oldest);
+    }
+    extractionCache.set(cssContent, result);
+
+    return result;
+}
+
+function extractThemeColorsUncached(cssContent: string): ThemeColors | null {
 
     const colors: Partial<ThemeColors> = {};
 
