@@ -283,8 +283,21 @@ export const audioMonitorScript = `
     // Start monitoring elapsed time for loop detection
     monitorElapsedTime();
     
-    // Re-monitor elements if they get replaced/recreated
+    // Re-monitor elements if they get replaced/recreated.
+    // This watches document.body with subtree:true on a page that mutates constantly,
+    // so the callback fired far more often than there was work to do. Coalesce to one
+    // pass per frame -- the queries below are cheap individually but not at that rate.
+    let rescanQueued = false;
     const bodyObserver = new MutationObserver(() => {
+      if (rescanQueued) return;
+      rescanQueued = true;
+      requestAnimationFrame(() => {
+        rescanQueued = false;
+        rescanMonitoredElements();
+      });
+    });
+
+    function rescanMonitoredElements() {
       const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
       if (elapsedEl && !elapsedObserver) {
         monitorElapsedTime();
@@ -315,7 +328,7 @@ export const audioMonitorScript = `
       if (likeButton && !likeButton.__monitored) {
         monitorPlaybackControls();
       }
-    });
+    }
     
     bodyObserver.observe(document.body, {
       childList: true,

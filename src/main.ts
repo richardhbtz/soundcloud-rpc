@@ -33,6 +33,7 @@ import { validateTrackUpdatePayload } from './validation';
 import { isSecretKey, migrateSecrets, writeSecret } from './utils/secretStore';
 import { applyNavigationPolicy } from './utils/navigationPolicy';
 import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
+import { installStoreReadCache } from './utils/storeCache';
 import path = require('path');
 import { platform } from 'os';
 
@@ -80,6 +81,9 @@ const store = new Store({
     clearInvalidConfig: true,
     encryptionKey: 'soundcloud-rpc-config',
 });
+
+// every get() otherwise re-reads and re-decrypts the whole config file
+installStoreReadCache(store);
 
 let isDarkTheme = store.get('theme') !== 'light';
 
@@ -466,6 +470,13 @@ function isValidSettingPayload(data: unknown): data is { key: string; value: any
     return isValidSettingValue(value);
 }
 
+// the header used to poll is-maximized every 100ms to notice this; push it instead
+function sendMaximizedState(maximized: boolean): void {
+    if (headerView && !headerView.webContents.isDestroyed()) {
+        headerView.webContents.send('window-maximized-changed', maximized);
+    }
+}
+
 // defer bounds adjustments if window frame cannot process rendering dimensions
 function adjustContentViews() {
     if (!mainWindow || !contentView || !headerView) return;
@@ -525,10 +536,12 @@ function setupWindowControls() {
 
     mainWindow.on('maximize', () => {
         adjustContentViews();
+        sendMaximizedState(true);
     });
 
     mainWindow.on('unmaximize', () => {
         adjustContentViews();
+        sendMaximizedState(false);
     });
 
     mainWindow.on('resize', () => {
@@ -833,6 +846,12 @@ async function init() {
 
     // Apply initial settings
     await proxyService.apply();
+
+    // Blocking has to be installed on the session before anything is requested through
+    // it. This previously ran after loadURL, so the first page load of every session --
+    // the one the user actually waits for -- went out unfiltered.
+    await setupAdBlocker();
+
     contentView.webContents.loadURL('https://soundcloud.com/discover');
 
     // Function to update navigation state in header
@@ -875,25 +894,6 @@ async function init() {
         }
         updateNavigationState();
     });
-
-    // Initialize adblocker once
-    if (store.get('adBlocker')) {
-        try {
-            const blocker = await ElectronBlocker.fromLists(
-                fetch,
-                fullLists,
-                { enableCompression: true },
-                {
-                    path: 'engine.bin',
-                    read: async (...args) => readFileSync(...args),
-                    write: async (...args) => writeFileSync(...args),
-                },
-            );
-            blocker.enableBlockingInSession(contentView.webContents.session);
-        } catch (error) {
-            console.error('Failed to initialize adblocker:', error);
-        }
-    }
 
     // Track if this is initial load
     let isInitialLoad = true;
@@ -1091,55 +1091,82 @@ async function init() {
         }
     }));
 
-    // bg username poller (handles dynamic logins and window resizing)
-    setInterval(async () => {
-        if (!contentView) return;
-        try {
-            const username = await contentView.webContents.executeJavaScript(`
-				(() => {
-					try {
-						// Look for the main profile button in the nav
-						const profileBtn = document.querySelector('.header__userNav [data-menu-name="profile"]');
-						if (profileBtn && profileBtn.href) {
-							// href is "https://soundcloud.com/elricfd"
-							const parts = profileBtn.href.split('/');
-							return parts[parts.length - 1]; // returns "elricfd"
-						}
-						
-						// Fallback selector
-						const userBtn = document.querySelector('.header__userNavUsernameButton');
-						if (userBtn && userBtn.href) {
-							const parts = userBtn.href.split('/');
-							return parts[parts.length - 1];
-						}
-						
-						return null;
-					} catch(err) {
-						return null;
-					}
-				})()
-			`);
+    // The username only changes on login/logout/account switch, all of which end in a
+    // navigation. Reading it on navigation instead of every 5 seconds removes a
+    // permanent executeJavaScript round-trip into the content renderer -- which also
+    // woke the page (and the CPU) while the app sat idle in the background.
+    contentView.webContents.on('did-navigate-in-page', () => void refreshCurrentAccountName());
+    contentView.webContents.on('did-finish-load', () => void refreshCurrentAccountName());
+}
 
-            if (username && typeof username === 'string' && username.trim() !== '') {
-                const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
-                const currentId = store.get('currentAccountId', 'default');
-                const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
+async function refreshCurrentAccountName(): Promise<void> {
+    if (!contentView || contentView.webContents.isDestroyed()) return;
+    if (!contentViewIsOnSoundCloud()) return;
 
-                if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
-                    console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
-
-                    accounts[accountIndex].name = username;
-                    store.set('accounts', [...accounts]); // Write to disk
-
-                    if (settingsManager && settingsManager.getView()) {
-                        settingsManager.getView()?.webContents.send('accounts-updated');
+    try {
+        const username = await contentView.webContents.executeJavaScript(`
+            (() => {
+                try {
+                    const profileBtn = document.querySelector('.header__userNav [data-menu-name="profile"]');
+                    if (profileBtn && profileBtn.href) {
+                        const parts = profileBtn.href.split('/');
+                        return parts[parts.length - 1];
                     }
+
+                    const userBtn = document.querySelector('.header__userNavUsernameButton');
+                    if (userBtn && userBtn.href) {
+                        const parts = userBtn.href.split('/');
+                        return parts[parts.length - 1];
+                    }
+
+                    return null;
+                } catch (err) {
+                    return null;
                 }
-            }
-        } catch (e) {
-            // silently ignore if page navigating
+            })()
+        `);
+
+        if (!username || typeof username !== 'string' || username.trim() === '') return;
+
+        const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+        const currentId = store.get('currentAccountId', 'default');
+        const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
+
+        if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
+            console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
+
+            accounts[accountIndex].name = username;
+            store.set('accounts', [...accounts]);
+
+            settingsManager?.getView()?.webContents.send('accounts-updated');
         }
-    }, 5000);
+    } catch {
+        // page was navigating; the next navigation event will retry
+    }
+}
+
+async function setupAdBlocker(): Promise<void> {
+    if (!contentView || !store.get('adBlocker')) return;
+
+    try {
+        const blocker = await ElectronBlocker.fromLists(
+            fetch,
+            fullLists,
+            { enableCompression: true },
+            {
+                // relative paths resolve against process.cwd(), which for a packaged app
+                // is wherever the launcher happened to be -- so the compiled engine was
+                // rarely found again and the full lists were refetched and recompiled on
+                // every start. userData is stable and writable.
+                path: path.join(app.getPath('userData'), 'adblocker-engine.bin'),
+                read: async (...args) => readFileSync(...args),
+                write: async (...args) => writeFileSync(...args),
+            },
+        );
+        blocker.enableBlockingInSession(contentView.webContents.session);
+    } catch (error) {
+        console.error('Failed to initialize adblocker:', error);
+    }
 }
 
 function setupMemoryPressureHandler() {
@@ -1349,8 +1376,14 @@ function applyThemeToContent(isDark: boolean) {
                 document.head.appendChild(style);
 				
 				// Handle iframe-based artist upsells
-                if (window._artistUpsellInterval) clearInterval(window._artistUpsellInterval);
-                window._artistUpsellInterval = setInterval(() => {
+                // this ran once a second for the life of the process regardless of the
+                // setting, walking iframes and touching their documents. only run it
+                // when there is actually something to hide.
+                if (window._artistUpsellInterval) {
+                    clearInterval(window._artistUpsellInterval);
+                    window._artistUpsellInterval = null;
+                }
+                if (${hideArtistUpsells}) window._artistUpsellInterval = setInterval(() => {
                     // Grab both Artist tools AND Sidebar modules iframes
                     document.querySelectorAll('iframe[title="Artist tools"], iframe[title="Sidebar modules"]').forEach(iframe => {
                         try {
