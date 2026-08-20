@@ -3,6 +3,7 @@ import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
 import type { ThemeColors } from '../utils/colorExtractor';
 import { applyNavigationPolicy } from '../utils/navigationPolicy';
+import { markTrustedSender } from '../utils/ipcGuard';
 import { escapeHtml } from '../utils/escapeHtml';
 import { readSecret } from '../utils/secretStore';
 import { join } from 'path';
@@ -63,6 +64,7 @@ export class SettingsManager {
         });
 
         applyNavigationPolicy(this.view.webContents);
+        markTrustedSender(this.view.webContents);
 
         // add view immediately but keep off-screen until shown
         this.parentWindow.addBrowserView(this.view);

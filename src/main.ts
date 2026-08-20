@@ -32,6 +32,7 @@ import type { TrackInfo } from './types';
 import { validateTrackUpdatePayload } from './validation';
 import { isSecretKey, migrateSecrets, writeSecret } from './utils/secretStore';
 import { applyNavigationPolicy } from './utils/navigationPolicy';
+import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
 import path = require('path');
 import { platform } from 'os';
 
@@ -670,6 +671,7 @@ async function init() {
     headerView.setBounds({ x: 0, y: 0, width: mainWindow.getBounds().width, height: 32 });
     headerView.setAutoResize({ width: true, height: false });
     applyNavigationPolicy(headerView.webContents);
+    markTrustedSender(headerView.webContents);
     headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
 
     // get selected account and define partition
@@ -719,7 +721,9 @@ async function init() {
     });
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
-    proxyService = new ProxyService(mainWindow, store, queueToastNotification);
+    // resolved on each use: the proxy belongs on whichever session the content view is
+    // currently loading through, which changes when the user switches account
+    proxyService = new ProxyService(() => contentView?.webContents.session ?? null, store, queueToastNotification);
     presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(contentView, store);
     webhookService = new WebhookService(store);
@@ -730,12 +734,12 @@ async function init() {
     setupMemoryPressureHandler();
 
     // Add settings toggle handler
-    ipcMain.on('toggle-settings', () => {
+    ipcMain.on('toggle-settings', trustedOn(() => {
         settingsManager.toggle();
         applyThemeToContent(isDarkTheme);
-    });
+    }));
 
-    ipcMain.handle('confirm-open-homepage', async (_event, url: string) => {
+    ipcMain.handle('confirm-open-homepage', trustedHandle(async (_event, url: string) => {
         if (!url || typeof url !== 'string') return false;
         const normalizedUrl = url.trim();
         if (!/^https?:\/\//i.test(normalizedUrl)) return false;
@@ -746,9 +750,9 @@ async function init() {
         }
 
         return confirmed;
-    });
+    }));
 
-    ipcMain.on('show-plugin-homepage-dialog', async (_event, url: string) => {
+    ipcMain.on('show-plugin-homepage-dialog', trustedOn(async (_event, url: string) => {
         if (!url || typeof url !== 'string') return;
         const normalizedUrl = url.trim();
         if (!/^https?:\/\//i.test(normalizedUrl)) return;
@@ -757,9 +761,9 @@ async function init() {
         if (confirmed) {
             await shell.openExternal(normalizedUrl);
         }
-    });
+    }));
 
-    ipcMain.handle('open-external-url', async (_event, url: string) => {
+    ipcMain.handle('open-external-url', trustedHandle(async (_event, url: string) => {
         if (!url || typeof url !== 'string') return '';
         const normalizedUrl = url.trim();
 
@@ -771,9 +775,9 @@ async function init() {
         } catch {
             return '';
         }
-    });
+    }));
 
-    ipcMain.handle('open-path', async (_event, targetPath: string) => {
+    ipcMain.handle('open-path', trustedHandle(async (_event, targetPath: string) => {
         if (!targetPath || typeof targetPath !== 'string') return 'Invalid path';
         const allowedPaths = [themeService.getThemesPath(), pluginService.getPluginsPath()].map((allowedPath) =>
             path.resolve(allowedPath),
@@ -782,7 +786,7 @@ async function init() {
         if (!allowedPaths.includes(normalizedPath)) return 'Blocked path';
 
         return shell.openPath(targetPath);
-    });
+    }));
 
     setupWindowControls();
 
@@ -1025,13 +1029,13 @@ async function init() {
         };
     });
 
-    ipcMain.on('switch-account', (_, accountId) => {
+    ipcMain.on('switch-account', trustedOn((_, accountId) => {
         store.set('currentAccountId', accountId);
         app.relaunch();
         app.quit();
-    });
+    }));
 
-    ipcMain.on('add-account', () => {
+    ipcMain.on('add-account', trustedOn(() => {
         const newId = `acc_${Date.now()}`;
         const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
         accounts.push({ id: newId, name: 'New Account' });
@@ -1039,9 +1043,9 @@ async function init() {
         store.set('currentAccountId', newId);
         app.relaunch();
         app.quit();
-    });
+    }));
 
-    ipcMain.on('logout-account', async () => {
+    ipcMain.on('logout-account', trustedOn(async () => {
         const currentId = store.get('currentAccountId', 'default');
 
         if (contentView) {
@@ -1063,10 +1067,10 @@ async function init() {
             // if default account, reload page logged out
             if (contentView) contentView.webContents.reload();
         }
-    });
+    }));
 
     // handle applying all changes
-    ipcMain.on('apply-changes', async () => {
+    ipcMain.on('apply-changes', trustedOn(async () => {
         if (store.get('proxyEnabled')) {
             await proxyService.apply();
         }
@@ -1085,7 +1089,7 @@ async function init() {
         } else {
             presenceService.clearActivity();
         }
-    });
+    }));
 
     // bg username poller (handles dynamic logins and window resizing)
     setInterval(async () => {
@@ -1494,6 +1498,18 @@ app.on('will-quit', () => {
 });
 
 // focus window when second instance opened
+// ProxyService.handleAuth() existed but nothing ever called it, so a proxy that asked
+// for credentials simply failed however carefully they had been entered.
+app.on('login', (event, _webContents, _details, authInfo, callback) => {
+    if (!authInfo.isProxy) return;
+
+    const { username, password } = proxyService?.handleAuth(authInfo) ?? { username: '', password: '' };
+    if (!username && !password) return;
+
+    event.preventDefault();
+    callback(username, password);
+});
+
 app.on('second-instance', () => {
     if (!mainWindow) {
         return;

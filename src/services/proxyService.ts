@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import type { Session } from 'electron';
 import type ElectronStore = require('electron-store');
 import { readSecret } from '../utils/secretStore';
 
@@ -8,25 +8,35 @@ interface ProxyData {
 }
 
 export class ProxyService {
-    private window: BrowserWindow;
+    /**
+     * Resolved lazily rather than captured at construction. The proxy has to be set on
+     * the session that actually loads soundcloud.com -- the content view's -- and that
+     * view is built after this service, then rebuilt with a different partition
+     * (`persist:sc_<accountId>`) whenever the user switches account. Binding to
+     * mainWindow's session instead, as this previously did, left the proxy applied to a
+     * session nothing loads through on any non-default account.
+     */
+    private resolveSession: () => Session | null;
     private store: ElectronStore;
     private onNotification: (message: string) => void;
 
-    constructor(window: BrowserWindow, store: ElectronStore, notifyCallback: (message: string) => void) {
-        this.window = window;
+    constructor(resolveSession: () => Session | null, store: ElectronStore, notifyCallback: (message: string) => void) {
+        this.resolveSession = resolveSession;
         this.store = store;
         this.onNotification = notifyCallback;
     }
 
     async apply(): Promise<void> {
-        if (!this.window) return;
+        const session = this.resolveSession();
+        if (!session) return;
+
         const proxyEnabled = this.store.get('proxyEnabled');
         const proxyHost = this.store.get('proxyHost');
         const proxyPort = this.store.get('proxyPort');
 
         if (proxyEnabled && proxyHost && proxyPort) {
             try {
-                await this.window.webContents.session.setProxy({
+                await session.setProxy({
                     proxyRules: `http://${proxyHost}:${proxyPort}`,
                 });
                 console.log(`Proxy enabled: http://${proxyHost}:${proxyPort}`);
@@ -35,7 +45,7 @@ export class ProxyService {
                 this.onNotification('Failed to set proxy. Check your settings.');
             }
         } else {
-            await this.window.webContents.session.setProxy({ mode: 'direct' });
+            await session.setProxy({ mode: 'direct' });
         }
     }
 

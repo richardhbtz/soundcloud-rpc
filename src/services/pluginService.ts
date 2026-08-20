@@ -4,6 +4,7 @@ import path, { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
+import { trustedHandle } from '../utils/ipcGuard';
 import { parseMetadata, type FileMetadata } from '../utils/metadataParser';
 import { Script, createContext, type Context } from 'vm';
 
@@ -375,9 +376,14 @@ export class PluginService {
             }));
         });
 
-        ipcMain.handle('set-plugin-enabled', (_, id: string, enabled: boolean) => {
-            return this.setPluginEnabled(id, enabled);
-        });
+        ipcMain.handle(
+            'set-plugin-enabled',
+            // activating a plugin runs main-process code, so this must never be
+            // reachable from the view that loads soundcloud.com
+            trustedHandle((_, id: string, enabled: boolean) => {
+                return this.setPluginEnabled(id, enabled);
+            }, 'set-plugin-enabled'),
+        );
 
         ipcMain.handle('get-plugins-folder-path', () => {
             return this.pluginsPath;
