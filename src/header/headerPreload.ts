@@ -19,6 +19,7 @@ const ON_CHANNELS = new Set([
     'refresh-state-changed',
     'theme-changed',
     'theme-colors-changed',
+    'window-maximized-changed',
 ]);
 
 contextBridge.exposeInMainWorld('headerAPI', {

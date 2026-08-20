@@ -208,6 +208,12 @@ ipcRenderer.on('theme-colors-changed', (_, colors) => {
 });
 
 // Listen for navigation state changes
+ipcRenderer.on('window-maximized-changed', (_, maximized) => {
+    if (isMaximized === maximized) return;
+    isMaximized = maximized;
+    updateWindowControls();
+});
+
 ipcRenderer.on('navigation-state-changed', (_, state) => {
     updateNavigationState(state);
 });
@@ -253,13 +259,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Check window state periodically
-    setInterval(() => {
-        ipcRenderer.invoke('is-maximized').then((maximized) => {
-            if (isMaximized !== maximized) {
-                isMaximized = maximized;
-                updateWindowControls();
-            }
-        });
-    }, 100);
+    // seed once; further changes arrive on 'window-maximized-changed'
+    ipcRenderer.invoke('is-maximized').then((maximized) => {
+        if (isMaximized !== maximized) {
+            isMaximized = maximized;
+            updateWindowControls();
+        }
+    });
 });
