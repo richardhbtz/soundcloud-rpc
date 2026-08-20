@@ -251,7 +251,7 @@ function setupTray() {
         {
             label: 'SoundCloud',
             click: () => {
-                if (mainWindow) {
+                if (mainWindow && !mainWindow.isDestroyed()) {
                     if (!mainWindow.isVisible()) mainWindow.show();
                     if (mainWindow.isMinimized()) mainWindow.restore();
                     mainWindow.focus();
@@ -261,7 +261,7 @@ function setupTray() {
         {
             label: 'Settings',
             click: () => {
-                if (settingsManager) {
+                if (settingsManager && mainWindow && !mainWindow.isDestroyed()) {
                     settingsManager.toggle();
                 }
             },
@@ -279,7 +279,7 @@ function setupTray() {
 
     // prevent rendering engine deadlocks when waking hidden/minimized windows from tray
     tray.on('click', () => {
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
             const isMinimized = mainWindow.isMinimized();
             const isVisible = mainWindow.isVisible();
 
