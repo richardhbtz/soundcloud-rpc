@@ -470,6 +470,38 @@ function isValidSettingPayload(data: unknown): data is { key: string; value: any
     return isValidSettingValue(value);
 }
 
+let contentViewAdjustScheduled = false;
+
+function scheduleContentViewAdjust(): void {
+    if (contentViewAdjustScheduled) return;
+    contentViewAdjustScheduled = true;
+
+    setImmediate(() => {
+        contentViewAdjustScheduled = false;
+        adjustContentViews();
+    });
+}
+
+/**
+ * Applies a theme change everywhere it needs to land. Previously the header's toggle and
+ * the settings dropdown each did part of this: the toggle never persisted the choice, so
+ * a theme set from the header was lost on restart and never reached plugins or the
+ * settings view.
+ */
+function applyThemeChange(isDark: boolean): void {
+    isDarkTheme = isDark;
+    store.set('theme', isDark ? 'dark' : 'light');
+
+    pluginService?.notifyThemeChange(isDarkTheme);
+
+    if (headerView && !headerView.webContents.isDestroyed()) {
+        headerView.webContents.send('theme-changed', isDarkTheme);
+    }
+    settingsManager?.getView()?.webContents.send('theme-changed', isDarkTheme);
+
+    applyThemeToContent(isDarkTheme);
+}
+
 // the header used to poll is-maximized every 100ms to notice this; push it instead
 function sendMaximizedState(maximized: boolean): void {
     if (headerView && !headerView.webContents.isDestroyed()) {
@@ -544,8 +576,11 @@ function setupWindowControls() {
         sendMaximizedState(false);
     });
 
+    // 'resize' fires continuously while a window edge is dragged, and each call
+    // repositions two BrowserViews. Coalescing to one pass per frame keeps the views
+    // in step with the frame the compositor actually presents, instead of racing it.
     mainWindow.on('resize', () => {
-        adjustContentViews();
+        scheduleContentViewAdjust();
     });
 
     ipcMain.on('close-window', () => {
@@ -592,11 +627,7 @@ function setupWindowControls() {
     });
 
     ipcMain.on('toggle-theme', () => {
-        isDarkTheme = !isDarkTheme;
-        if (headerView && headerView.webContents) {
-            headerView.webContents.send('theme-changed', isDarkTheme);
-        }
-        applyThemeToContent(isDarkTheme);
+        applyThemeChange(!isDarkTheme);
     });
 
     // Handle is-maximized requests
@@ -622,13 +653,14 @@ let contentView: BrowserView;
 
 // Main initialization
 async function init() {
-    // Wait for Widevine CDM to be ready
-    try {
-        await components.whenReady();
-        console.log('Components ready:', components.status());
-    } catch (error) {
-        console.error('Failed to initialize components:', error);
-    }
+    // The Widevine CDM is only needed once protected media plays, but awaiting it here
+    // blocked every subsequent step -- window creation included -- so the app showed
+    // nothing at all until it resolved. Kick it off now and let startup continue.
+    const componentsReady = components
+        .whenReady()
+        .then(() => console.log('Components ready:', components.status()))
+        .catch((error) => console.error('Failed to initialize components:', error));
+    void componentsReady;
 
     // move any plaintext credentials written by an earlier build into the OS keystore.
     // must run after app ready, since safeStorage is not available before that.
@@ -992,6 +1024,8 @@ async function init() {
                 // If minimize to tray is enabled, create the tray
                 setupTray();
             }
+        } else if (key === 'theme') {
+            applyThemeChange(data.value === 'dark');
         } else if (key === 'webhookEnabled') {
             webhookService.setEnabled(data.value);
         } else if (key === 'webhookUrl') {
@@ -1212,27 +1246,6 @@ function setupThemeHandlers() {
     }
     applyThemeToContent(isDarkTheme);
 
-    // Listen for theme changes from settings or header
-    ipcMain.on('setting-changed', (_, data) => {
-        if (!isValidSettingPayload(data)) return;
-        if (data.key === 'theme') {
-            isDarkTheme = data.value === 'dark';
-            store.set('theme', data.value);
-
-            if (pluginService) {
-                pluginService.notifyThemeChange(isDarkTheme);
-            }
-
-            // Update all views
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('theme-changed', isDarkTheme);
-            }
-            if (settingsManager) {
-                settingsManager.getView()?.webContents.send('theme-changed', isDarkTheme);
-            }
-            applyThemeToContent(isDarkTheme);
-        }
-    });
 }
 
 // keys returned by insertCSS, so the previous theme's stylesheet can be removed
@@ -1681,8 +1694,12 @@ function setupAudioHandler() {
             await presenceService.updatePresence(result);
         }
 
-        // update rich presence preview in settings
-        if (settingsManager) {
+        // update rich presence preview in settings.
+        // Only while the panel is on screen: this payload carries the artwork URL, and
+        // the preview markup fetches and decodes that image. Sending it on every track
+        // update meant a hidden panel pulled artwork over the network for the whole
+        // session, and on macOS the view is torn down when closed anyway.
+        if (settingsManager?.isPanelVisible()) {
             settingsManager.getView()?.webContents.send('presence-preview-update', result);
         }
 

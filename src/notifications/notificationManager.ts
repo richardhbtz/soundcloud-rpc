@@ -12,7 +12,6 @@ export class NotificationManager {
     private parentWindow: BrowserWindow;
     private themeColors: ThemeColors | null = null;
     private devMode = process.argv.includes('--dev');
-    private useMacOptimizations = process.platform === 'darwin';
 
     constructor(parentWindow: BrowserWindow) {
         this.parentWindow = parentWindow;
@@ -44,12 +43,13 @@ export class NotificationManager {
         try {
             this.parentWindow.removeBrowserView(view);
         } catch {}
-        if (this.useMacOptimizations) {
-            try {
-                (view.webContents as any).destroy();
-            } catch {}
-            this.view = null;
-        }
+        // Destroyed on every platform, not just macOS. A toast lives for ~4.5s; keeping
+        // its renderer resident afterwards costs a process for the rest of the session
+        // on Windows and Linux too. ensureView() rebuilds it on the next toast.
+        try {
+            (view.webContents as any).destroy();
+        } catch {}
+        this.view = null;
     }
 
     public setThemeColors(colors: ThemeColors | null): void {

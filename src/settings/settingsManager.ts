@@ -17,6 +17,7 @@ export class SettingsManager {
     private store: ElectronStore;
     private translationService: TranslationService;
     private devMode = process.argv.includes('--dev');
+    // macOS additionally tears the view down again on close
     private useMacOptimizations = process.platform === 'darwin';
     // key returned by insertCSS for the current theme-colour stylesheet
     private themeColorCssKey: string | null = null;
@@ -32,9 +33,9 @@ export class SettingsManager {
                 this.updateBounds();
             }
         });
-        if (!this.useMacOptimizations) {
-            this.createView();
-        }
+        // The view is built on first open on every platform. It was previously created
+        // eagerly off macOS, which meant a renderer process and the full settings
+        // document were paid for at startup by users who never open settings.
     }
 
     public toggle(): void {
@@ -1884,6 +1885,11 @@ export class SettingsManager {
 
     public getView(): BrowserView | null {
         return this.view;
+    }
+
+    /** True only when the panel is built and actually on screen. */
+    public isPanelVisible(): boolean {
+        return this.isVisible && this.view !== null && !this.view.webContents.isDestroyed();
     }
 
     public updateTranslations(translationService: TranslationService): void {

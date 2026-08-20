@@ -6,6 +6,9 @@ import { normalizeTrackInfo } from '../utils/trackParser';
 import { readSecret, writeSecret } from '../utils/secretStore';
 import type { LastFmTrackData } from '../types';
 
+/** Upper bound on any Last.fm request; the API is not on the critical path. */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 export interface ScrobbleState {
     artist: string;
     title: string;
@@ -81,6 +84,9 @@ export class LastFmService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ ...payload, api_sig: apiSig, format: 'json' }),
+                // without a deadline a hung connection leaves the scrobble promise
+                // pending for as long as the OS keeps the socket open
+                signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
             });
             return await response.json();
         } catch (error) {
@@ -97,6 +103,7 @@ export class LastFmService {
             `https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=${encodeURIComponent(
                 api_key,
             )}&token=${encodeURIComponent(token)}&api_sig=${encodeURIComponent(apiSig)}&format=json`,
+            { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
         );
         const data = await res.json();
 

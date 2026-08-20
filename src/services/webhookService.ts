@@ -50,6 +50,9 @@ function shouldSendWebhook(state: WebhookState, triggerPercentage: number): bool
     return !state.webhookSent && playedTime >= targetTime;
 }
 
+/** Upper bound on a webhook delivery attempt. */
+const WEBHOOK_TIMEOUT_MS = 10_000;
+
 export class WebhookService {
     private store: ElectronStore;
     private currentWebhookState: WebhookState | null = null;
@@ -122,6 +125,9 @@ export class WebhookService {
                     timestamp: new Date().toISOString(),
                     ...trackData,
                 }),
+                // a user-supplied endpoint that never answers must not hold a request
+                // open for the rest of the session
+                signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
             });
 
             if (!response.ok) {
