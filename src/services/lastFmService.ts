@@ -9,6 +9,12 @@ import type { LastFmTrackData } from '../types';
 /** Upper bound on any Last.fm request; the API is not on the critical path. */
 const REQUEST_TIMEOUT_MS = 10_000;
 
+/** How long to wait for the user to approve authorisation before giving up. */
+const AUTH_TIMEOUT_MS = 5 * 60_000;
+
+const authUrl = (apiKey: string) =>
+    `https://www.last.fm/api/auth/?api_key=${encodeURIComponent(apiKey)}&cb=https://soundcloud.com/discover`;
+
 export interface ScrobbleState {
     artist: string;
     title: string;
@@ -123,19 +129,64 @@ export class LastFmService {
 
         this.isAuthenticating = true; // lock auth process
 
-        const authUrl = `https://www.last.fm/api/auth/?api_key=${encodeURIComponent(
-            apikey,
-        )}&cb=https://soundcloud.com/discover`;
-        // load auth url &&& wait for redirect
-        await this.window.webContents.loadURL(authUrl);
+        const webContents = this.window.webContents;
+        // held in an object so `finish` can clear it without referencing a binding
+        // declared later
+        const timers: { approval?: ReturnType<typeof setTimeout> } = {};
+        let settled = false;
 
-        this.window.webContents.on('will-redirect', async (_, url) => {
-            const token = new URL(url).searchParams.get('token');
-            if (token) {
-                await this.getLastFmSession(apikey as string, token);
-                this.window.webContents.loadURL('https://soundcloud.com/discover');
+        // Every exit path runs through here. The lock was previously only cleared by
+        // disconnect(), so any failed or abandoned attempt left it set for the rest of
+        // the session and the user could never retry without disconnecting the account.
+        const finish = () => {
+            if (settled) return;
+            settled = true;
+
+            if (timers.approval) clearTimeout(timers.approval);
+            webContents.off('will-redirect', onRedirect);
+            webContents.off('destroyed', finish);
+            this.isAuthenticating = false;
+        };
+
+        const onRedirect = async (_: unknown, url: string) => {
+            let token: string | null = null;
+            try {
+                token = new URL(url).searchParams.get('token');
+            } catch {
+                return;
             }
-        });
+
+            // the flow passes through login and consent pages first; only the callback
+            // carries a token, so intermediate redirects are ignored rather than
+            // consuming the listener
+            if (!token) return;
+
+            finish();
+
+            try {
+                await this.getLastFmSession(apikey, token);
+            } catch (error) {
+                console.error('Last.fm session exchange failed:', error);
+            }
+
+            webContents.loadURL('https://soundcloud.com/discover');
+        };
+
+        // the listener has to be attached before the navigation starts -- attaching it
+        // after `await loadURL` missed any redirect that happened during the load
+        webContents.on('will-redirect', onRedirect);
+        webContents.once('destroyed', finish);
+
+        // the user may simply never approve; without this the listener and the lock
+        // would both persist for the life of the process
+        timers.approval = setTimeout(finish, AUTH_TIMEOUT_MS);
+
+        try {
+            await webContents.loadURL(authUrl(apikey));
+        } catch (error) {
+            console.error('Failed to open the Last.fm authorisation page:', error);
+            finish();
+        }
     }
 
     private async scrobbleTrack(artist: string, track: string, timestamp: number): Promise<void> {
