@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
+import { readSecret } from '../utils/secretStore';
 
 interface ProxyData {
     user: string;
@@ -42,7 +43,7 @@ export class ProxyService {
         if (!this.store.get('proxyEnabled')) {
             return { username: '', password: '' };
         }
-        const proxyData = this.store.get('proxyData') as ProxyData | undefined;
+        const proxyData = readSecret<ProxyData | undefined>(this.store, 'proxyData', undefined);
         return {
             username: proxyData?.user || '',
             password: proxyData?.password || '',

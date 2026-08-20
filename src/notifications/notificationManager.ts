@@ -1,5 +1,6 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import type { ThemeColors } from '../utils/colorExtractor';
+import { applyNavigationPolicy } from '../utils/navigationPolicy';
 import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
@@ -33,6 +34,7 @@ export class NotificationManager {
                 ...(isMac ? { spellcheck: false } : {}),
             },
         });
+        applyNavigationPolicy(this.view.webContents);
         return this.view;
     }
 

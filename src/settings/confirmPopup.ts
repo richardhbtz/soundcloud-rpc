@@ -1,18 +1,11 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
+import { applyNavigationPolicy } from '../utils/navigationPolicy';
+import { escapeHtml } from '../utils/escapeHtml';
 
 let confirmPopupView: BrowserView | null = null;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
-
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
 
 function updateHomepageConfirmBounds(mainWindow: BrowserWindow): void {
     if (!mainWindow || !confirmPopupView) return;
@@ -46,6 +39,8 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
             ...(isMac ? { spellcheck: false } : {}),
         },
     });
+
+    applyNavigationPolicy(confirmPopupView.webContents);
 
     mainWindow.addBrowserView(confirmPopupView);
     updateHomepageConfirmBounds(mainWindow);
