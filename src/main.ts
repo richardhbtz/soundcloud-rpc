@@ -30,6 +30,8 @@ import { audioMonitorScript } from './services/audioMonitorService';
 import { showHomepageConfirmDialog, updateDialogBounds } from './settings/confirmPopup';
 import type { TrackInfo } from './types';
 import { validateTrackUpdatePayload } from './validation';
+import { isSecretKey, migrateSecrets, writeSecret } from './utils/secretStore';
+import { applyNavigationPolicy } from './utils/navigationPolicy';
 import path = require('path');
 import { platform } from 'os';
 
@@ -393,14 +395,74 @@ function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
     if (!contentView || event.sender.id !== contentView.webContents.id) return false;
 
     const frameUrl = event.senderFrame?.url || event.sender.getURL();
+    return isSoundCloudUrl(frameUrl);
+}
+
+function isSoundCloudUrl(rawUrl: string): boolean {
     try {
-        const url = new URL(frameUrl);
+        const url = new URL(rawUrl);
         return (
             url.protocol === 'https:' && (url.hostname === 'soundcloud.com' || url.hostname.endsWith('.soundcloud.com'))
         );
     } catch {
         return false;
     }
+}
+
+/**
+ * The content view can be navigated away from soundcloud.com -- by a link, by an ad
+ * frame, or by the app itself during Last.fm authentication. Scripts the app injects
+ * carry app privileges, so they must only run once the view is back on SoundCloud.
+ */
+function contentViewIsOnSoundCloud(): boolean {
+    if (!contentView || contentView.webContents.isDestroyed()) return false;
+    return isSoundCloudUrl(contentView.webContents.getURL());
+}
+
+const SETTING_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
+
+function isValidSettingValue(value: unknown, depth = 0): boolean {
+    if (depth > 4) return false;
+    if (value === null) return true;
+
+    switch (typeof value) {
+        case 'string':
+            return value.length <= 4096;
+        case 'number':
+            return Number.isFinite(value);
+        case 'boolean':
+            return true;
+        case 'object':
+            break;
+        default:
+            return false;
+    }
+
+    if (Array.isArray(value)) {
+        return value.length <= 128 && value.every((entry) => isValidSettingValue(entry, depth + 1));
+    }
+
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length > 64) return false;
+    return entries.every(([key, entry]) => SETTING_KEY_PATTERN.test(key) && isValidSettingValue(entry, depth + 1));
+}
+
+/**
+ * `setting-changed` writes straight into the config store, so an unchecked payload can
+ * set arbitrary keys -- including proxy and credential entries. Keys are restricted to a
+ * plain identifier shape, which also rules out dot-prop path traversal and
+ * `__proto__`-style names.
+ */
+// `value` stays loosely typed: it is validated at runtime above, and the handler
+// dispatches on `key` to decide how to read it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isValidSettingPayload(data: unknown): data is { key: string; value: any } {
+    if (typeof data !== 'object' || data === null) return false;
+
+    const { key, value } = data as { key?: unknown; value?: unknown };
+    if (typeof key !== 'string' || !SETTING_KEY_PATTERN.test(key)) return false;
+
+    return isValidSettingValue(value);
 }
 
 // defer bounds adjustments if window frame cannot process rendering dimensions
@@ -554,6 +616,10 @@ async function init() {
         console.error('Failed to initialize components:', error);
     }
 
+    // move any plaintext credentials written by an earlier build into the OS keystore.
+    // must run after app ready, since safeStorage is not available before that.
+    migrateSecrets(store);
+
     setupUpdater();
     installDesktopFile();
     if (store.get('minimizeToTray', false)) {
@@ -603,6 +669,7 @@ async function init() {
     mainWindow.addBrowserView(headerView);
     headerView.setBounds({ x: 0, y: 0, width: mainWindow.getBounds().width, height: 32 });
     headerView.setAutoResize({ width: true, height: false });
+    applyNavigationPolicy(headerView.webContents);
     headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
 
     // get selected account and define partition
@@ -627,6 +694,8 @@ async function init() {
             ...(isMac ? { spellcheck: false } : {}),
         },
     });
+
+    applyNavigationPolicy(contentView.webContents, { allowPopups: true });
 
     mainWindow.addBrowserView(contentView);
     contentView.setBounds({
@@ -860,6 +929,11 @@ async function init() {
             // Reapply theme to content after page reload
             applyThemeToContent(isDarkTheme);
 
+            // The view can be sitting on last.fm (auth flow), an OAuth provider, or
+            // anywhere a link led. Injected scripts carry app privileges and read the
+            // player DOM, so they only belong on SoundCloud itself.
+            if (!contentViewIsOnSoundCloud()) return;
+
             // Inject audio monitoring script
             await contentView.webContents.executeJavaScript(audioMonitorScript);
 
@@ -878,8 +952,19 @@ async function init() {
 
     // Register settings related events
     ipcMain.on('setting-changed', async (_event, data) => {
+        if (!isValidSettingPayload(data)) {
+            console.warn('Rejected invalid setting-changed payload');
+            return;
+        }
+
         const key = proxyService.transformKey(data.key);
-        store.set(key, data.value);
+
+        // credentials are held as ciphertext rather than written straight to the config
+        if (isSecretKey(key)) {
+            writeSecret(store, key, data.value);
+        } else {
+            store.set(key, data.value);
+        }
 
         console.log(key);
 
@@ -1098,6 +1183,7 @@ function setupThemeHandlers() {
 
     // Listen for theme changes from settings or header
     ipcMain.on('setting-changed', (_, data) => {
+        if (!isValidSettingPayload(data)) return;
         if (data.key === 'theme') {
             isDarkTheme = data.value === 'dark';
             store.set('theme', data.value);

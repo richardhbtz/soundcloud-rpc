@@ -3,6 +3,7 @@ import type ElectronStore from 'electron-store';
 import * as crypto from 'crypto';
 import fetch from 'cross-fetch';
 import { normalizeTrackInfo } from '../utils/trackParser';
+import { readSecret, writeSecret } from '../utils/secretStore';
 import type { LastFmTrackData } from '../types';
 
 export interface ScrobbleState {
@@ -60,9 +61,9 @@ export class LastFmService {
 
     /* API dispatcher eliminates duplicate fetch headers &&& signing logic */
     private async sendLastFmRequest(method: string, params: Record<string, string>): Promise<any> {
-        const sessionKey = this.store.get('lastFmSessionKey') as string;
-        const apiKey = this.store.get('lastFmApiKey') as string;
-        const secretKey = this.store.get('lastFmSecret') as string;
+        const sessionKey = readSecret(this.store, 'lastFmSessionKey', '');
+        const apiKey = readSecret(this.store, 'lastFmApiKey', '');
+        const secretKey = readSecret(this.store, 'lastFmSecret', '');
 
         if (!sessionKey || !apiKey || !secretKey) return null;
 
@@ -89,30 +90,35 @@ export class LastFmService {
     }
 
     private async getLastFmSession(api_key: string, token: string) {
-        const secret = this.store.get('lastFmSecret') as string;
+        const secret = readSecret(this.store, 'lastFmSecret', '');
         const apiSig = generateApiSignature({ method: 'auth.getSession', api_key, token }, secret);
 
         const res = await fetch(
-            `https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=${api_key}&token=${token}&api_sig=${apiSig}&format=json`,
+            `https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=${encodeURIComponent(
+                api_key,
+            )}&token=${encodeURIComponent(token)}&api_sig=${encodeURIComponent(apiSig)}&format=json`,
         );
         const data = await res.json();
 
         if (data.error) return console.error(data.message);
-        this.store.set('lastFmSessionKey', data.session.key);
+        writeSecret(this.store, 'lastFmSessionKey', data.session.key);
     }
 
     public async authenticate(): Promise<void> {
         if (this.isAuthenticating) return; // prevent multiple auth attempts
 
-        const apikey = this.store.get('lastFmApiKey');
-        const secret = this.store.get('lastFmSecret');
+        const apikey = readSecret(this.store, 'lastFmApiKey', '');
+        const secret = readSecret(this.store, 'lastFmSecret', '');
 
-        if (!this.store.get('lastFmEnabled') || !apikey || !secret || this.store.get('lastFmSessionKey')) return;
+        if (!this.store.get('lastFmEnabled') || !apikey || !secret || readSecret(this.store, 'lastFmSessionKey', ''))
+            return;
         if (!this.window.webContents.getURL().startsWith('https://soundcloud.com/')) return;
 
         this.isAuthenticating = true; // lock auth process
 
-        const authUrl = `https://www.last.fm/api/auth/?api_key=${apikey}&cb=https://soundcloud.com/discover`;
+        const authUrl = `https://www.last.fm/api/auth/?api_key=${encodeURIComponent(
+            apikey,
+        )}&cb=https://soundcloud.com/discover`;
         // load auth url &&& wait for redirect
         await this.window.webContents.loadURL(authUrl);
 
@@ -254,9 +260,9 @@ export class LastFmService {
         if (this.loopWatchdog) clearInterval(this.loopWatchdog);
         this.isAuthenticating = false;
         this.store.set('lastFmEnabled', false);
-        this.store.delete('lastFmApiKey');
-        this.store.delete('lastFmSecret');
-        this.store.delete('lastFmSessionKey');
+        writeSecret(this.store, 'lastFmApiKey', '');
+        writeSecret(this.store, 'lastFmSecret', '');
+        writeSecret(this.store, 'lastFmSessionKey', '');
         this.window.webContents.reload();
     }
 }

@@ -2,6 +2,9 @@ import { BrowserView, BrowserWindow } from 'electron';
 import type ElectronStore = require('electron-store');
 import { TranslationService } from '../services/translationService';
 import type { ThemeColors } from '../utils/colorExtractor';
+import { applyNavigationPolicy } from '../utils/navigationPolicy';
+import { escapeHtml } from '../utils/escapeHtml';
+import { readSecret } from '../utils/secretStore';
 import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
@@ -58,6 +61,8 @@ export class SettingsManager {
                 ...(isMac ? { spellcheck: false } : {}),
             },
         });
+
+        applyNavigationPolicy(this.view.webContents);
 
         // add view immediately but keep off-screen until shown
         this.parentWindow.addBrowserView(this.view);
@@ -943,10 +948,10 @@ export class SettingsManager {
                     this.store.get('proxyEnabled') ? 'block' : 'none'
                 }">
                     <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${
-                        this.store.get('proxyHost') || ''
+                        escapeHtml(this.store.get('proxyHost') || '')
                     }">
                     <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${
-                        this.store.get('proxyPort') || ''
+                        escapeHtml(this.store.get('proxyPort') || '')
                     }">
                 </div>
             </div>
@@ -969,10 +974,10 @@ export class SettingsManager {
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
                 }">
                     <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${
-                        this.store.get('lastFmApiKey') || ''
+                        escapeHtml(readSecret(this.store, 'lastFmApiKey', ''))
                     }">
                     <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${
-                        this.store.get('lastFmSecret') || ''
+                        escapeHtml(readSecret(this.store, 'lastFmSecret', ''))
                     }">
                 </div>
                 <div class="description">
@@ -999,13 +1004,13 @@ export class SettingsManager {
                     this.store.get('webhookEnabled') ? 'block' : 'none'
                 }">
                     <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${
-                        this.store.get('webhookUrl') || ''
+                        escapeHtml(this.store.get('webhookUrl') || '')
                     }">
                     <div class="setting-item">
                         <span data-i18n="webhookTrigger">${this.translationService.translate('webhookTrigger')}</span>
                         <div class="input-with-unit">
                             <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
-                                this.store.get('webhookTriggerPercentage') || 50
+                                escapeHtml(this.store.get('webhookTriggerPercentage') || 50)
                             }">
                             <span class="unit-symbol">%</span>
                         </div>
