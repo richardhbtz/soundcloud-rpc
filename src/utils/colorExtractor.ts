@@ -33,18 +33,22 @@ export function extractThemeColors(cssContent: string): ThemeColors | null {
             .replace(/!important/gi, '')
             .trim();
 
+        // every branch below is fully anchored. a prefix-only test such as /^rgba?\(/
+        // would accept trailing junk after the closing paren, which downstream
+        // consumers could carry into a stylesheet or a script string.
+
         // Handle hex colors
-        if (value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)) {
+        if (value.match(/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i)) {
             return value;
         }
 
-        // Handle rgb/rgba
-        if (value.match(/^rgba?\(/i)) {
+        // Handle rgb/rgba -- digits, separators and percentages only
+        if (value.match(/^rgba?\(\s*[0-9.,%\s/]+\)$/i)) {
             return value;
         }
 
-        // Handle hsl/hsla
-        if (value.match(/^hsla?\(/i)) {
+        // Handle hsl/hsla -- same, plus angle units
+        if (value.match(/^hsla?\(\s*[0-9.,%\s/]+(deg|rad|grad|turn)?[0-9.,%\s/]*\)$/i)) {
             return value;
         }
 

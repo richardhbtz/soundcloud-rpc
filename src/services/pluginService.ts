@@ -3,6 +3,7 @@ import { readFileSync, existsSync, readdirSync, statSync, watch, mkdirSync } fro
 import path, { join, basename, extname } from 'path';
 import type ElectronStore from 'electron-store';
 import { EventEmitter } from 'events';
+import { createHash } from 'crypto';
 import { parseMetadata, type FileMetadata } from '../utils/metadataParser';
 import { Script, createContext, type Context } from 'vm';
 
@@ -10,8 +11,17 @@ export interface PluginInfo {
     id: string;
     filePath: string;
     metadata: FileMetadata;
+    /** sha256 of the source that was scanned, used to detect swapped files */
+    sourceHash: string;
     enabled: boolean;
 }
+
+/**
+ * Stored approvals: plugin id -> sha256 of the source the user enabled.
+ * `true` is the legacy shape written by older builds and is grandfathered in on
+ * first scan, then rewritten as a hash.
+ */
+type PluginApprovals = Record<string, string | boolean>;
 
 interface PluginRuntime {
     context: Context;
@@ -60,7 +70,7 @@ export class PluginService {
         try {
             if (!existsSync(this.pluginsPath)) return;
 
-            const enabledMap = (this.store.get('enabledPlugins', {}) as Record<string, boolean>) || {};
+            const approvals = (this.store.get('enabledPlugins', {}) as PluginApprovals) || {};
             const files = readdirSync(this.pluginsPath);
 
             for (const file of files) {
@@ -73,14 +83,29 @@ export class PluginService {
                     const source = readFileSync(filePath, 'utf-8');
                     const metadata = parseMetadata(source, 'js');
                     const id = basename(file, '.js');
+                    const sourceHash = createHash('sha256').update(source).digest('hex');
 
                     if (!metadata.name) metadata.name = id;
+
+                    // a plugin stays enabled only while its file is byte-for-byte what
+                    // the user approved. dropping a different file under a
+                    // previously-enabled name leaves it disabled until re-approved,
+                    // rather than executing on sight.
+                    const approved = approvals[id];
+                    const enabled = approved === true || approved === sourceHash;
+
+                    if (approved !== undefined && !enabled) {
+                        console.warn(
+                            `Plugin "${id}" changed on disk since it was enabled; it stays disabled until re-enabled.`,
+                        );
+                    }
 
                     this.plugins.set(id, {
                         id,
                         filePath,
                         metadata,
-                        enabled: !!enabledMap[id],
+                        sourceHash,
+                        enabled,
                     });
                 } catch (error) {
                     console.error(`Failed to load plugin ${file}:`, error);
@@ -130,9 +155,20 @@ export class PluginService {
             if (this.runtimes.has(id)) return true;
 
             const source = readFileSync(plugin.filePath, 'utf-8');
+            // approve exactly what runs, so the stored hash can never drift from the
+            // code that was actually executed
+            plugin.sourceHash = createHash('sha256').update(source).digest('hex');
+
             const pluginExports: PluginExports = {};
 
-            const sandbox = {
+            // NOTE: node's `vm` is NOT a security boundary, and the object below is not
+            // a sandbox. a plugin can reach the real global through any function it is
+            // handed -- `this.constructor.constructor('return process')()` is enough --
+            // and from there it has the full main-process Node API: fs, child_process,
+            // the lot. this only shapes a CommonJS-like module environment for
+            // convenience. plugins are fully trusted code; installing one is equivalent
+            // to installing a native application.
+            const pluginGlobals = {
                 module: { exports: pluginExports },
                 exports: pluginExports,
                 console: {
@@ -146,11 +182,11 @@ export class PluginService {
                 clearInterval,
             };
 
-            const context = createContext(sandbox);
+            const context = createContext(pluginGlobals);
             const script = new Script(source, { filename: plugin.filePath });
             script.runInContext(context);
 
-            const resolved = sandbox.module.exports || sandbox.exports;
+            const resolved = pluginGlobals.module.exports || pluginGlobals.exports;
             this.runtimes.set(id, { context, exports: resolved });
 
             try {
@@ -182,6 +218,16 @@ export class PluginService {
         this.runtimes.delete(id);
     }
 
+    /**
+     * Plugin ids come from filenames, which the user controls. Restrict them to
+     * characters that cannot terminate a JS string literal or an HTML attribute before
+     * embedding them in injected source. Hyphens are excluded too, because the same
+     * value is used to build the `__scrpc_cleanup_*` identifier.
+     */
+    private static safeId(id: string): string {
+        return id.replace(/[^a-zA-Z0-9_]/g, '_');
+    }
+
     private injectContentScript(id: string, exports: PluginExports): void {
         if (!this.contentView) return;
 
@@ -194,17 +240,18 @@ export class PluginService {
         }
         if (!code || !code.trim()) return;
 
+        const safeId = PluginService.safeId(id);
         const escaped = code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
         const wrapped = `
             (function(){
                 try {
-                    var existing = document.getElementById('scrpc-plugin-${id}');
+                    var existing = document.getElementById('scrpc-plugin-${safeId}');
                     if (existing) existing.remove();
                     var s = document.createElement('script');
-                    s.id = 'scrpc-plugin-${id}';
+                    s.id = 'scrpc-plugin-${safeId}';
                     s.textContent = \`${escaped}\`;
                     document.head.appendChild(s);
-                } catch(e) { console.error('[plugin:${id}] inject error:', e); }
+                } catch(e) { console.error('[plugin:${safeId}] inject error:', e); }
             })();
         `;
 
@@ -216,13 +263,14 @@ export class PluginService {
     private removeContentScript(id: string): void {
         if (!this.contentView) return;
 
+        const safeId = PluginService.safeId(id);
         const cleanup = `
             (function(){
-                var el = document.getElementById('scrpc-plugin-${id}');
+                var el = document.getElementById('scrpc-plugin-${safeId}');
                 if (el) el.remove();
-                if (window.__scrpc_cleanup_${id.replace(/[^a-zA-Z0-9_]/g, '_')}) {
-                    try { window.__scrpc_cleanup_${id.replace(/[^a-zA-Z0-9_]/g, '_')}(); } catch(e) {}
-                    delete window.__scrpc_cleanup_${id.replace(/[^a-zA-Z0-9_]/g, '_')};
+                if (window.__scrpc_cleanup_${safeId}) {
+                    try { window.__scrpc_cleanup_${safeId}(); } catch(e) {}
+                    delete window.__scrpc_cleanup_${safeId};
                 }
             })();
         `;
@@ -241,9 +289,11 @@ export class PluginService {
     }
 
     private persistEnabledState(): void {
-        const map: Record<string, boolean> = {};
+        // store the approved source hash rather than a bare flag, so the approval is
+        // tied to specific file contents
+        const map: Record<string, string> = {};
         for (const [id, plugin] of this.plugins) {
-            if (plugin.enabled) map[id] = true;
+            if (plugin.enabled) map[id] = plugin.sourceHash;
         }
         this.store.set('enabledPlugins', map);
     }
@@ -268,24 +318,18 @@ export class PluginService {
     }
 
     public refreshPlugins(): void {
-        const previouslyEnabled = new Set<string>();
-        for (const [id, plugin] of this.plugins) {
-            if (plugin.enabled) previouslyEnabled.add(id);
-        }
-
-        for (const id of this.runtimes.keys()) {
+        for (const id of Array.from(this.runtimes.keys())) {
             this.deactivatePlugin(id);
         }
 
         this.plugins.clear();
         this.scanPlugins();
 
-        for (const id of previouslyEnabled) {
-            const plugin = this.plugins.get(id);
-            if (plugin) {
-                plugin.enabled = true;
-                this.activatePlugin(id);
-            }
+        // scanPlugins already resolved enabled state against the stored approvals, so a
+        // file swapped in under a previously-enabled name comes back disabled. do not
+        // re-enable by id here -- that would run whatever now sits at that filename.
+        for (const [id, plugin] of this.plugins) {
+            if (plugin.enabled) this.activatePlugin(id);
         }
 
         this.persistEnabledState();

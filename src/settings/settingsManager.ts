@@ -14,6 +14,8 @@ export class SettingsManager {
     private translationService: TranslationService;
     private devMode = process.argv.includes('--dev');
     private useMacOptimizations = process.platform === 'darwin';
+    // key returned by insertCSS for the current theme-colour stylesheet
+    private themeColorCssKey: string | null = null;
 
     constructor(parentWindow: BrowserWindow, store: ElectronStore, translationService: TranslationService) {
         this.parentWindow = parentWindow;
@@ -1840,30 +1842,37 @@ export class SettingsManager {
         `);
     }
 
-    public setThemeColors(colors: ThemeColors | null): void {
-        if (!this.view) return;
-        if (!colors) {
-            // reset to default theme colors
-            this.view.webContents.executeJavaScript(`
-                document.documentElement.style.removeProperty('--bg-primary');
-                document.documentElement.style.removeProperty('--bg-secondary');
-                document.documentElement.style.removeProperty('--text-primary');
-                document.documentElement.style.removeProperty('--accent');
-            `);
-            return;
+    public async setThemeColors(colors: ThemeColors | null): Promise<void> {
+        if (!this.view || this.view.webContents.isDestroyed()) return;
+        const webContents = this.view.webContents;
+
+        // colors originate from user-supplied theme files. they are applied as a
+        // stylesheet rather than interpolated into a script, so a crafted value can at
+        // worst produce an invalid CSS declaration -- never executable JavaScript.
+        const previousKey = this.themeColorCssKey;
+        if (previousKey) {
+            this.themeColorCssKey = null;
+            try {
+                await webContents.removeInsertedCSS(previousKey);
+            } catch {
+                // view navigated since insertion; the old stylesheet is already gone
+            }
         }
 
-        // apply custom theme colors
-        this.view.webContents
-            .executeJavaScript(
-                `
-            document.documentElement.style.setProperty('--bg-primary', '${colors.surface || colors.background}');
-            document.documentElement.style.setProperty('--bg-secondary', '${colors.background}');
-            document.documentElement.style.setProperty('--text-primary', '${colors.text}');
-            document.documentElement.style.setProperty('--accent', '${colors.accent || colors.primary}');
-        `,
-            )
-            .catch(console.error);
+        if (!colors) return;
+
+        const css = `:root {
+            --bg-primary: ${colors.surface || colors.background};
+            --bg-secondary: ${colors.background};
+            --text-primary: ${colors.text};
+            --accent: ${colors.accent || colors.primary};
+        }`;
+
+        try {
+            this.themeColorCssKey = await webContents.insertCSS(css);
+        } catch (error) {
+            console.error('Failed to apply theme colors to settings view:', error);
+        }
     }
 
     public getView(): BrowserView | null {

@@ -9,6 +9,7 @@ import {
     shell,
     components,
     type IpcMainEvent,
+    type WebContents,
 } from 'electron';
 import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
@@ -613,7 +614,10 @@ async function init() {
             ...(sessionPartition ? { partition: sessionPartition } : {}),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false,
+            // this view loads soundcloud.com plus third-party ad/embed iframes, so it is
+            // the one that most needs the Chromium sandbox. preload.js only uses
+            // contextBridge/ipcRenderer, both of which work fine in a sandboxed preload.
+            sandbox: true,
             webSecurity: true,
             allowRunningInsecureContent: false,
             nodeIntegrationInSubFrames: false,
@@ -1114,6 +1118,39 @@ function setupThemeHandlers() {
     });
 }
 
+// keys returned by insertCSS, so the previous theme's stylesheet can be removed
+// when a new one is applied
+const insertedThemeCssKeys: Partial<Record<'content' | 'header' | 'settings', string>> = {};
+
+// custom theme CSS comes from user-supplied .css files. it must never be interpolated
+// into a script string -- insertCSS takes the stylesheet as data, so a theme containing
+// backticks, ${...} or quotes cannot break out into JavaScript.
+async function applyCustomThemeCss(
+    target: 'content' | 'header' | 'settings',
+    webContents: WebContents | null | undefined,
+    css: string,
+): Promise<void> {
+    if (!webContents || webContents.isDestroyed()) return;
+
+    const previousKey = insertedThemeCssKeys[target];
+    if (previousKey) {
+        delete insertedThemeCssKeys[target];
+        try {
+            await webContents.removeInsertedCSS(previousKey);
+        } catch {
+            // the view navigated since insertion; the old stylesheet went with it
+        }
+    }
+
+    if (!css.trim()) return;
+
+    try {
+        insertedThemeCssKeys[target] = await webContents.insertCSS(css);
+    } catch (error) {
+        console.error(`Failed to apply custom theme CSS to ${target} view:`, error);
+    }
+}
+
 function applyThemeToContent(isDark: boolean) {
     if (!contentView) return;
 
@@ -1253,27 +1290,10 @@ function applyThemeToContent(isDark: boolean) {
                     });
                 }, 1000);
 
-                // apply custom theme CSS (content section + all) if available
-                const contentCSS = \`${sections.all + (sections.all && sections.content ? '\n' : '') + sections.content || ''}\`;
-                if (contentCSS.trim()) {
-                    const customStyle = document.createElement('style');
-                    customStyle.id = 'custom-theme-style';
-                    customStyle.textContent = contentCSS;
-                    
-                    const existingCustomStyle = document.getElementById('custom-theme-style');
-                    if (existingCustomStyle) {
-                        existingCustomStyle.remove();
-                    }
-                    document.head.appendChild(customStyle);
-                    console.log('Applied custom theme CSS');
-                } else {
-                    // Remove custom theme if none is selected
-                    const existingCustomStyle = document.getElementById('custom-theme-style');
-                    if (existingCustomStyle) {
-                        existingCustomStyle.remove();
-                        console.log('Removed custom theme CSS');
-                    }
-                }
+                // custom theme CSS is applied separately via insertCSS -- see
+                // applyCustomThemeCss below. drop any stylesheet left by an older build.
+                const legacyCustomStyle = document.getElementById('custom-theme-style');
+                if (legacyCustomStyle) legacyCustomStyle.remove();
             } catch(e) {
                 console.error('Error applying theme:', e);
             }
@@ -1282,50 +1302,13 @@ function applyThemeToContent(isDark: boolean) {
 
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
 
-    // inject into header & settings views using specific sections
-    const headerCSS = sections.all + (sections.all && sections.header ? '\n' : '') + sections.header || '';
-    if (headerView && headerView.webContents) {
-        const headerScript = `
-            (function(){
-                try {
-                    const css = \`${headerCSS}\`;
-                    const id = 'custom-theme-style';
-                    const existing = document.getElementById(id);
-                    if (existing) existing.remove();
-                    if (css.trim()){
-                        const style = document.createElement('style');
-                        style.id = id;
-                        style.textContent = css;
-                        document.head.appendChild(style);
-                        console.log('Applied custom header theme CSS');
-                    }
-                } catch(e){ console.error('Header theme inject error:', e); }
-            })();
-        `;
-        headerView.webContents.executeJavaScript(headerScript).catch(console.error);
-    }
+    // apply each view's custom theme sections as stylesheets, never as script source
+    const joinSection = (section: string) =>
+        sections.all + (sections.all && section ? '\n' : '') + section || '';
 
-    if (settingsManager) {
-        const settingsCSS = sections.all + (sections.all && sections.settings ? '\n' : '') + sections.settings || '';
-        const settingsScript = `
-            (function(){
-                try {
-                    const css = \`${settingsCSS}\`;
-                    const id = 'custom-theme-style';
-                    const existing = document.getElementById(id);
-                    if (existing) existing.remove();
-                    if (css.trim()){
-                        const style = document.createElement('style');
-                        style.id = id;
-                        style.textContent = css;
-                        document.head.appendChild(style);
-                        console.log('Applied custom settings theme CSS');
-                    }
-                } catch(e){ console.error('Settings theme inject error:', e); }
-            })();
-        `;
-        settingsManager.getView()?.webContents.executeJavaScript(settingsScript).catch(console.error);
-    }
+    void applyCustomThemeCss('content', contentView.webContents, joinSection(sections.content));
+    void applyCustomThemeCss('header', headerView?.webContents, joinSection(sections.header));
+    void applyCustomThemeCss('settings', settingsManager?.getView()?.webContents, joinSection(sections.settings));
 }
 
 function initializeShortcuts() {
