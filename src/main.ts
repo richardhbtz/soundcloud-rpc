@@ -555,7 +555,9 @@ async function init() {
 
     setupUpdater();
     installDesktopFile();
-    setupTray();
+    if (store.get('minimizeToTray', false)) {
+        setupTray();
+    }
 
     if (process.platform === 'darwin') setupDarwinMenu();
     else Menu.setApplicationMenu(null);
