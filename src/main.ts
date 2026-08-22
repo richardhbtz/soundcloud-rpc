@@ -14,6 +14,8 @@ import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
+import { buildDesktopEntry } from './linux/desktopEntry';
+import { isSandboxUsable, systemSandboxProbe } from './linux/sandbox';
 import { NotificationManager } from './notifications/notificationManager';
 import { SettingsManager } from './settings/settingsManager';
 import { ProxyService } from './services/proxyService';
@@ -97,6 +99,7 @@ let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
+const isLinux = process.platform === 'linux';
 const globalUserAgent = isMac
     ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -104,26 +107,51 @@ const globalPlatformHint = isMac ? '"macOS"' : '"Windows"';
 
 app.userAgentFallback = globalUserAgent;
 
-function applyMacMemoryOptimizations(): void {
-    if (!isMac) return;
-
-    const existingDisableFeatures = app.commandLine.getSwitchValue('disable-features');
+function appendCommandLineFeatures(switchName: string, featuresToAdd: string[]): void {
     const features = new Set(
-        existingDisableFeatures
+        app.commandLine
+            .getSwitchValue(switchName)
             .split(',')
             .map((feature) => feature.trim())
             .filter(Boolean),
     );
-    features.add('BackForwardCache');
+    for (const feature of featuresToAdd) features.add(feature);
 
-    app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
+    app.commandLine.appendSwitch(switchName, Array.from(features).join(','));
+}
+
+function applyMacMemoryOptimizations(): void {
+    if (!isMac) return;
+
+    appendCommandLineFeatures('disable-features', ['BackForwardCache']);
     app.commandLine.appendSwitch('renderer-process-limit', '1');
     app.commandLine.appendSwitch('disk-cache-size', '1');
     app.commandLine.appendSwitch('media-cache-size', '1');
     app.commandLine.appendSwitch('enable-low-end-device-mode');
 }
 
+function applyLinuxIntegration(): void {
+    if (!isLinux) return;
+
+    // the desktop's "now playing" widget and the media keys both drive the MPRIS
+    // interface, which chromium only publishes while the media session service runs
+    appendCommandLineFeatures('enable-features', ['MediaSessionService', 'HardwareMediaKeyHandling']);
+
+    // draw through wayland on a wayland session instead of upscaling through xwayland
+    if (!app.commandLine.hasSwitch('ozone-platform-hint')) {
+        app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+    }
+
+    // chromium aborts at startup when it can't sandbox, so trade the sandbox away
+    // rather than refuse to launch. the linux notes in the README cover getting it back
+    if (!app.commandLine.hasSwitch('no-sandbox') && !isSandboxUsable(systemSandboxProbe)) {
+        console.warn('No usable Chromium sandbox found on this system, starting with --no-sandbox');
+        app.commandLine.appendSwitch('no-sandbox');
+    }
+}
+
 applyMacMemoryOptimizations();
+applyLinuxIntegration();
 // header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -166,7 +194,7 @@ function setupUpdater() {
     }
 
     // updater only works from the appimage on linux
-    if (process.platform === 'linux' && !process.env.APPIMAGE) {
+    if (isLinux && !process.env.APPIMAGE) {
         console.log('Not running from AppImage, skipping auto-updater');
         return;
     }
@@ -188,7 +216,7 @@ function setupUpdater() {
 // appimages don't install a desktop file, so wayland compositors can't match the window
 // to an icon and you get the generic cog. write one to ~/.local/share on first run
 function installDesktopFile() {
-    if (process.platform !== 'linux' || !process.env.APPIMAGE) return;
+    if (!isLinux || !process.env.APPIMAGE) return;
 
     try {
         const dataHome = process.env.XDG_DATA_HOME || path.join(app.getPath('home'), '.local', 'share');
@@ -200,18 +228,11 @@ function installDesktopFile() {
             copyFileSync(path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'), iconFilePath);
         }
 
-        const entry = [
-            '[Desktop Entry]',
-            'Name=SoundCloud',
-            'Comment=SoundCloud client with Discord Rich Presence',
-            `Exec="${process.env.APPIMAGE}" %U`,
-            'Icon=soundcloud-rpc',
-            'Type=Application',
-            'Categories=AudioVideo;Audio;Music;',
-            'StartupWMClass=soundcloud-rpc',
-            'Terminal=false',
-            '',
-        ].join('\n');
+        const entry = buildDesktopEntry({
+            execPath: process.env.APPIMAGE,
+            iconName: 'soundcloud-rpc',
+            wmClass: 'soundcloud-rpc',
+        });
 
         // rewrite if missing or the appimage moved
         const existing = existsSync(desktopFilePath) ? readFileSync(desktopFilePath, 'utf8') : '';

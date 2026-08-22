@@ -8,7 +8,7 @@
 
 A **SoundCloud** Client with **Discord Rich Presence**, **Dark Mode**, **Last.fm** and **AdBlock** support
 
-Works on **Linux** (AppImage/deb), **Windows** and **macOS**
+Works on **Linux** (AppImage/deb/tar.gz), **Windows** and **macOS**
 
 </div>
 
@@ -32,7 +32,7 @@ For the latest version of soundcloud-rpc, download the installer or executable f
 
 ## 🐧 Linux
 
-Grab the AppImage or deb from the [releases](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
+Grab the AppImage, deb or tar.gz from the [releases](https://github.com/richardhbtz/soundcloud-rpc/releases) page.
 
 ```
 chmod +x soundcloud-*-linux.AppImage
@@ -40,14 +40,31 @@ chmod +x soundcloud-*-linux.AppImage
 ```
 
 The AppImage writes its own .desktop file + icon on first run, so the proper icon shows up in the taskbar/launcher from
-the second launch on (wayland compositors can't know the icon before that). Widevine (GO+ playback) works. Auto updates
-only work with the AppImage. Tray works out of the box on kde, gnome needs a systray extension.
+the second launch on (wayland compositors can't know the icon before that). Auto updates only work with the AppImage. If
+your distro doesn't ship FUSE 2 (Arch and Ubuntu 24.04 don't), install it or start the AppImage with
+`--appimage-extract-and-run`; the tar.gz needs nothing at all, just unpack it and run `soundcloud-rpc`.
+
+**GO+ playback works.** Streaming only ever needs temporary Widevine licenses, and Linux grants those: EME returns
+`com.widevine.alpha` at `SW_SECURE_CRYPTO` robustness with `sessionTypes: ["temporary"]`. Only _persistent_ (offline)
+licenses are refused — the limitation Linux was dropped over — and those are being retired everywhere anyway, deprecated
+in castlabs ECS v38 and removed in v42. Linux's Widevine has no VMP, so there is nothing to sign here. The CDM downloads
+itself on first launch, so the very first start needs a connection.
+
+Media keys and the desktop's "now playing" widget go through MPRIS, which the app registers as
+`org.mpris.MediaPlayer2.chromium.instance<pid>`. The tray needs a StatusNotifierItem host: KDE has one built in, GNOME
+needs a systray extension, and bars like waybar or quickshell need their tray module enabled.
+
+Chromium needs either unprivileged user namespaces or a setuid `chrome-sandbox` helper, and an AppImage can't have the
+latter because it's mounted `nosuid`. On distros that also lock down unprivileged namespaces (Ubuntu 24.04+, hardened
+Debian kernels) the app detects the dead end and falls back to `--no-sandbox` instead of refusing to launch. The deb
+installs the setuid helper, so it keeps the sandbox on those systems.
 
 Or build it yourself:
 
 ```
 npm install
-npm run build-linux-appimage   # or build-linux-deb
+npm run build-linux            # AppImage + deb + tar.gz
+npm run build-linux-appimage   # or build-linux-deb / build-linux-tar
 ```
 
 ## ⚙️‍ Building

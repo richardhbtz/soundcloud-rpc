@@ -230,6 +230,51 @@ body.platform-win32 .windows-controls {
     display: flex;
 }
 
+/* Linux draws its own control icons: the glyphs above need the Segoe icon fonts,
+   which only exist on Windows. Shapes stay stroked so the light theme's `fill:
+   currentColor` rule for control <path>s can't flood these outlines. */
+.windows-controls .control .icon-svg {
+    display: none;
+    width: 14px;
+    height: 14px;
+    color: var(--header-text);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: color 0.3s;
+}
+
+body.platform-linux .windows-controls {
+    display: flex;
+}
+
+body.platform-linux .windows-controls .control .icon-glyph {
+    display: none;
+}
+
+body.platform-linux .windows-controls .control .icon-svg {
+    display: inline-flex;
+}
+
+body.platform-linux .windows-controls .maximize .icon-restore,
+body.platform-linux .windows-controls .maximize.is-maximized .icon-maximize {
+    display: none;
+}
+
+body.platform-linux .windows-controls .maximize.is-maximized .icon-restore {
+    display: inline-flex;
+}
+
+body.platform-linux .windows-controls .close:hover {
+    background-color: #e81123;
+}
+
+body.platform-linux .windows-controls .close:hover .icon-svg {
+    color: #ffffff;
+}
+
 /* Theme specific styles */
 :root {
     --header-bg: #121212;
