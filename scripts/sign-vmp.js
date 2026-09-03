@@ -49,7 +49,24 @@ function signPackage(appOutDir) {
         console.log('EVS signing output:', subprocess.stdout);
         console.log('VMP signing completed successfully');
     } catch (error) {
-        console.warn('\n⚠️  EVS signing module not found locally. Skipping VMP signing.');
+        // this catch covers every failure mode, not just a missing module: bad or absent
+        // EVS credentials, an expired account, and network errors all land here
+        console.warn('\n' + '='.repeat(72));
+        console.warn('WARNING: VMP signing did not complete. The build is NOT signed.');
+        console.warn('');
+        console.warn('DRM-protected audio will NOT play in this build. On SoundCloud');
+        console.warn('that means every SoundCloud Go and Go+ track fails silently --');
+        console.warn('the player skips or stalls with no visible error. Free tracks are');
+        console.warn('unaffected, which is what makes this easy to miss.');
+        console.warn('');
+        console.warn('Widevine requires a VMP signature on macOS and Windows. To sign:');
+        console.warn('  pip install --upgrade castlabs-evs');
+        console.warn('  python -m castlabs_evs.account signup      # once, free');
+        console.warn('  EVS_USERNAME=... EVS_PASSWORD=... npm run build-mac');
+        console.warn('');
+        console.warn('Set STRICT_VMP_SIGNING=true to fail the build instead of warning.');
+        console.warn('='.repeat(72) + '\n');
+
         if (error.stdout) console.error('stdout:', error.stdout);
         if (error.stderr) console.error('stderr:', error.stderr);
 
