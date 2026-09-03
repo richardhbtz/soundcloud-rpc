@@ -1,6 +1,7 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { applyNavigationPolicy } from '../utils/navigationPolicy';
+import { appUrl, cspMetaTag, provideDocument } from '../utils/appProtocol';
 import { escapeHtml } from '../utils/escapeHtml';
 
 let confirmPopupView: BrowserView | null = null;
@@ -46,7 +47,7 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
     updateHomepageConfirmBounds(mainWindow);
     confirmPopupView.setAutoResize({ width: true, height: true });
 
-    const html = `
+    const html = `${cspMetaTag()}
         <style>
             @font-face {
                 font-family: 'SC-Font';
@@ -138,7 +139,7 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
             }
         </style>
         <body>
-            <div class="dialog" role="dialog" aria-modal="true" aria-label="Open Plugin Homepage">
+            <div class="dialog" role="dialog" aria-modal="true" aria-label="Open Plugin Homepage" data-request-id="${escapeHtml(requestId)}">
                 <div class="title">Open Plugin Homepage</div>
                 <div class="subtitle">Are you sure you want to open this URL in your browser?</div>
                 <div class="url">${safeUrl}</div>
@@ -147,35 +148,12 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
                     <button id="confirmBtn" class="confirm" type="button">Open in Browser</button>
                 </div>
             </div>
-            <script>
-                requestAnimationFrame(() => {
-                    document.body.classList.add('visible');
-                });
-
-                function submit(result) {
-                    window.homepageConfirmAPI.submit('${requestId}', result);
-                }
-
-                document.getElementById('cancelBtn').addEventListener('click', () => submit(false));
-                document.getElementById('confirmBtn').addEventListener('click', () => submit(true));
-                document.body.addEventListener('click', (event) => {
-                    if (event.target === document.body) {
-                        submit(false);
-                    }
-                });
-                document.addEventListener('keydown', (event) => {
-                    if (event.key === 'Escape') {
-                        submit(false);
-                    }
-                    if (event.key === 'Enter') {
-                        submit(true);
-                    }
-                });
-            </script>
+            <script src="/confirmPanel.js"></script>
         </body>
     `;
 
-    await confirmPopupView.webContents.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+    provideDocument('confirm', () => html);
+    await confirmPopupView.webContents.loadURL(appUrl('confirm'));
     confirmPopupView.webContents.focus();
 
     return new Promise((resolve) => {
