@@ -1,7 +1,7 @@
 {
     "name": "soundcloud-rpc",
     "version": "0.2.0",
-    "description": "🎵 A SoundCloud Client with Discord Rich Presence, Dark Mode, Last.fm and AdBlock support",
+    "description": "\ud83c\udfb5 A SoundCloud Client with Discord Rich Presence, Dark Mode, Last.fm and AdBlock support",
     "author": {
         "name": "Richard Habitzreuter",
         "email": "richardhabitzreuter@icloud.com"
@@ -11,7 +11,7 @@
         "lint": "eslint -c .eslintrc --ext .ts ./src",
         "test": "vitest run",
         "test:watch": "vitest",
-        "copy-header": "cpx \"src/header/**/*\" tsc/header",
+        "copy-header": "cpx \"src/header/**/*\" tsc/header && cpx \"src/settings/*.js\" tsc/settings && cpx \"src/notification/*.js\" tsc/notification && cpx \"src/confirm/*.js\" tsc/confirm",
         "dev": "tsc && npm run copy-header && electron ./tsc/main.js --dev",
         "build": "tsc && npm run copy-header && electron-builder --dir",
         "build-win": "tsc && npm run copy-header && electron-builder -w nsis",

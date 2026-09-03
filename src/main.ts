@@ -32,6 +32,7 @@ import type { TrackInfo } from './types';
 import { validateTrackUpdatePayload } from './validation';
 import { isSecretKey, migrateSecrets, writeSecret } from './utils/secretStore';
 import { applyNavigationPolicy } from './utils/navigationPolicy';
+import { handleAppScheme, registerAppScheme } from './utils/appProtocol';
 import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
 import { installStoreReadCache } from './utils/storeCache';
 import path = require('path');
@@ -132,6 +133,9 @@ function applyMacMemoryOptimizations(): void {
 }
 
 applyMacMemoryOptimizations();
+
+// privileged schemes have to be declared before the app is ready
+registerAppScheme();
 // header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -653,6 +657,10 @@ let contentView: BrowserView;
 
 // Main initialization
 async function init() {
+    // serves the settings, notification and confirm documents; must be in place before
+    // any of those views loads
+    handleAppScheme();
+
     // The Widevine CDM must be installed and provisioned BEFORE any window that will
     // play protected media is created -- this is a castlabs requirement, not just
     // startup bookkeeping. Deferring it breaks SoundCloud Go+ playback, so this await

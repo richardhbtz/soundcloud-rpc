@@ -1,6 +1,7 @@
 import { BrowserView, BrowserWindow, ipcMain } from 'electron';
 import type { ThemeColors } from '../utils/colorExtractor';
 import { applyNavigationPolicy } from '../utils/navigationPolicy';
+import { appUrl, cspMetaTag, provideDocument } from '../utils/appProtocol';
 import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
@@ -89,7 +90,7 @@ export class NotificationManager {
         const backgroundColor = this.themeColors?.surface || '#303030';
         const textColor = this.themeColors?.text || '#ffffff';
 
-        const html = `
+        const html = `${cspMetaTag()}
         <style>
             body {
                 margin: 0;
@@ -131,16 +132,7 @@ export class NotificationManager {
         </style>
         <body>
             <div class="notification">${message}</div>
-            <script>
-                setTimeout(() => document.body.style.opacity = '1', 100);
-                setTimeout(() => {
-                    document.body.classList.add('fade-out');
-                    document.body.style.opacity = '0';
-                    setTimeout(() => {
-                        window.notificationAPI.done();
-                    }, 300);
-                }, 4500);
-            </script>
+            <script src="/notificationPanel.js"></script>
         </body>`;
 
         // Set up one-time IPC listener for this notification
@@ -148,6 +140,7 @@ export class NotificationManager {
             setTimeout(() => this.displayNext(), 100);
         });
 
-        view.webContents.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+        provideDocument('notification', () => html);
+        view.webContents.loadURL(appUrl('notification'));
     }
 }
