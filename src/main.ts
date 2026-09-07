@@ -92,30 +92,8 @@ let shortcutService: ShortcutService;
 let pluginService: PluginService;
 let tray: Tray | null = null;
 let isQuitting = false;
-let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
-
-function applyMacMemoryOptimizations(): void {
-    if (!isMac) return;
-
-    const existingDisableFeatures = app.commandLine.getSwitchValue('disable-features');
-    const features = new Set(
-        existingDisableFeatures
-            .split(',')
-            .map((feature) => feature.trim())
-            .filter(Boolean),
-    );
-    features.add('BackForwardCache');
-
-    app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
-    app.commandLine.appendSwitch('renderer-process-limit', '1');
-    app.commandLine.appendSwitch('disk-cache-size', '1');
-    app.commandLine.appendSwitch('media-cache-size', '1');
-    app.commandLine.appendSwitch('enable-low-end-device-mode');
-}
-
-applyMacMemoryOptimizations();
 // header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -610,8 +588,6 @@ async function init() {
     shortcutService.attachToWebContents(contentView.webContents);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
 
-    setupMemoryPressureHandler();
-
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
         settingsManager.toggle();
@@ -950,36 +926,6 @@ async function init() {
             // silently ignore if page navigating
         }
     }, 5000);
-}
-
-function setupMemoryPressureHandler() {
-    if (memoryPressureHandlerRegistered) return;
-    if (!isMac) return;
-    memoryPressureHandlerRegistered = true;
-
-    app.on('memory-pressure' as any, async (_event: unknown, details: unknown) => {
-        const level = typeof details === 'string' ? details : 'unknown';
-        console.warn(`Memory pressure detected (${level}). Clearing caches and history.`);
-
-        if (contentView) {
-            contentView.webContents.clearHistory();
-        }
-
-        const session = contentView?.webContents.session;
-        if (!session) return;
-
-        try {
-            await session.clearCache();
-        } catch (error) {
-            console.warn('Failed to clear HTTP cache:', error);
-        }
-
-        try {
-            await session.clearStorageData({ storages: ['cachestorage'] });
-        } catch (error) {
-            console.warn('Failed to clear Cache Storage:', error);
-        }
-    });
 }
 
 function setupThemeHandlers() {

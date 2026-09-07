@@ -21,6 +21,11 @@ describe('SoundCloud browser networking policy', () => {
         expect(mainSource).not.toMatch(/sandbox\s*:\s*false/);
     });
 
+    it('does not apply macOS-only Chromium networking or cache switches', () => {
+        expect(mainSource).not.toMatch(/commandLine\.appendSwitch/);
+        expect(mainSource).not.toMatch(/memory-pressure/);
+    });
+
     it('cannot enable Ghostery in the validation build', () => {
         expect(mainSource).not.toMatch(/ElectronBlocker|enableBlockingInSession/);
         expect(settingsSource).toMatch(/id="adBlocker"[^>]*disabled/);
