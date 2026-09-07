@@ -921,7 +921,7 @@ export class SettingsManager {
                 <div class="setting-item">
                     <span data-i18n="enableAdBlocker">${this.translationService.translate('enableAdBlocker')}</span>
                     <label class="toggle">
-                        <input type="checkbox" id="adBlocker" ${this.store.get('adBlocker') ? 'checked' : ''}>
+                        <input type="checkbox" id="adBlocker" disabled title="Temporarily disabled for native networking validation">
                         <span class="slider"></span>
                     </label>
                 </div>
