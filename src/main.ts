@@ -692,8 +692,16 @@ async function init() {
 
     // handle window close event for minimize to tray
     mainWindow.on('close', (event) => {
+        if (isQuitting) return;
+
         const minimizeToTray = store.get('minimizeToTray', true);
-        if (minimizeToTray && !isQuitting) {
+
+        // macOS convention: the close button hides the window and the app stays in the
+        // Dock; Cmd+Q quits. Without this, closing on macOS destroyed the window while
+        // the process lived on, and nothing could bring a window back -- the activate
+        // handler compared mainWindow to null, which it never was, and init() cannot
+        // safely run a second time in any case.
+        if (minimizeToTray || isMac) {
             event.preventDefault();
             mainWindow.hide();
         }
@@ -1529,10 +1537,13 @@ app.on('window-all-closed', function () {
     }
 });
 
-app.on('activate', function () {
-    if (mainWindow === null) {
-        init();
-    }
+// Dock icon clicked. The window is only ever hidden on macOS, never destroyed
+// mid-session, so this just needs to surface it.
+app.on('activate', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
 });
 
 app.on('before-quit', () => {
@@ -1567,7 +1578,7 @@ app.on('login', (event, _webContents, _details, authInfo, callback) => {
 });
 
 app.on('second-instance', () => {
-    if (!mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
         return;
     }
 
