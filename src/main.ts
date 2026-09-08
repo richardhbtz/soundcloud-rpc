@@ -653,14 +653,16 @@ let contentView: BrowserView;
 
 // Main initialization
 async function init() {
-    // The Widevine CDM is only needed once protected media plays, but awaiting it here
-    // blocked every subsequent step -- window creation included -- so the app showed
-    // nothing at all until it resolved. Kick it off now and let startup continue.
-    const componentsReady = components
-        .whenReady()
-        .then(() => console.log('Components ready:', components.status()))
-        .catch((error) => console.error('Failed to initialize components:', error));
-    void componentsReady;
+    // The Widevine CDM must be installed and provisioned BEFORE any window that will
+    // play protected media is created -- this is a castlabs requirement, not just
+    // startup bookkeeping. Deferring it breaks SoundCloud Go+ playback, so this await
+    // stays even though it delays first paint.
+    try {
+        await components.whenReady();
+        console.log('Components ready:', components.status());
+    } catch (error) {
+        console.error('Failed to initialize components:', error);
+    }
 
     // move any plaintext credentials written by an earlier build into the OS keystore.
     // must run after app ready, since safeStorage is not available before that.
