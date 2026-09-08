@@ -4,6 +4,38 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+/**
+ * Runs the castlabs EVS module under the first interpreter that exists.
+ *
+ * This used to hard-code `python`, which macOS 12.3+ does not ship at all -- Apple
+ * removed it and never added an alias, only `python3`. On every modern Mac the spawn
+ * failed with ENOENT before castlabs was consulted, the failure was caught, and the
+ * build shipped unsigned. Set EVS_PYTHON to force a specific interpreter.
+ */
+function runEvs(args) {
+    const candidates = process.env.EVS_PYTHON ? [process.env.EVS_PYTHON] : ['python3', 'python'];
+
+    let last;
+    for (const interpreter of candidates) {
+        last = spawnSync(interpreter, args, {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        // ENOENT means this interpreter is not installed; anything else is a real
+        // result from an interpreter that exists, so stop here
+        if (!last.error || last.error.code !== 'ENOENT') {
+            last.interpreter = interpreter;
+            return last;
+        }
+    }
+
+    last.error = new Error(
+        `No Python interpreter found (tried: ${candidates.join(', ')}). ` +
+            'Install Python 3, or set EVS_PYTHON to the interpreter that has castlabs-evs installed.',
+    );
+    return last;
+}
+
 function signPackage(appOutDir) {
     if (process.env.STRICT_VMP_SIGNING === 'true' && (!process.env.EVS_USERNAME || !process.env.EVS_PASSWORD)) {
         console.error('EVS_USERNAME and EVS_PASSWORD are required when STRICT_VMP_SIGNING=true');
@@ -27,10 +59,7 @@ function signPackage(appOutDir) {
         // sign package using EVS via safe binary spawning
         // for win: sign after code signing (if any)
         // for mac: sign before code signing
-        const subprocess = spawnSync('python', ['-m', 'castlabs_evs.vmp', 'sign-pkg', packageDir], {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'], // explicitly separate streams safely
-        });
+        const subprocess = runEvs(['-m', 'castlabs_evs.vmp', 'sign-pkg', packageDir]);
 
         // check if subprocess threw internal operational system error
         if (subprocess.error) {
@@ -46,7 +75,7 @@ function signPackage(appOutDir) {
             throw customError;
         }
 
-        console.log('EVS signing output:', subprocess.stdout);
+        console.log(`EVS signing output (${subprocess.interpreter}):`, subprocess.stdout);
         console.log('VMP signing completed successfully');
     } catch (error) {
         // this catch covers every failure mode, not just a missing module: bad or absent
