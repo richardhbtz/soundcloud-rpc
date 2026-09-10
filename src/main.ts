@@ -35,6 +35,7 @@ import { applyNavigationPolicy } from './utils/navigationPolicy';
 import { handleAppScheme, registerAppScheme } from './utils/appProtocol';
 import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
 import { installStoreReadCache } from './utils/storeCache';
+import { deriveBrowserUserAgent } from './utils/userAgent';
 import path = require('path');
 import { platform } from 'os';
 
@@ -106,12 +107,8 @@ let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
-const globalUserAgent = isMac
-    ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const globalPlatformHint = isMac ? '"macOS"' : '"Windows"';
-
-app.userAgentFallback = globalUserAgent;
+// real engine UA minus the tokens that mark this as Electron; see utils/userAgent.ts
+app.userAgentFallback = deriveBrowserUserAgent(app.userAgentFallback, app.getName());
 
 function applyMacMemoryOptimizations(): void {
     if (!isMac) return;
@@ -353,37 +350,6 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
 
-    window.webContents.setUserAgent(globalUserAgent);
-
-    const session = window.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
-    });
 
     return window;
 }
@@ -771,7 +737,6 @@ async function init() {
     });
     contentView.setAutoResize({ width: true, height: true });
 
-    contentView.webContents.setUserAgent(globalUserAgent);
 
     // Initialize services
     translationService = new TranslationService();
@@ -862,36 +827,6 @@ async function init() {
     // Provide current track info to settings preview on demand
     ipcMain.handle('get-current-track', () => {
         return lastTrackInfo;
-    });
-
-    // Configure session
-    const session = contentView.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use the same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
     });
 
     // Apply initial settings
