@@ -953,12 +953,12 @@ export class SettingsManager {
                 <div class="input-group" id="proxyFields" style="display: ${
                     this.store.get('proxyEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${
-                        escapeHtml(this.store.get('proxyHost') || '')
-                    }">
-                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${
-                        escapeHtml(this.store.get('proxyPort') || '')
-                    }">
+                    <input type="text" class="textInput" id="proxyHost" placeholder="${this.translationService.translate('proxyHost')}" data-i18n-placeholder="proxyHost" value="${escapeHtml(
+                        this.store.get('proxyHost') || '',
+                    )}">
+                    <input type="text" class="textInput" id="proxyPort" placeholder="${this.translationService.translate('proxyPort')}" data-i18n-placeholder="proxyPort" value="${escapeHtml(
+                        this.store.get('proxyPort') || '',
+                    )}">
                 </div>
             </div>
 
@@ -979,12 +979,12 @@ export class SettingsManager {
                 <div class="input-group" id="lastFmFields" style="display: ${
                     this.store.get('lastFmEnabled') ? 'block' : 'none'
                 }">
-                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${
-                        escapeHtml(readSecret(this.store, 'lastFmApiKey', ''))
-                    }">
-                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${
-                        escapeHtml(readSecret(this.store, 'lastFmSecret', ''))
-                    }">
+                    <input type="text" class="textInput" id="lastFmApiKey" placeholder="${this.translationService.translate('lastFmApiKey')}" data-i18n-placeholder="lastFmApiKey" value="${escapeHtml(
+                        readSecret(this.store, 'lastFmApiKey', ''),
+                    )}">
+                    <input type="password" class="textInput" id="lastFmSecret" placeholder="${this.translationService.translate('lastFmApiSecret')}" data-i18n-placeholder="lastFmApiSecret" value="${escapeHtml(
+                        readSecret(this.store, 'lastFmSecret', ''),
+                    )}">
                 </div>
                 <div class="description">
                     <a href="#" id="createLastFmApiKey" class="link" data-i18n="createApiKeyLastFm">${this.translationService.translate('createApiKeyLastFm')}</a>
@@ -1009,15 +1009,15 @@ export class SettingsManager {
                 <div class="input-group" id="webhookFields" style="display: ${
                     this.store.get('webhookEnabled') ? 'block' : 'none'
                 }">
-                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${
-                        escapeHtml(this.store.get('webhookUrl') || '')
-                    }">
+                    <input type="url" class="textInput" id="webhookUrl" placeholder="${this.translationService.translate('webhookUrl')}" data-i18n-placeholder="webhookUrl" value="${escapeHtml(
+                        this.store.get('webhookUrl') || '',
+                    )}">
                     <div class="setting-item">
                         <span data-i18n="webhookTrigger">${this.translationService.translate('webhookTrigger')}</span>
                         <div class="input-with-unit">
-                            <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${
-                                escapeHtml(this.store.get('webhookTriggerPercentage') || 50)
-                            }">
+                            <input type="number" id="webhookTriggerPercentage" class="textInput" style="width: 80px;" min="0" max="100" step="1" value="${escapeHtml(
+                                this.store.get('webhookTriggerPercentage') || 50,
+                            )}">
                             <span class="unit-symbol">%</span>
                         </div>
                     </div>
@@ -1169,7 +1169,6 @@ export class SettingsManager {
         </div>
         <script src="/settingsPanel.js"></script>`;
     }
-
 
     private show(): void {
         const wasCreated = this.view === null;

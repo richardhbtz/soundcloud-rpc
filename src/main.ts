@@ -350,7 +350,6 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
 
-
     return window;
 }
 
@@ -737,7 +736,6 @@ async function init() {
     });
     contentView.setAutoResize({ width: true, height: true });
 
-
     // Initialize services
     translationService = new TranslationService();
     themeService = new ThemeService(store);
@@ -762,59 +760,74 @@ async function init() {
     setupMemoryPressureHandler();
 
     // Add settings toggle handler
-    ipcMain.on('toggle-settings', trustedOn(() => {
-        settingsManager.toggle();
-        applyThemeToContent(isDarkTheme);
-    }));
+    ipcMain.on(
+        'toggle-settings',
+        trustedOn(() => {
+            settingsManager.toggle();
+            applyThemeToContent(isDarkTheme);
+        }),
+    );
 
-    ipcMain.handle('confirm-open-homepage', trustedHandle(async (_event, url: string) => {
-        if (!url || typeof url !== 'string') return false;
-        const normalizedUrl = url.trim();
-        if (!/^https?:\/\//i.test(normalizedUrl)) return false;
+    ipcMain.handle(
+        'confirm-open-homepage',
+        trustedHandle(async (_event, url: string) => {
+            if (!url || typeof url !== 'string') return false;
+            const normalizedUrl = url.trim();
+            if (!/^https?:\/\//i.test(normalizedUrl)) return false;
 
-        const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
-        if (confirmed) {
-            await shell.openExternal(normalizedUrl);
-        }
+            const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
+            if (confirmed) {
+                await shell.openExternal(normalizedUrl);
+            }
 
-        return confirmed;
-    }));
+            return confirmed;
+        }),
+    );
 
-    ipcMain.on('show-plugin-homepage-dialog', trustedOn(async (_event, url: string) => {
-        if (!url || typeof url !== 'string') return;
-        const normalizedUrl = url.trim();
-        if (!/^https?:\/\//i.test(normalizedUrl)) return;
+    ipcMain.on(
+        'show-plugin-homepage-dialog',
+        trustedOn(async (_event, url: string) => {
+            if (!url || typeof url !== 'string') return;
+            const normalizedUrl = url.trim();
+            if (!/^https?:\/\//i.test(normalizedUrl)) return;
 
-        const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
-        if (confirmed) {
-            await shell.openExternal(normalizedUrl);
-        }
-    }));
+            const confirmed = await showHomepageConfirmDialog(mainWindow, normalizedUrl);
+            if (confirmed) {
+                await shell.openExternal(normalizedUrl);
+            }
+        }),
+    );
 
-    ipcMain.handle('open-external-url', trustedHandle(async (_event, url: string) => {
-        if (!url || typeof url !== 'string') return '';
-        const normalizedUrl = url.trim();
+    ipcMain.handle(
+        'open-external-url',
+        trustedHandle(async (_event, url: string) => {
+            if (!url || typeof url !== 'string') return '';
+            const normalizedUrl = url.trim();
 
-        try {
-            const parsed = new URL(normalizedUrl);
-            if (parsed.protocol !== 'https:') return '';
-            await shell.openExternal(parsed.toString());
-            return '';
-        } catch {
-            return '';
-        }
-    }));
+            try {
+                const parsed = new URL(normalizedUrl);
+                if (parsed.protocol !== 'https:') return '';
+                await shell.openExternal(parsed.toString());
+                return '';
+            } catch {
+                return '';
+            }
+        }),
+    );
 
-    ipcMain.handle('open-path', trustedHandle(async (_event, targetPath: string) => {
-        if (!targetPath || typeof targetPath !== 'string') return 'Invalid path';
-        const allowedPaths = [themeService.getThemesPath(), pluginService.getPluginsPath()].map((allowedPath) =>
-            path.resolve(allowedPath),
-        );
-        const normalizedPath = path.resolve(targetPath);
-        if (!allowedPaths.includes(normalizedPath)) return 'Blocked path';
+    ipcMain.handle(
+        'open-path',
+        trustedHandle(async (_event, targetPath: string) => {
+            if (!targetPath || typeof targetPath !== 'string') return 'Invalid path';
+            const allowedPaths = [themeService.getThemesPath(), pluginService.getPluginsPath()].map((allowedPath) =>
+                path.resolve(allowedPath),
+            );
+            const normalizedPath = path.resolve(targetPath);
+            if (!allowedPaths.includes(normalizedPath)) return 'Blocked path';
 
-        return shell.openPath(targetPath);
-    }));
+            return shell.openPath(targetPath);
+        }),
+    );
 
     setupWindowControls();
 
@@ -1016,67 +1029,79 @@ async function init() {
         };
     });
 
-    ipcMain.on('switch-account', trustedOn((_, accountId) => {
-        store.set('currentAccountId', accountId);
-        app.relaunch();
-        app.quit();
-    }));
-
-    ipcMain.on('add-account', trustedOn(() => {
-        const newId = `acc_${Date.now()}`;
-        const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
-        accounts.push({ id: newId, name: 'New Account' });
-        store.set('accounts', accounts);
-        store.set('currentAccountId', newId);
-        app.relaunch();
-        app.quit();
-    }));
-
-    ipcMain.on('logout-account', trustedOn(async () => {
-        const currentId = store.get('currentAccountId', 'default');
-
-        if (contentView) {
-            // log out of session
-            await contentView.webContents.session.clearStorageData();
-        }
-
-        // if not default account, remove from list
-        if (currentId !== 'default') {
-            const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
-            const filteredAccounts = accounts.filter((a: any) => a.id !== currentId);
-
-            store.set('accounts', filteredAccounts);
-            store.set('currentAccountId', 'default'); // Switch back to main
-
+    ipcMain.on(
+        'switch-account',
+        trustedOn((_, accountId) => {
+            store.set('currentAccountId', accountId);
             app.relaunch();
             app.quit();
-        } else {
-            // if default account, reload page logged out
-            if (contentView) contentView.webContents.reload();
-        }
-    }));
+        }),
+    );
+
+    ipcMain.on(
+        'add-account',
+        trustedOn(() => {
+            const newId = `acc_${Date.now()}`;
+            const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+            accounts.push({ id: newId, name: 'New Account' });
+            store.set('accounts', accounts);
+            store.set('currentAccountId', newId);
+            app.relaunch();
+            app.quit();
+        }),
+    );
+
+    ipcMain.on(
+        'logout-account',
+        trustedOn(async () => {
+            const currentId = store.get('currentAccountId', 'default');
+
+            if (contentView) {
+                // log out of session
+                await contentView.webContents.session.clearStorageData();
+            }
+
+            // if not default account, remove from list
+            if (currentId !== 'default') {
+                const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+                const filteredAccounts = accounts.filter((a: any) => a.id !== currentId);
+
+                store.set('accounts', filteredAccounts);
+                store.set('currentAccountId', 'default'); // Switch back to main
+
+                app.relaunch();
+                app.quit();
+            } else {
+                // if default account, reload page logged out
+                if (contentView) contentView.webContents.reload();
+            }
+        }),
+    );
 
     // handle applying all changes
-    ipcMain.on('apply-changes', trustedOn(async () => {
-        if (store.get('proxyEnabled')) {
-            await proxyService.apply();
-        }
+    ipcMain.on(
+        'apply-changes',
+        trustedOn(async () => {
+            if (store.get('proxyEnabled')) {
+                await proxyService.apply();
+            }
 
-        if (store.get('lastFmEnabled')) {
-            await lastFmService.authenticate();
-        }
+            if (store.get('lastFmEnabled')) {
+                await lastFmService.authenticate();
+            }
 
-        if (store.get('adBlocker')) {
-            mainWindow.webContents.reload();
-        }
+            if (store.get('adBlocker')) {
+                mainWindow.webContents.reload();
+            }
 
-        if (store.get('discordRichPresence')) {
-            // Refresh presence using the current track info instead of reconnecting
-            await presenceService.updatePresence(lastTrackInfo as any);
-        } else {
-            presenceService.clearActivity();
-        }
-    }));
+            if (store.get('discordRichPresence')) {
+                // Refresh presence using the current track info instead of reconnecting
+                await presenceService.updatePresence(lastTrackInfo as any);
+            } else {
+                presenceService.clearActivity();
+            }
+        }),
+    );
 
     // The username only changes on login/logout/account switch, all of which end in a
     // navigation. Reading it on navigation instead of every 5 seconds removes a
@@ -1198,7 +1223,6 @@ function setupThemeHandlers() {
         settingsManager.getView()?.webContents.send('theme-changed', isDarkTheme);
     }
     applyThemeToContent(isDarkTheme);
-
 }
 
 // keys returned by insertCSS, so the previous theme's stylesheet can be removed
@@ -1392,8 +1416,7 @@ function applyThemeToContent(isDark: boolean) {
     contentView.webContents.executeJavaScript(themeScript).catch(console.error);
 
     // apply each view's custom theme sections as stylesheets, never as script source
-    const joinSection = (section: string) =>
-        sections.all + (sections.all && section ? '\n' : '') + section || '';
+    const joinSection = (section: string) => sections.all + (sections.all && section ? '\n' : '') + section || '';
 
     void applyCustomThemeCss('content', contentView.webContents, joinSection(sections.content));
     void applyCustomThemeCss('header', headerView?.webContents, joinSection(sections.header));

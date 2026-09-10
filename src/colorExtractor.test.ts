@@ -19,7 +19,9 @@ describe('extractThemeColors', () => {
 
     it('accepts well-formed rgb and hsl values', () => {
         expect(extractThemeColors(':root { --primary-color: rgb(255, 85, 0); }')?.primary).toBe('rgb(255, 85, 0)');
-        expect(extractThemeColors(':root { --primary-color: hsl(20, 100%, 50%); }')?.primary).toBe('hsl(20, 100%, 50%)');
+        expect(extractThemeColors(':root { --primary-color: hsl(20, 100%, 50%); }')?.primary).toBe(
+            'hsl(20, 100%, 50%)',
+        );
     });
 
     it('rejects a value with trailing content after the closing paren', () => {
