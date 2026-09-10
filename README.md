@@ -60,16 +60,14 @@ Before installing and running this app, you must have [Node.js](https://nodejs.o
 
 ### SoundCloud Go / Go+ playback (macOS and Windows)
 
-Go and Go+ tracks are DRM-protected and play through Widevine. On macOS and
-Windows, Widevine only works in a build that has been **VMP-signed** by castlabs.
+Go and Go+ tracks are DRM-protected and play through Widevine. On macOS and Windows, Widevine only works in a build that
+has been **VMP-signed** by castlabs.
 
-A build made without signing credentials is not signed, and the failure is quiet:
-the app starts, free tracks play normally, and Go/Go+ tracks simply stall or skip
-with no error shown. If you have a Go subscription and paid tracks will not play,
-an unsigned build is the first thing to check.
+A build made without signing credentials is not signed, and the failure is quiet: the app starts, free tracks play
+normally, and Go/Go+ tracks simply stall or skip with no error shown. If you have a Go subscription and paid tracks will
+not play, an unsigned build is the first thing to check.
 
-Signing is free. Create a castlabs EVS account once, then build with credentials
-in the environment:
+Signing is free. Create a castlabs EVS account once, then build with credentials in the environment:
 
 ```bash
 pip install --upgrade castlabs-evs
@@ -78,8 +76,7 @@ python -m castlabs_evs.account signup       # once
 EVS_USERNAME=you EVS_PASSWORD=secret npm run build-mac
 ```
 
-Set `STRICT_VMP_SIGNING=true` to make the build fail instead of warning when
-signing does not succeed.
+Set `STRICT_VMP_SIGNING=true` to make the build fail instead of warning when signing does not succeed.
 
 Linux does not require VMP signing -- Widevine works on the AppImage without it.
 

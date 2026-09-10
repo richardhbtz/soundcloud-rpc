@@ -29,7 +29,7 @@ async function loadCustomThemes() {
             selector.removeChild(selector.lastChild);
         }
 
-        themes.forEach(theme => {
+        themes.forEach((theme) => {
             const option = document.createElement('option');
             option.value = theme.name;
             option.textContent = theme.name;
@@ -55,7 +55,7 @@ async function loadPlugins() {
             return;
         }
 
-        plugins.forEach(p => {
+        plugins.forEach((p) => {
             const card = document.createElement('div');
             card.className = 'plugin-card';
             const hasHomepage = p.metadata.homepage && p.metadata.homepage.trim() !== '';
@@ -129,15 +129,15 @@ async function loadAccounts() {
         if (!selector) return;
 
         selector.innerHTML = '';
-        data.accounts.forEach(acc => {
+        data.accounts.forEach((acc) => {
             const option = document.createElement('option');
             option.value = acc.id;
             option.textContent = acc.name;
             selector.appendChild(option);
         });
         selector.value = data.currentAccountId || 'default';
-    } catch(e) { 
-        console.error('Failed to load accounts:', e); 
+    } catch (e) {
+        console.error('Failed to load accounts:', e);
     }
 }
 
@@ -203,7 +203,12 @@ document.getElementById('refreshThemes')?.addEventListener('click', async () => 
 
 function escapeHtml(str) {
     if (typeof str !== 'string') return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
 }
 
 document.getElementById('openPluginsFolder')?.addEventListener('click', async () => {
@@ -374,7 +379,7 @@ function parseTimeToMs(time) {
     if (!time) return 0;
     const isNegative = time.trim().startsWith('-');
     const raw = isNegative ? time.trim().slice(1) : time.trim();
-    const parts = raw.split(':').map(p => Number(p));
+    const parts = raw.split(':').map((p) => Number(p));
     let seconds = 0;
     for (const part of parts) {
         seconds = seconds * 60 + (isNaN(part) ? 0 : part);
@@ -453,7 +458,9 @@ function createPlayingPreview(trackInfo, options) {
     const details = document.createElement('div');
     details.className = 'activity-details-preview';
     details.appendChild(createTextElement('activity-name-preview', safeText(trackInfo.title, 'Unknown Track')));
-    details.appendChild(createTextElement('activity-details-text-preview', 'by ' + safeText(trackInfo.author, 'Unknown Artist')));
+    details.appendChild(
+        createTextElement('activity-details-text-preview', 'by ' + safeText(trackInfo.author, 'Unknown Artist')),
+    );
 
     const progressContainer = document.createElement('div');
     progressContainer.className = 'progress-bar-container-preview';
@@ -546,11 +553,13 @@ function updatePreview(trackInfo) {
     activityContent.className = 'activity-content-preview';
 
     if (trackInfo.isPlaying) {
-        activityContent.appendChild(createPlayingPreview(trackInfo, {
-            displaySCSmallIcon,
-            displayButtons,
-            inlineRow: true,
-        }));
+        activityContent.appendChild(
+            createPlayingPreview(trackInfo, {
+                displaySCSmallIcon,
+                displayButtons,
+                inlineRow: true,
+            }),
+        );
         startProgressUpdate(trackInfo);
     } else if (displayWhenIdling) {
         activityContent.appendChild(createPausedPreview({ inlineRow: false }));
@@ -599,7 +608,7 @@ ipcRenderer.on('theme-changed', (_, isDark) => {
 
 ipcRenderer.on('update-translations', () => {
     ipcRenderer.invoke('get-translations').then((translations) => {
-        document.querySelectorAll('[data-i18n]').forEach(element => {
+        document.querySelectorAll('[data-i18n]').forEach((element) => {
             const key = element.getAttribute('data-i18n');
             if (key && translations[key]) {
                 if (element.tagName === 'H2' && element.querySelector('svg')) {
@@ -612,14 +621,14 @@ ipcRenderer.on('update-translations', () => {
             }
         });
 
-        document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
             const key = element.getAttribute('data-i18n-placeholder');
             if (key && translations[key]) {
                 element.setAttribute('placeholder', translations[key]);
             }
         });
 
-        document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        document.querySelectorAll('[data-i18n-title]').forEach((element) => {
             const key = element.getAttribute('data-i18n-title');
             if (key && translations[key]) {
                 element.setAttribute('title', translations[key]);

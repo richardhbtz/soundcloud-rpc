@@ -46,7 +46,6 @@ export function extractThemeColors(cssContent: string): ThemeColors | null {
 }
 
 function extractThemeColorsUncached(cssContent: string): ThemeColors | null {
-
     const colors: Partial<ThemeColors> = {};
 
     // Helper to parse CSS color values (hex, rgb, rgba, hsl, hsla)
