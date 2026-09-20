@@ -6,10 +6,7 @@
         "noImplicitAny": true,
         "sourceMap": true,
         "outDir": "tsc",
-        "baseUrl": ".",
-        "paths": {
-            "*": ["node_modules/*"]
-        },
+        "rootDir": "src",
         "skipLibCheck": true,
         "resolveJsonModule": true,
         "esModuleInterop": true,
