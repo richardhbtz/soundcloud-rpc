@@ -123,10 +123,7 @@ function applyMacMemoryOptimizations(): void {
     features.add('BackForwardCache');
 
     app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
-    app.commandLine.appendSwitch('renderer-process-limit', '1');
-    app.commandLine.appendSwitch('disk-cache-size', '1');
-    app.commandLine.appendSwitch('media-cache-size', '1');
-    app.commandLine.appendSwitch('enable-low-end-device-mode');
+
 }
 
 applyMacMemoryOptimizations();
@@ -383,11 +380,6 @@ function isSoundCloudUrl(rawUrl: string): boolean {
     }
 }
 
-/**
- * The content view can be navigated away from soundcloud.com -- by a link, by an ad
- * frame, or by the app itself during Last.fm authentication. Scripts the app injects
- * carry app privileges, so they must only run once the view is back on SoundCloud.
- */
 function contentViewIsOnSoundCloud(): boolean {
     if (!contentView || contentView.webContents.isDestroyed()) return false;
     return isSoundCloudUrl(contentView.webContents.getURL());
@@ -451,12 +443,6 @@ function scheduleContentViewAdjust(): void {
     });
 }
 
-/**
- * Applies a theme change everywhere it needs to land. Previously the header's toggle and
- * the settings dropdown each did part of this: the toggle never persisted the choice, so
- * a theme set from the header was lost on restart and never reached plugins or the
- * settings view.
- */
 function applyThemeChange(isDark: boolean): void {
     isDarkTheme = isDark;
     store.set('theme', isDark ? 'dark' : 'light');
@@ -647,7 +633,7 @@ async function init() {
         setupTray();
     }
 
-    if (process.platform === 'darwin') setupDarwinMenu();
+    if (process.platform === 'darwin') setupDarwinMenu(() => contentView?.webContents.reload());
     else Menu.setApplicationMenu(null);
 
     const windowState = windowStateManager({ defaultWidth: 800, defaultHeight: 800 });
@@ -661,11 +647,6 @@ async function init() {
 
         const minimizeToTray = store.get('minimizeToTray', true);
 
-        // macOS convention: the close button hides the window and the app stays in the
-        // Dock; Cmd+Q quits. Without this, closing on macOS destroyed the window while
-        // the process lived on, and nothing could bring a window back -- the activate
-        // handler compared mainWindow to null, which it never was, and init() cannot
-        // safely run a second time in any case.
         if (minimizeToTray || isMac) {
             event.preventDefault();
             mainWindow.hide();
@@ -845,9 +826,6 @@ async function init() {
     // Apply initial settings
     await proxyService.apply();
 
-    // Blocking has to be installed on the session before anything is requested through
-    // it. This previously ran after loadURL, so the first page load of every session --
-    // the one the user actually waits for -- went out unfiltered.
     await setupAdBlocker();
 
     contentView.webContents.loadURL('https://soundcloud.com/discover');
@@ -893,11 +871,29 @@ async function init() {
         updateNavigationState();
     });
 
+    let rendererCrashes = 0;
+    contentView.webContents.on('render-process-gone', (_event, details) => {
+        console.error(`Content renderer gone (${details.reason}, exitCode ${details.exitCode})`);
+        if (details.reason === 'clean-exit' || isQuitting) return;
+
+        rendererCrashes += 1;
+        if (rendererCrashes > 3) {
+            queueToastNotification('SoundCloud keeps crashing — restart the app');
+            return;
+        }
+
+        queueToastNotification('SoundCloud crashed — reloading');
+        contentView?.webContents.reloadIgnoringCache();
+    });
+
     // Track if this is initial load
     let isInitialLoad = true;
 
     // Setup event handlers
     contentView.webContents.on('did-finish-load', async () => {
+        // one clean load clears the budget, so unrelated crashes later still get retries
+        rendererCrashes = 0;
+
         await lastFmService.authenticate();
 
         // Get the current language from the page FIRST
@@ -931,9 +927,6 @@ async function init() {
             // Reapply theme to content after page reload
             applyThemeToContent(isDarkTheme);
 
-            // The view can be sitting on last.fm (auth flow), an OAuth provider, or
-            // anywhere a link led. Injected scripts carry app privileges and read the
-            // player DOM, so they only belong on SoundCloud itself.
             if (!contentViewIsOnSoundCloud()) return;
 
             // Inject audio monitoring script
@@ -1103,10 +1096,6 @@ async function init() {
         }),
     );
 
-    // The username only changes on login/logout/account switch, all of which end in a
-    // navigation. Reading it on navigation instead of every 5 seconds removes a
-    // permanent executeJavaScript round-trip into the content renderer -- which also
-    // woke the page (and the CPU) while the app sat idle in the background.
     contentView.webContents.on('did-navigate-in-page', () => void refreshCurrentAccountName());
     contentView.webContents.on('did-finish-load', () => void refreshCurrentAccountName());
 }
@@ -1166,10 +1155,6 @@ async function setupAdBlocker(): Promise<void> {
             fullLists,
             { enableCompression: true },
             {
-                // relative paths resolve against process.cwd(), which for a packaged app
-                // is wherever the launcher happened to be -- so the compiled engine was
-                // rarely found again and the full lists were refetched and recompiled on
-                // every start. userData is stable and writable.
                 path: path.join(app.getPath('userData'), 'adblocker-engine.bin'),
                 read: async (...args) => readFileSync(...args),
                 write: async (...args) => writeFileSync(...args),
@@ -1225,13 +1210,8 @@ function setupThemeHandlers() {
     applyThemeToContent(isDarkTheme);
 }
 
-// keys returned by insertCSS, so the previous theme's stylesheet can be removed
-// when a new one is applied
 const insertedThemeCssKeys: Partial<Record<'content' | 'header' | 'settings', string>> = {};
 
-// custom theme CSS comes from user-supplied .css files. it must never be interpolated
-// into a script string -- insertCSS takes the stylesheet as data, so a theme containing
-// backticks, ${...} or quotes cannot break out into JavaScript.
 async function applyCustomThemeCss(
     target: 'content' | 'header' | 'settings',
     webContents: WebContents | null | undefined,
@@ -1522,9 +1502,6 @@ app.on('will-quit', () => {
     }
 });
 
-// focus window when second instance opened
-// ProxyService.handleAuth() existed but nothing ever called it, so a proxy that asked
-// for credentials simply failed however carefully they had been entered.
 app.on('login', (event, _webContents, _details, authInfo, callback) => {
     if (!authInfo.isProxy) return;
 
@@ -1673,11 +1650,6 @@ function setupAudioHandler() {
             await presenceService.updatePresence(result);
         }
 
-        // update rich presence preview in settings.
-        // Only while the panel is on screen: this payload carries the artwork URL, and
-        // the preview markup fetches and decodes that image. Sending it on every track
-        // update meant a hidden panel pulled artwork over the network for the whole
-        // session, and on macOS the view is torn down when closed anyway.
         if (settingsManager?.isPanelVisible()) {
             settingsManager.getView()?.webContents.send('presence-preview-update', result);
         }

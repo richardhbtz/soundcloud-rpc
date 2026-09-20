@@ -1,5 +1,7 @@
 import { Menu } from 'electron';
 
+let reloadContent: () => void = () => {};
+
 const template: Electron.MenuItemConstructorOptions[] = [
     {
         label: 'Edit',
@@ -16,7 +18,11 @@ const template: Electron.MenuItemConstructorOptions[] = [
     },
     {
         label: 'View',
-        submenu: [{ role: 'reload' }, { type: 'separator' }, { role: 'togglefullscreen' }],
+        submenu: [
+            { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => reloadContent() },
+            { type: 'separator' },
+            { role: 'togglefullscreen' },
+        ],
     },
     { role: 'window', submenu: [{ role: 'minimize' }, { role: 'quit' }] },
     {
@@ -32,7 +38,8 @@ const template: Electron.MenuItemConstructorOptions[] = [
     },
 ];
 
-export function setupDarwinMenu(): void {
+export function setupDarwinMenu(onReload: () => void): void {
+    reloadContent = onReload;
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
 }
