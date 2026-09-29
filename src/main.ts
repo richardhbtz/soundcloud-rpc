@@ -130,7 +130,6 @@ function applyMacMemoryOptimizations(): void {
     features.add('BackForwardCache');
 
     app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
-
 }
 
 applyMacMemoryOptimizations();
