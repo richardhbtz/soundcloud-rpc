@@ -107,6 +107,13 @@ let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
+
+// macOS has no native back/forward UI, so show the header nav buttons by default. One-time so an
+// opt-out in Settings sticks, and so installs that already persisted the old `false` default get it too.
+if (isMac && !store.get('macNavControlsDefaulted', false)) {
+    store.set({ navigationControlsEnabled: true, macNavControlsDefaulted: true });
+}
+
 // real engine UA minus the tokens that mark this as Electron; see utils/userAgent.ts
 app.userAgentFallback = deriveBrowserUserAgent(app.userAgentFallback, app.getName());
 
@@ -488,6 +495,13 @@ function adjustContentViews() {
     updateDialogBounds(mainWindow);
 }
 
+function navigateHistory(direction: 'back' | 'forward') {
+    const history = contentView?.webContents.navigationHistory;
+    if (!history) return;
+    if (direction === 'back' && history.canGoBack()) history.goBack();
+    else if (direction === 'forward' && history.canGoForward()) history.goForward();
+}
+
 function setupWindowControls() {
     if (!mainWindow) return;
 
@@ -549,17 +563,17 @@ function setupWindowControls() {
         }
     });
 
-    // nav handlers
-    ipcMain.on('navigate-back', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
-            contentView.webContents.navigationHistory.goBack();
-        }
-    });
+    // nav handlers (header buttons, and two-finger swipes forwarded by preload.ts)
+    ipcMain.on('navigate-back', () => navigateHistory('back'));
+    ipcMain.on('navigate-forward', () => navigateHistory('forward'));
 
-    ipcMain.on('navigate-forward', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
-            contentView.webContents.navigationHistory.goForward();
-        }
+    // 3-finger swipe, or two-finger when macOS "Swipe between pages" is set to swipe instead of scroll.
+    // Chromium's own swipeWithEvent: maps left to Back, right to Forward.
+    // ponytail: ignores that trackpad setting, so a gesture that reaches both this and the wheel path in
+    // preload.ts would navigate twice. If that shows up, gate on AppleEnableSwipeNavigateWithScrolls.
+    mainWindow.on('swipe', (_event, direction) => {
+        if (direction === 'left') navigateHistory('back');
+        else if (direction === 'right') navigateHistory('forward');
     });
 
     ipcMain.on('refresh-page', () => {
