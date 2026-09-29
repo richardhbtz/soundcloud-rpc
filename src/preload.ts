@@ -9,3 +9,71 @@ contextBridge.exposeInMainWorld('soundcloudAPI', {
         });
     },
 });
+
+// Two-finger trackpad swipes reach the page as horizontal wheel events and Electron has no history
+// swiper of its own, so turn them into back/forward. The 3-finger `swipe` event is handled in main.ts.
+// Sandboxed preloads can't require local modules, which is why this lives here rather than in utils/.
+const SWIPE_PX = 150; // horizontal travel that counts as a swipe; raise if it fires too easily
+const SWIPE_GAP_MS = 150; // silence that ends a gesture, momentum events keep one alive
+
+// can a scroller under the pointer still move sideways in this direction?
+function canScrollX(e: WheelEvent, direction: number): boolean {
+    const { documentElement: html, body } = document;
+    const overflowX = (el: Element) => getComputedStyle(el).overflowX;
+    // The viewport, which scrolls through <html>, takes <html>'s overflow or <body>'s when <html>'s is
+    // visible (soundcloud.com overflows sideways below ~960px this way, and body.scrollLeft stays 0).
+    // Unlike other elements, `visible` there still scrolls.
+    const bodyGoesToViewport = overflowX(html) === 'visible';
+    const viewport = bodyGoesToViewport ? overflowX(body) : overflowX(html);
+
+    for (const node of e.composedPath()) {
+        if (!(node instanceof Element) || (node === body && bodyGoesToViewport)) continue;
+        const isViewport = node === html;
+        const overflow = isViewport ? viewport : overflowX(node);
+        if (isViewport ? overflow === 'hidden' || overflow === 'clip' : overflow !== 'auto' && overflow !== 'scroll') {
+            continue;
+        }
+        const max = node.scrollWidth - node.clientWidth;
+        if (max > 0 && (direction < 0 ? node.scrollLeft > 0 : node.scrollLeft < max - 1)) return true;
+    }
+    return false;
+}
+
+if (process.platform === 'darwin') {
+    let last = 0;
+    let dx = 0;
+    let dy = 0;
+    let ignored = false; // this gesture already navigated, or a scroller owns it
+    let checked = false; // scroller check runs once per gesture, on its first horizontal event
+
+    window.addEventListener(
+        'wheel',
+        (e) => {
+            if (e.ctrlKey || e.shiftKey) return; // pinch-zoom, shift-scroll
+
+            if (e.timeStamp - last > SWIPE_GAP_MS) {
+                dx = 0;
+                dy = 0;
+                ignored = false;
+                checked = false;
+            }
+            last = e.timeStamp;
+            if (ignored) return;
+
+            if (!checked && e.deltaX) {
+                checked = true;
+                ignored = canScrollX(e, e.deltaX);
+                if (ignored) return;
+            }
+
+            dx += e.deltaX;
+            dy += e.deltaY;
+            if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 2 * Math.abs(dy)) return;
+
+            ignored = true;
+            // same overscroll semantics as Chromium elsewhere: scrolling past the left edge is back
+            ipcRenderer.send(dx < 0 ? 'navigate-back' : 'navigate-forward');
+        },
+        { passive: true },
+    );
+}
