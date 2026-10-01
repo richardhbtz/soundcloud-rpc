@@ -5,35 +5,30 @@ const path = require('path');
 const fs = require('fs');
 
 /**
- * Runs the castlabs EVS module under the first interpreter that exists.
+ * Runs the castlabs EVS module under the first interpreter that can import it.
  *
- * This used to hard-code `python`, which macOS 12.3+ does not ship at all -- Apple
- * removed it and never added an alias, only `python3`. On every modern Mac the spawn
- * failed with ENOENT before castlabs was consulted, the failure was caught, and the
- * build shipped unsigned. Set EVS_PYTHON to force a specific interpreter.
+ * "Exists" is not enough: PATH's python3 is often Homebrew's, while `pip3 install --user
+ * castlabs-evs` may have gone into Apple's /usr/bin/python3. Stopping at the first
+ * interpreter that exists got ModuleNotFoundError, and the build shipped with castlabs'
+ * development VMP signature, which breaks every DRM track. Set EVS_PYTHON to force one.
  */
 function runEvs(args) {
-    const candidates = process.env.EVS_PYTHON ? [process.env.EVS_PYTHON] : ['python3', 'python'];
-
-    let last;
-    for (const interpreter of candidates) {
-        last = spawnSync(interpreter, args, {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'],
-        });
-        // ENOENT means this interpreter is not installed; anything else is a real
-        // result from an interpreter that exists, so stop here
-        if (!last.error || last.error.code !== 'ENOENT') {
-            last.interpreter = interpreter;
-            return last;
-        }
+    const candidates = process.env.EVS_PYTHON ? [process.env.EVS_PYTHON] : ['python3', 'python', '/usr/bin/python3'];
+    const interpreter = candidates.find(
+        (candidate) => spawnSync(candidate, ['-c', 'import castlabs_evs'], { stdio: 'ignore' }).status === 0,
+    );
+    if (!interpreter) {
+        return {
+            error: new Error(
+                `castlabs-evs is not importable by any of: ${candidates.join(', ')}. ` +
+                    'Run `python3 -m pip install castlabs-evs`, or set EVS_PYTHON to the interpreter that has it.',
+            ),
+        };
     }
 
-    last.error = new Error(
-        `No Python interpreter found (tried: ${candidates.join(', ')}). ` +
-            'Install Python 3, or set EVS_PYTHON to the interpreter that has castlabs-evs installed.',
-    );
-    return last;
+    const result = spawnSync(interpreter, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    result.interpreter = interpreter;
+    return result;
 }
 
 function signPackage(appOutDir) {
@@ -91,7 +86,8 @@ function signPackage(appOutDir) {
         console.warn('Widevine requires a VMP signature on macOS and Windows. To sign:');
         console.warn('  pip install --upgrade castlabs-evs');
         console.warn('  python -m castlabs_evs.account signup      # once, free');
-        console.warn('  EVS_USERNAME=... EVS_PASSWORD=... npm run build-mac');
+        console.warn('  python3 -m castlabs_evs.account reauth    # if the cached login expired');
+        console.warn('  npm run build-mac');
         console.warn('');
         console.warn('Set STRICT_VMP_SIGNING=true to fail the build instead of warning.');
         console.warn('='.repeat(72) + '\n');
