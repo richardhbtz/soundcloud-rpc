@@ -902,6 +902,10 @@ async function init() {
     // Track if this is initial load
     let isInitialLoad = true;
 
+    // theme and promo/upsell hiding go in on dom-ready, not did-finish-load: the load event waits
+    // on every subresource and never fires when a load is interrupted, which left upsells visible
+    contentView.webContents.on('dom-ready', () => applyThemeToContent(isDarkTheme));
+
     // Setup event handlers
     contentView.webContents.on('did-finish-load', async () => {
         // one clean load clears the budget, so unrelated crashes later still get retries
@@ -937,9 +941,6 @@ async function init() {
     // Reinitialize everything after page load/refresh
     async function reinitializeAfterPageLoad() {
         try {
-            // Reapply theme to content after page reload
-            applyThemeToContent(isDarkTheme);
-
             if (!contentViewIsOnSoundCloud()) return;
 
             // Inject audio monitoring script
@@ -1406,7 +1407,8 @@ function applyThemeToContent(isDark: boolean) {
         })();
     `;
 
-    contentView.webContents.executeJavaScript(themeScript).catch(console.error);
+    // mainFrame, not webContents: webContents.executeJavaScript queues until did-stop-loading
+    contentView.webContents.mainFrame.executeJavaScript(themeScript).catch(console.error);
 
     // apply each view's custom theme sections as stylesheets, never as script source
     const joinSection = (section: string) => sections.all + (sections.all && section ? '\n' : '') + section || '';
