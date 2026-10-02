@@ -74,6 +74,7 @@ export class LastFmService {
     }
 
     /* API dispatcher eliminates duplicate fetch headers &&& signing logic */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async sendLastFmRequest(method: string, params: Record<string, string>): Promise<any> {
         const sessionKey = readSecret(this.store, 'lastFmSessionKey', '');
         const apiKey = readSecret(this.store, 'lastFmApiKey', '');

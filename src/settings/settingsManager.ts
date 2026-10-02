@@ -92,6 +92,7 @@ export class SettingsManager {
             this.parentWindow.removeBrowserView(this.view);
         } catch {}
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this.view.webContents as any).destroy();
         } catch {}
         this.view = null;

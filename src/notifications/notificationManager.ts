@@ -46,6 +46,7 @@ export class NotificationManager {
         } catch {}
         // a toast lives ~4.5s; its renderer is not worth keeping for the rest of the session
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (view.webContents as any).destroy();
         } catch {}
         this.view = null;

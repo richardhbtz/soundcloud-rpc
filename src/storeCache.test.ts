@@ -10,7 +10,7 @@ function makeFakeStore(initial: Record<string, unknown> = {}) {
         get(key: string, defaultValue?: unknown) {
             reads++;
             const value = key.includes('.')
-                ? key.split('.').reduce<unknown>((acc, part) => (acc as any)?.[part], data)
+                ? key.split('.').reduce<unknown>((acc, part) => (acc as Record<string, unknown>)?.[part], data)
                 : data[key];
             return value === undefined ? defaultValue : value;
         },

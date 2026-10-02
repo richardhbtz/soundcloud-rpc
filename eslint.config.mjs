@@ -30,6 +30,12 @@ export default defineConfig([
         languageOptions: {
             parser: tsParser,
         },
+
+        rules: {
+            // `import x = require('x')` is how this CommonJS codebase pulls in untyped modules
+            '@typescript-eslint/no-require-imports': 'off',
+            'no-empty': ['error', { allowEmptyCatch: true }],
+        },
     },
     {
         // Renderer-side scripts. These run in a BrowserView, not in Node, so they need
@@ -48,9 +54,6 @@ export default defineConfig([
             globals: {
                 ...globals.browser,
             },
-        },
-        rules: {
-            '@typescript-eslint/no-require-imports': 'off',
         },
     },
 ]);

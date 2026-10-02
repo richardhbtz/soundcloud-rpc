@@ -19,6 +19,7 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
 
     if (confirmPopupView) {
         mainWindow.removeBrowserView(confirmPopupView);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (confirmPopupView as any).webContents.destroy();
         confirmPopupView = null;
     }
@@ -165,6 +166,7 @@ export async function showHomepageConfirmDialog(mainWindow: BrowserWindow, url: 
 
             if (confirmPopupView && mainWindow) {
                 mainWindow.removeBrowserView(confirmPopupView);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (confirmPopupView as any).webContents.destroy();
                 confirmPopupView = null;
             }

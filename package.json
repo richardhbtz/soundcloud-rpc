@@ -8,7 +8,7 @@
     },
     "license": "MIT",
     "scripts": {
-        "lint": "eslint -c .eslintrc --ext .ts ./src",
+        "lint": "eslint src",
         "test": "vitest run",
         "test:watch": "vitest",
         "copy-header": "cpx \"src/header/**/*\" tsc/header && cpx \"src/settings/*.js\" tsc/settings && cpx \"src/notification/*.js\" tsc/notification && cpx \"src/confirm/*.js\" tsc/confirm && cpx \"src/downloads/*.js\" tsc/downloads",
