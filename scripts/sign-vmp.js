@@ -52,8 +52,8 @@ function signPackage(appOutDir) {
 
     try {
         // sign package using EVS via safe binary spawning
-        // for win: sign after code signing (if any)
-        // for mac: sign before code signing
+        // for win: sign after code signing (if any) -> afterSign hook
+        // for mac: sign before code signing -> afterPack hook
         const subprocess = runEvs(['-m', 'castlabs_evs.vmp', 'sign-pkg', packageDir]);
 
         // check if subprocess threw internal operational system error
@@ -107,18 +107,29 @@ function signPackage(appOutDir) {
     }
 }
 
-// Export function for electron-builder afterSign hook
-// electron-builder passes context object with: appOutDir, packager
-module.exports = function (context) {
-    const { appOutDir } = context;
-
+// electron-builder hooks. package.json points both afterPack and afterSign at this file and
+// electron-builder calls the export named after the hook, with a context holding
+// appOutDir and electronPlatformName.
+//
+// castlabs EVS requires VMP signing BEFORE code signing on macOS and AFTER it on Windows.
+// On macOS EVS rewrites Electron Framework.sig inside the bundle, a sealed resource, so
+// doing it in afterSign would invalidate the Apple signature (and the notarization).
+// afterPack also runs before electron-builder flips fuses: if `electronFuses` is ever
+// configured, the mac VMP signing has to move after that step.
+module.exports.afterPack = function (context) {
     // vmp signing isn't a thing on linux, widevine works without it there
     if (context.electronPlatformName === 'linux') {
         console.log('linux build, skipping VMP signing');
-        return;
     }
+    if (context.electronPlatformName === 'darwin') {
+        signPackage(context.appOutDir);
+    }
+};
 
-    signPackage(appOutDir);
+module.exports.afterSign = function (context) {
+    if (context.electronPlatformName === 'win32') {
+        signPackage(context.appOutDir);
+    }
 };
 
 // if called directly w a path argument (for manual signing)
