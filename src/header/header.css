@@ -47,8 +47,9 @@ html.theme-light {
 }
 
 .custom-header {
-    display: flex;
-    justify-content: space-between;
+    /* nav | tabs | window controls. Equal outer columns keep the tabs in the middle of the window. */
+    display: grid;
+    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
     align-items: center;
     height: 32px;
     background-color: var(--header-bg);
@@ -76,9 +77,21 @@ html.theme-light {
     display: none;
 }
 
-/* Reserve space for native macOS traffic light controls */
-body.platform-darwin .custom-header {
+.header-side,
+.header-center {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 100%;
+}
+
+/* Reserve space for native macOS traffic light controls. On the column rather than the header,
+   so it does not push the tabs off centre. */
+body.platform-darwin .header-side:first-child {
     padding-left: 80px;
+}
+
+body.platform-darwin .header-side:last-child {
     padding-right: 12px;
 }
 
@@ -136,15 +149,158 @@ body.platform-darwin .navigation-controls {
     }
 }
 
+/* draggable spacers either side of the tab group, which keep it centered */
 .title-bar {
+    align-self: stretch;
+    cursor: default;
+    flex: 1 1 16px;
+    min-width: 16px;
+}
+
+/* Tabs, laid out like Safari's compact tab bar: one pill, with the selected tab doubling as the URL bar */
+.tab-group {
     display: flex;
     align-items: center;
+    gap: 2px;
+    flex: 0 1 auto;
+    min-width: 0;
+    height: 22px;
+    padding: 2px;
+    border-radius: 8px;
+    background-color: var(--hover-bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    -webkit-app-region: no-drag;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    width: 150px;
+    min-width: 28px;
+    height: 22px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    overflow: hidden;
+    opacity: 0.7;
+    transition:
+        background-color 0.15s,
+        opacity 0.15s;
+}
+
+.tab:hover {
+    opacity: 1;
+    background-color: var(--hover-bg);
+}
+
+.tab.active {
+    flex: 0 1 auto;
+    width: 320px;
+    min-width: 150px;
+    opacity: 1;
+    background-color: var(--hover-bg);
+}
+
+.tab.dragging {
+    opacity: 0.4;
+}
+
+.tab.drop-target {
+    box-shadow: inset 2px 0 0 var(--header-accent);
+}
+
+.tab-icon {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    object-fit: cover;
+}
+
+.tab-title,
+.tab-path {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    max-width: calc(100% - 220px);
-    cursor: default;
+    min-width: 0;
+}
+
+.tab-title {
+    flex: 1 1 auto;
+}
+
+.tab.active .tab-title {
+    flex: 0 1 auto;
+}
+
+/* the address, without https://soundcloud.com/ */
+.tab-path {
+    flex: 1 1 0;
+    opacity: 0.5;
+}
+
+/* shown only while the selected tab is being edited as a URL bar; holds the full address */
+.tab-url {
+    display: none;
     flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    user-select: text;
+}
+
+.tab.editing .tab-title,
+.tab.editing .tab-path {
+    display: none;
+}
+
+.tab.editing .tab-url {
+    display: block;
+}
+
+.tab-close {
+    display: none;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: default;
+}
+
+.tab-close:hover {
+    background-color: var(--hover-bg);
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close {
+    display: flex;
+}
+
+/* the last tab cannot be closed from here; closing it would close the window */
+.tab-group.single .tab-close {
+    display: none;
+}
+
+#new-tab-btn {
+    flex: none;
+    margin: 0 0 0 4px;
+    width: 24px;
+    -webkit-app-region: no-drag;
 }
 
 .window-controls {

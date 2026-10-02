@@ -36,6 +36,17 @@ import { handleAppScheme, registerAppScheme } from './utils/appProtocol';
 import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
 import { installStoreReadCache } from './utils/storeCache';
 import { deriveBrowserUserAgent } from './utils/userAgent';
+import { presentAsChrome } from './utils/chromeIdentity';
+import {
+    EMPTY_PAGE_INFO,
+    displayUrl,
+    moveItem,
+    parsePageInfo,
+    resolveUrlInput,
+    tabIcon,
+    tabTitle,
+    type PageInfo,
+} from './utils/tabs';
 import path = require('path');
 import { platform } from 'os';
 
@@ -369,7 +380,7 @@ let lastTrackInfo: TrackInfo = {
 };
 
 function isTrustedSoundCloudSender(event: IpcMainEvent): boolean {
-    if (!contentView || event.sender.id !== contentView.webContents.id) return false;
+    if (!tabOfSender(event)) return false;
 
     const frameUrl = event.senderFrame?.url || event.sender.getURL();
     return isSoundCloudUrl(frameUrl);
@@ -598,6 +609,37 @@ function setupWindowControls() {
         applyThemeChange(!isDarkTheme);
     });
 
+    ipcMain.on(
+        'tab-new',
+        trustedOn(() => void openTab(), 'tab-new'),
+    );
+    ipcMain.on(
+        'tab-select',
+        trustedOn((_event, id: unknown) => {
+            const tab = tabs.find((t) => t.id === id);
+            if (tab) activateTab(tab);
+        }, 'tab-select'),
+    );
+    ipcMain.on(
+        'tab-close',
+        trustedOn((_event, id: unknown) => closeTab(id), 'tab-close'),
+    );
+    ipcMain.on(
+        'tab-move',
+        trustedOn((_event, id: unknown, toIndex: unknown) => {
+            const from = tabs.findIndex((tab) => tab.id === id);
+            if (typeof toIndex !== 'number') return;
+            // in place: `tabs` is shared, and only the order changes
+            tabs.splice(0, tabs.length, ...moveItem(tabs, from, toIndex));
+            sendTabState();
+        }, 'tab-move'),
+    );
+    ipcMain.on(
+        'navigate-url',
+        trustedOn((_event, input: unknown) => navigateActiveTab(input), 'navigate-url'),
+    );
+    ipcMain.handle('get-tab-state', () => tabState());
+
     // Handle is-maximized requests
     ipcMain.handle('is-maximized', () => {
         return mainWindow ? mainWindow.isMaximized() : false;
@@ -617,7 +659,309 @@ function setupWindowControls() {
 }
 
 let headerView: BrowserView | null;
+// the active tab's view. Everything that acts on "the page" (zoom, reload, back/forward, theme
+// toggles) goes through this, so it follows whichever tab is in front.
 let contentView: BrowserView;
+
+const HOME_URL = 'https://soundcloud.com/discover';
+
+interface Tab {
+    id: number;
+    view: BrowserView;
+    info: PageInfo;
+}
+
+const tabs: Tab[] = [];
+let nextTabId = 1;
+// the tab whose player is driving presence, scrobbling and the thumbar
+let audioTabId: number | undefined;
+let startupHintShown = false;
+
+function tabOfSender(event: IpcMainEvent): Tab | undefined {
+    return tabs.find((tab) => tab.view.webContents.id === event.sender.id);
+}
+
+function tabState() {
+    const url = contentView?.webContents.getURL() ?? '';
+    return {
+        tabs: tabs.map((tab) => ({
+            id: tab.id,
+            title: tabTitle(tab.view.webContents.getURL(), tab.info),
+            icon: tabIcon(tab.info),
+        })),
+        activeId: tabs.find((tab) => tab.view === contentView)?.id,
+        url,
+        display: displayUrl(url),
+        // shown for SoundCloud's own pages, and when a cover fails to load
+        fallbackIcon: soundCloudIcon(),
+    };
+}
+
+let soundCloudIconUrl = '';
+function soundCloudIcon(): string {
+    soundCloudIconUrl ||= nativeImage
+        .createFromPath(path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'))
+        .resize({ width: 32, height: 32 })
+        .toDataURL();
+    return soundCloudIconUrl;
+}
+
+// During shutdown the header's webContents is torn down before the tabs', which still emit load and
+// navigation events on their way out; touching it then throws and takes the quit down with it.
+function headerContents(): WebContents | null {
+    const webContents = headerView?.webContents;
+    return webContents && !webContents.isDestroyed() ? webContents : null;
+}
+
+function sendTabState(): void {
+    if (isQuitting) return;
+    headerContents()?.send('tabs-changed', tabState());
+}
+
+function updateNavigationState(): void {
+    if (isQuitting || !contentView?.webContents) return;
+    headerContents()?.send('navigation-state-changed', {
+        canGoBack: contentView.webContents.navigationHistory.canGoBack(),
+        canGoForward: contentView.webContents.navigationHistory.canGoForward(),
+    });
+}
+
+function createTab(): Tab {
+    // get selected account and define partition
+    const currentAccountId = store.get('currentAccountId', 'default');
+    const sessionPartition = currentAccountId === 'default' ? undefined : `persist:sc_${currentAccountId}`;
+
+    const view = new BrowserView({
+        webPreferences: {
+            ...(sessionPartition ? { partition: sessionPartition } : {}),
+            nodeIntegration: false,
+            contextIsolation: true,
+            // this view loads soundcloud.com plus third-party ad/embed iframes, so it is
+            // the one that most needs the Chromium sandbox. preload.js only uses
+            // contextBridge/ipcRenderer, both of which work fine in a sandboxed preload.
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            nodeIntegrationInSubFrames: false,
+            nodeIntegrationInWorker: false,
+            devTools: devMode,
+            preload: path.join(__dirname, 'preload.js'),
+            ...(isMac ? { spellcheck: false } : {}),
+        },
+    });
+    const tab: Tab = { id: nextTabId++, view, info: EMPTY_PAGE_INFO };
+    tabs.push(tab);
+
+    applyNavigationPolicy(view.webContents, {
+        allowPopups: true,
+        onNewTab: (url, background) => void openTab(url, !background),
+    });
+    shortcutService.attachToWebContents(view.webContents);
+    return tab;
+}
+
+// Only the active tab's view is attached to the window; the others keep running detached.
+function activateTab(tab: Tab): void {
+    if (contentView && contentView !== tab.view) mainWindow.removeBrowserView(contentView);
+    contentView = tab.view;
+    mainWindow.addBrowserView(tab.view);
+
+    // a view added later stacks above the settings panel, toasts and dialogs; put those back on top
+    for (const view of mainWindow.getBrowserViews()) {
+        if (view !== tab.view && view !== headerView) mainWindow.setTopBrowserView(view);
+    }
+
+    const { width, height } = mainWindow.getContentBounds();
+    tab.view.setBounds({ x: 0, y: HEADER_HEIGHT, width, height: height - HEADER_HEIGHT });
+    tab.view.setAutoResize({ width: true, height: true });
+
+    // ponytail: enabling or disabling a plugin only reaches the active tab; other tabs pick it
+    // up on their next load. Loop over `tabs` in PluginService if that is not enough.
+    pluginService?.setContentView(tab.view);
+    tab.view.webContents.focus();
+
+    sendTabState();
+    updateNavigationState();
+    headerContents()?.send('refresh-state-changed', tab.view.webContents.isLoading());
+}
+
+async function startTab(tab: Tab, url: string): Promise<void> {
+    const { webContents } = tab.view;
+
+    // before the first soundcloud request, so it never sees the Chromium-only brand
+    const header = headerContents();
+    if (header) {
+        await presentAsChrome(webContents, header, app.userAgentFallback).catch((error) =>
+            console.error('Failed to set Chrome client hints:', error),
+        );
+    }
+    if (!tabs.includes(tab) || isQuitting) return; // closed while it was being set up
+
+    // wired after presentAsChrome so its about:blank load does not run the page handlers
+    wireTab(tab);
+    webContents.loadURL(url);
+}
+
+async function openTab(url = HOME_URL, activate = true): Promise<void> {
+    const tab = createTab();
+    if (activate) activateTab(tab);
+    else sendTabState();
+    await startTab(tab, url);
+}
+
+function closeTab(id: unknown): void {
+    const index = tabs.findIndex((tab) => tab.id === id);
+    if (index === -1) return;
+
+    // the last tab is the window: closing it closes (or, on macOS and with tray, hides) the window
+    if (tabs.length === 1) {
+        mainWindow.close();
+        return;
+    }
+
+    const [tab] = tabs.splice(index, 1);
+    if (tab.view === contentView) activateTab(tabs[Math.min(index, tabs.length - 1)]);
+    else sendTabState();
+
+    if (audioTabId === tab.id) {
+        audioTabId = undefined;
+        lastTrackInfo = { ...lastTrackInfo, isPlaying: false };
+        void presenceService?.updatePresence(lastTrackInfo);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (tab.view.webContents as any).destroy();
+}
+
+function cycleTab(step: number): void {
+    const index = tabs.findIndex((tab) => tab.view === contentView);
+    if (index !== -1) activateTab(tabs[(index + step + tabs.length) % tabs.length]);
+}
+
+function navigateActiveTab(input: unknown): void {
+    const url = typeof input === 'string' ? resolveUrlInput(input) : null;
+    if (!url || !contentView) return;
+
+    const { webContents } = contentView;
+    const target = new URL(url);
+    if (contentViewIsOnSoundCloud() && target.origin === new URL(webContents.getURL()).origin) {
+        // hand the path to SoundCloud's own router: a real load would stop whatever is playing
+        const path = JSON.stringify(target.pathname + target.search + target.hash);
+        webContents
+            .executeJavaScript(`history.pushState(null, '', ${path}); dispatchEvent(new PopStateEvent('popstate'));`)
+            .catch(() => webContents.loadURL(url));
+    } else {
+        webContents.loadURL(url);
+    }
+    webContents.focus();
+}
+
+// Per-tab page lifecycle: header state for the active tab, crash recovery, theme and monitor injection.
+function wireTab(tab: Tab): void {
+    const { webContents } = tab.view;
+    const isActive = () => tab.view === contentView;
+
+    const sendLoading = (loading: boolean) => {
+        if (isActive() && !isQuitting) headerContents()?.send('refresh-state-changed', loading);
+    };
+    const onNavigated = () => {
+        sendTabState();
+        if (isActive()) updateNavigationState();
+    };
+
+    webContents.on('did-navigate', onNavigated);
+    webContents.on('did-navigate-in-page', () => {
+        onNavigated();
+        if (isActive()) void refreshCurrentAccountName();
+    });
+
+    // Listen for page load events to manage refresh state
+    webContents.on('did-start-loading', () => sendLoading(true));
+    webContents.on('did-stop-loading', () => {
+        sendLoading(false);
+        onNavigated();
+    });
+    webContents.on('did-fail-load', () => {
+        sendLoading(false);
+        onNavigated();
+    });
+
+    let rendererCrashes = 0;
+    webContents.on('render-process-gone', (_event, details) => {
+        console.error(`Content renderer gone (${details.reason}, exitCode ${details.exitCode})`);
+        if (details.reason === 'clean-exit' || isQuitting) return;
+
+        rendererCrashes += 1;
+        if (rendererCrashes > 3) {
+            queueToastNotification('SoundCloud keeps crashing — restart the app');
+            return;
+        }
+
+        queueToastNotification('SoundCloud crashed — reloading');
+        webContents.reloadIgnoringCache();
+    });
+
+    // theme and promo/upsell hiding go in on dom-ready, not did-finish-load: the load event waits
+    // on every subresource and never fires when a load is interrupted, which left upsells visible
+    webContents.on('dom-ready', () => applyThemeToContent(isDarkTheme, tab.view));
+
+    let isInitialLoad = true;
+    webContents.on('did-finish-load', async () => {
+        // one clean load clears the budget, so unrelated crashes later still get retries
+        rendererCrashes = 0;
+
+        if (isInitialLoad) {
+            // drop the about:blank entry presentAsChrome left behind, or Back would land on it
+            webContents.navigationHistory.clear();
+            isInitialLoad = false;
+        }
+
+        if (isActive()) {
+            await lastFmService.authenticate();
+
+            // Get the current language from the page FIRST
+            await getLanguage();
+
+            // Show notification only on first load
+            if (!startupHintShown) {
+                startupHintShown = true;
+                notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
+            }
+
+            // Update the language in the settings manager
+            settingsManager.updateTranslations(translationService);
+
+            // Update navigation state after page load
+            updateNavigationState();
+
+            // Initialize navigation controls visibility
+            const navigationEnabled = store.get('navigationControlsEnabled', false);
+            if (headerView && headerView.webContents) {
+                headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
+            }
+
+            void refreshCurrentAccountName();
+        }
+
+        // Reinitialize after page load/refresh
+        try {
+            if (!isSoundCloudUrl(webContents.getURL())) return;
+
+            // Inject audio monitoring script
+            await webContents.executeJavaScript(audioMonitorScript);
+
+            // Re-inject all enabled plugin content scripts
+            pluginService?.injectAllContentScripts(tab.view);
+
+            if (presenceService) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await presenceService.updatePresence(lastTrackInfo as any);
+            }
+        } catch (error) {
+            console.error('Failed to reinitialize after page load:', error);
+        }
+    });
+}
 
 // Main initialization
 async function init() {
@@ -649,7 +993,7 @@ async function init() {
     if (process.platform === 'darwin') setupDarwinMenu(() => contentView?.webContents.reload());
     else Menu.setApplicationMenu(null);
 
-    const windowState = windowStateManager({ defaultWidth: 800, defaultHeight: 800 });
+    const windowState = windowStateManager({ defaultWidth: 1280, defaultHeight: 800 });
     mainWindow = createBrowserWindow(windowState);
 
     windowState.manage(mainWindow);
@@ -696,39 +1040,12 @@ async function init() {
     markTrustedSender(headerView.webContents);
     headerView.webContents.loadFile(path.join(__dirname, 'header', 'header.html'));
 
-    // get selected account and define partition
-    const currentAccountId = store.get('currentAccountId', 'default');
-    const sessionPartition = currentAccountId === 'default' ? undefined : `persist:sc_${currentAccountId}`;
+    // tabs attach their own shortcut listeners, so this service has to exist before the first one
+    shortcutService = new ShortcutService(mainWindow);
+    shortcutService.attachToWebContents(headerView.webContents);
 
-    contentView = new BrowserView({
-        webPreferences: {
-            ...(sessionPartition ? { partition: sessionPartition } : {}),
-            nodeIntegration: false,
-            contextIsolation: true,
-            // this view loads soundcloud.com plus third-party ad/embed iframes, so it is
-            // the one that most needs the Chromium sandbox. preload.js only uses
-            // contextBridge/ipcRenderer, both of which work fine in a sandboxed preload.
-            sandbox: true,
-            webSecurity: true,
-            allowRunningInsecureContent: false,
-            nodeIntegrationInSubFrames: false,
-            nodeIntegrationInWorker: false,
-            devTools: devMode,
-            preload: path.join(__dirname, 'preload.js'),
-            ...(isMac ? { spellcheck: false } : {}),
-        },
-    });
-
-    applyNavigationPolicy(contentView.webContents, { allowPopups: true });
-
-    mainWindow.addBrowserView(contentView);
-    contentView.setBounds({
-        x: 0,
-        y: 32,
-        width: mainWindow.getBounds().width,
-        height: mainWindow.getBounds().height - 32,
-    });
-    contentView.setAutoResize({ width: true, height: true });
+    const firstTab = createTab();
+    activateTab(firstTab);
 
     // Initialize services
     translationService = new TranslationService();
@@ -745,10 +1062,8 @@ async function init() {
     // currently loading through, which changes when the user switches account
     proxyService = new ProxyService(() => contentView?.webContents.session ?? null, store, queueToastNotification);
     presenceService = new PresenceService(store, translationService);
-    lastFmService = new LastFmService(contentView, store);
+    lastFmService = new LastFmService(() => contentView, store);
     webhookService = new WebhookService(store);
-    shortcutService = new ShortcutService(mainWindow);
-    shortcutService.attachToWebContents(contentView.webContents);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
 
     setupMemoryPressureHandler();
@@ -841,123 +1156,16 @@ async function init() {
 
     await setupAdBlocker();
 
-    contentView.webContents.loadURL('https://soundcloud.com/discover');
+    await startTab(firstTab, HOME_URL);
 
-    // Function to update navigation state in header
-    function updateNavigationState() {
-        if (headerView && headerView.webContents && contentView) {
-            const state = {
-                canGoBack: contentView.webContents.navigationHistory.canGoBack(),
-                canGoForward: contentView.webContents.navigationHistory.canGoForward(),
-            };
-            headerView.webContents.send('navigation-state-changed', state);
-        }
-    }
+    ipcMain.on('soundcloud:page-info', (event, payload: unknown) => {
+        const tab = tabOfSender(event);
+        const info = parsePageInfo(payload);
+        if (!tab || !info || !isTrustedSoundCloudSender(event)) return;
 
-    // Listen for navigation events to update button states
-    contentView.webContents.on('did-navigate', () => {
-        updateNavigationState();
+        tab.info = info;
+        sendTabState();
     });
-
-    contentView.webContents.on('did-navigate-in-page', () => {
-        updateNavigationState();
-    });
-
-    // Listen for page load events to manage refresh state
-    contentView.webContents.on('did-start-loading', () => {
-        if (headerView && headerView.webContents) {
-            headerView.webContents.send('refresh-state-changed', true);
-        }
-    });
-
-    contentView.webContents.on('did-stop-loading', () => {
-        if (headerView && headerView.webContents) {
-            headerView.webContents.send('refresh-state-changed', false);
-        }
-        updateNavigationState();
-    });
-
-    contentView.webContents.on('did-fail-load', () => {
-        if (headerView && headerView.webContents) {
-            headerView.webContents.send('refresh-state-changed', false);
-        }
-        updateNavigationState();
-    });
-
-    let rendererCrashes = 0;
-    contentView.webContents.on('render-process-gone', (_event, details) => {
-        console.error(`Content renderer gone (${details.reason}, exitCode ${details.exitCode})`);
-        if (details.reason === 'clean-exit' || isQuitting) return;
-
-        rendererCrashes += 1;
-        if (rendererCrashes > 3) {
-            queueToastNotification('SoundCloud keeps crashing — restart the app');
-            return;
-        }
-
-        queueToastNotification('SoundCloud crashed — reloading');
-        contentView?.webContents.reloadIgnoringCache();
-    });
-
-    // Track if this is initial load
-    let isInitialLoad = true;
-
-    // theme and promo/upsell hiding go in on dom-ready, not did-finish-load: the load event waits
-    // on every subresource and never fires when a load is interrupted, which left upsells visible
-    contentView.webContents.on('dom-ready', () => applyThemeToContent(isDarkTheme));
-
-    // Setup event handlers
-    contentView.webContents.on('did-finish-load', async () => {
-        // one clean load clears the budget, so unrelated crashes later still get retries
-        rendererCrashes = 0;
-
-        await lastFmService.authenticate();
-
-        // Get the current language from the page FIRST
-        await getLanguage();
-
-        // Show notification only on first load
-        if (isInitialLoad) {
-            notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
-            isInitialLoad = false;
-        }
-
-        // Update the language in the settings manager
-        settingsManager.updateTranslations(translationService);
-
-        // Update navigation state after page load
-        updateNavigationState();
-
-        // Initialize navigation controls visibility
-        const navigationEnabled = store.get('navigationControlsEnabled', false);
-        if (headerView && headerView.webContents) {
-            headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
-        }
-
-        // Reinitialize after page load/refresh
-        await reinitializeAfterPageLoad();
-    });
-
-    // Reinitialize everything after page load/refresh
-    async function reinitializeAfterPageLoad() {
-        try {
-            if (!contentViewIsOnSoundCloud()) return;
-
-            // Inject audio monitoring script
-            await contentView.webContents.executeJavaScript(audioMonitorScript);
-
-            // Re-inject all enabled plugin content scripts
-            if (pluginService) {
-                pluginService.injectAllContentScripts();
-            }
-
-            if (presenceService) {
-                await presenceService.updatePresence(lastTrackInfo as any);
-            }
-        } catch (error) {
-            console.error('Failed to reinitialize after page load:', error);
-        }
-    }
 
     // Register settings related events
     ipcMain.on('setting-changed', async (_event, data) => {
@@ -1080,7 +1288,7 @@ async function init() {
                 app.quit();
             } else {
                 // if default account, reload page logged out
-                if (contentView) contentView.webContents.reload();
+                for (const tab of tabs) tab.view.webContents.reload();
             }
         }),
     );
@@ -1109,9 +1317,6 @@ async function init() {
             }
         }),
     );
-
-    contentView.webContents.on('did-navigate-in-page', () => void refreshCurrentAccountName());
-    contentView.webContents.on('did-finish-load', () => void refreshCurrentAccountName());
 }
 
 async function refreshCurrentAccountName(): Promise<void> {
@@ -1224,7 +1429,8 @@ function setupThemeHandlers() {
     applyThemeToContent(isDarkTheme);
 }
 
-const insertedThemeCssKeys: Partial<Record<'content' | 'header' | 'settings', string>> = {};
+// per webContents rather than per target: every tab is a 'content' view with its own stylesheet key
+const insertedThemeCssKeys = new WeakMap<WebContents, string>();
 
 async function applyCustomThemeCss(
     target: 'content' | 'header' | 'settings',
@@ -1233,9 +1439,9 @@ async function applyCustomThemeCss(
 ): Promise<void> {
     if (!webContents || webContents.isDestroyed()) return;
 
-    const previousKey = insertedThemeCssKeys[target];
+    const previousKey = insertedThemeCssKeys.get(webContents);
     if (previousKey) {
-        delete insertedThemeCssKeys[target];
+        insertedThemeCssKeys.delete(webContents);
         try {
             await webContents.removeInsertedCSS(previousKey);
         } catch {
@@ -1246,13 +1452,13 @@ async function applyCustomThemeCss(
     if (!css.trim()) return;
 
     try {
-        insertedThemeCssKeys[target] = await webContents.insertCSS(css);
+        insertedThemeCssKeys.set(webContents, await webContents.insertCSS(css));
     } catch (error) {
         console.error(`Failed to apply custom theme CSS to ${target} view:`, error);
     }
 }
 
-function applyThemeToContent(isDark: boolean) {
+function applyThemeToContent(isDark: boolean, only?: BrowserView) {
     if (!contentView) return;
 
     const customThemeCSS = themeService.getCurrentCustomThemeCSS();
@@ -1297,6 +1503,42 @@ function applyThemeToContent(isDark: boolean) {
         return res;
     })(customThemeCSS);
 
+    // macOS draws its own overlay scrollbars, which hide when idle; any ::-webkit-scrollbar rule
+    // replaces them with a permanent strip, so the custom ones are for Windows and Linux only
+    const scrollbarCss = isMac
+        ? ''
+        : `
+              ::-webkit-scrollbar-button {
+                  display: none;
+              }
+
+              ::-webkit-scrollbar {
+                  width: 10px;
+                  height: 10px;
+                  background-color: transparent;
+              }
+
+              ::-webkit-scrollbar-track {
+                  background-color: transparent;
+              }
+
+              ::-webkit-scrollbar-thumb {
+                  background-color: ${isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+                  border-radius: 4px;
+                  border: 2px solid transparent;
+                  background-clip: content-box;
+                  transition: background-color 0.3s;
+              }
+
+              ::-webkit-scrollbar-thumb:hover {
+                  background-color: ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+              }
+
+              ::-webkit-scrollbar-corner {
+                  background-color: transparent;
+              }
+          `;
+
     const themeScript = `
         (function() {
             try {
@@ -1318,35 +1560,13 @@ function applyThemeToContent(isDark: boolean) {
                 const style = document.createElement('style');
                 style.id = 'custom-scrollbar-style';
                 style.textContent = \`
-                    ::-webkit-scrollbar-button {
-                        display: none;
-                    }
+                    ${scrollbarCss}
                     
-                    ::-webkit-scrollbar {
-                        width: 8px;
-                        height: 8px;
-                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
-                    }
-                    
-                    ::-webkit-scrollbar-track {
-                        background-color: transparent;
-                    }
-                    
-                    ::-webkit-scrollbar-thumb {
-                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
-                        border-radius: 4px;
-                        transition: background-color 0.3s;
-                    }
-                    
-                    ::-webkit-scrollbar-thumb:hover {
-                        background-color: ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
-                    }
-                    
-                    ::-webkit-scrollbar-corner {
-                        background-color: transparent;
-                    }
-                    
-                    ${hidePromotions ? '.banner.m-promotion { display: none !important; }' : ''}
+                    ${hidePromotions ? '.banner.m-promotion, .sidebarModule.mobileApps { display: none !important; }' : ''}
+
+                    /* footer: keep only the language selector. the separators between the links are
+                       bare text nodes, so they are collapsed with font-size rather than display */
+                    ${hidePromotions ? '.l-footer { font-size: 0 !important; line-height: 0 !important; } .l-footer > a { display: none !important; } .l-footer .footer__localeSelector { font-size: 14px !important; line-height: 20px !important; margin-top: 0 !important; }' : ''}
                     
                     ${hideEventsNearYou ? '.velvetCakeModule { display: none !important; }' : ''}
                     
@@ -1401,19 +1621,38 @@ function applyThemeToContent(isDark: boolean) {
                 // applyCustomThemeCss below. drop any stylesheet left by an older build.
                 const legacyCustomStyle = document.getElementById('custom-theme-style');
                 if (legacyCustomStyle) legacyCustomStyle.remove();
+
+                // Opt out of every optional OneTrust cookie category (targeting, functional,
+                // performance), which default to on. OneTrust loads late, hence the wait, and
+                // remembers the choice in its own cookie, so later loads find nothing to reject.
+                if (!window._cookieRejectInterval) {
+                    let tries = 0;
+                    window._cookieRejectInterval = setInterval(() => {
+                        const ready = window.OneTrust && typeof window.OnetrustActiveGroups === 'string';
+                        if (!ready && ++tries < 60) return;
+                        clearInterval(window._cookieRejectInterval);
+                        window._cookieRejectInterval = null;
+                        if (ready && /C000[2-4]/.test(window.OnetrustActiveGroups)) window.OneTrust.RejectAll();
+                    }, 500);
+                }
             } catch(e) {
                 console.error('Error applying theme:', e);
             }
         })();
     `;
 
-    // mainFrame, not webContents: webContents.executeJavaScript queues until did-stop-loading
-    contentView.webContents.mainFrame.executeJavaScript(themeScript).catch(console.error);
+    const targets = (only ? [only] : tabs.map((tab) => tab.view)).filter((view) => !view.webContents.isDestroyed());
+    for (const view of targets) {
+        // mainFrame, not webContents: webContents.executeJavaScript queues until did-stop-loading
+        view.webContents.mainFrame.executeJavaScript(themeScript).catch(console.error);
+    }
 
     // apply each view's custom theme sections as stylesheets, never as script source
     const joinSection = (section: string) => sections.all + (sections.all && section ? '\n' : '') + section || '';
 
-    void applyCustomThemeCss('content', contentView.webContents, joinSection(sections.content));
+    for (const view of targets) {
+        void applyCustomThemeCss('content', view.webContents, joinSection(sections.content));
+    }
     void applyCustomThemeCss('header', headerView?.webContents, joinSection(sections.header));
     void applyCustomThemeCss('settings', settingsManager?.getView()?.webContents, joinSection(sections.settings));
 }
@@ -1476,6 +1715,18 @@ function initializeShortcuts() {
             }
             contentView.webContents.reload();
         }
+    });
+
+    shortcutService.register('newTab', 'CommandOrControl+T', 'New Tab', () => void openTab());
+    shortcutService.register('closeTab', 'CommandOrControl+W', 'Close Tab', () => {
+        closeTab(tabs.find((tab) => tab.view === contentView)?.id);
+    });
+    shortcutService.register('nextTab', 'Control+Tab', 'Next Tab', () => cycleTab(1));
+    shortcutService.register('previousTab', 'Control+Shift+Tab', 'Previous Tab', () => cycleTab(-1));
+    shortcutService.register('focusUrlBar', 'CommandOrControl+L', 'Focus URL Bar', () => {
+        const header = headerContents();
+        header?.focus();
+        header?.send('focus-url-bar');
     });
 
     console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
@@ -1626,6 +1877,11 @@ function setupAudioHandler() {
 
         const { data: result, reason } = update;
 
+        // every tab runs the monitor; a paused tab must not overwrite what another one is playing
+        const senderTab = tabOfSender(event);
+        if (result.isPlaying) audioTabId = senderTab?.id;
+        else if (audioTabId !== undefined && audioTabId !== senderTab?.id) return;
+
         if (devMode) {
             console.debug(`Track update received: ${reason}`);
         }
@@ -1670,7 +1926,12 @@ function setupAudioHandler() {
         }
 
         if (thumbarService) {
-            thumbarService.updateThumbarButtons(mainWindow, result.isPlaying, result.isLiked, contentView);
+            thumbarService.updateThumbarButtons(
+                mainWindow,
+                result.isPlaying,
+                result.isLiked,
+                senderTab?.view ?? contentView,
+            );
         }
     });
 }

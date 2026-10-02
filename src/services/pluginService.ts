@@ -229,8 +229,8 @@ export class PluginService {
         return id.replace(/[^a-zA-Z0-9_]/g, '_');
     }
 
-    private injectContentScript(id: string, exports: PluginExports): void {
-        if (!this.contentView) return;
+    private injectContentScript(id: string, exports: PluginExports, view = this.contentView): void {
+        if (!view) return;
 
         let code: string | undefined;
         try {
@@ -256,7 +256,7 @@ export class PluginService {
             })();
         `;
 
-        this.contentView.webContents.executeJavaScript(wrapped).catch((e: Error) => {
+        view.webContents.executeJavaScript(wrapped).catch((e: Error) => {
             console.error(`[plugin:${id}] content script injection failed:`, e);
         });
     }
@@ -283,9 +283,9 @@ export class PluginService {
         this.contentView = view;
     }
 
-    public injectAllContentScripts(): void {
+    public injectAllContentScripts(view = this.contentView): void {
         for (const [id, runtime] of this.runtimes) {
-            this.injectContentScript(id, runtime.exports);
+            this.injectContentScript(id, runtime.exports, view);
         }
     }
 
