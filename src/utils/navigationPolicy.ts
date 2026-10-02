@@ -1,10 +1,7 @@
 import { shell, type WebContents } from 'electron';
 
 interface NavigationPolicyOptions {
-    /**
-     * Third-party sign-in flows (Google, Apple, Facebook) genuinely need `window.open`,
-     * so the content view allows popups. Every other view denies them outright.
-     */
+    /** Tabs need `window.open` for third-party sign-in (Google, Apple, Facebook); no other view does. */
     allowPopups?: boolean;
     /**
      * Called instead of opening a window when the user opens a soundcloud.com link in a new tab
@@ -14,14 +11,10 @@ interface NavigationPolicyOptions {
 }
 
 /**
- * Without a window-open handler, any `window.open` or `target="_blank"` -- including one
- * from an embedded ad frame -- creates an app-owned window with no URL check and
- * whatever `webPreferences` the features string implies. Without a navigation guard, a
- * view can be driven to a non-web scheme.
- *
- * Popups that are allowed through are pinned to https and given an explicitly hardened
- * renderer, so a permitted popup can never be more privileged than the view that opened
- * it.
+ * Left alone, any `window.open` or `target="_blank"` -- including one from an ad frame --
+ * creates an app-owned window with no URL check, and a view can be navigated to a non-web
+ * scheme. Popups that are allowed are held to https and a hardened renderer, so one can
+ * never be more privileged than the view that opened it.
  */
 export function applyNavigationPolicy(webContents: WebContents, options: NavigationPolicyOptions = {}): void {
     const { allowPopups = false, onNewTab } = options;

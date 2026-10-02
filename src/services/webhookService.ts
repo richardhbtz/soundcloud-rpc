@@ -125,8 +125,7 @@ export class WebhookService {
                     timestamp: new Date().toISOString(),
                     ...trackData,
                 }),
-                // a user-supplied endpoint that never answers must not hold a request
-                // open for the rest of the session
+                // the endpoint is user-supplied and may never answer
                 signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
             });
 

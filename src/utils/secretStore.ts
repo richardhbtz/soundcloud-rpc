@@ -2,13 +2,9 @@ import { safeStorage } from 'electron';
 import type ElectronStore from 'electron-store';
 
 /**
- * electron-store is opened with an `encryptionKey` that is a string literal in this
- * repository's source, so it is obfuscation against casual file editing rather than
- * protection. Anything that can read the config file can recover that key.
- *
- * Credentials therefore go through the OS-backed keystore instead -- Keychain on macOS,
- * DPAPI on Windows, libsecret/kwallet on Linux -- and are held in the config file only
- * as ciphertext.
+ * The config store's `encryptionKey` is a literal in this repository, so it only guards
+ * against casual file editing. Credentials go through the OS keystore instead (Keychain,
+ * DPAPI, libsecret/kwallet) and sit in the config file as ciphertext.
  */
 
 const ENCRYPTED_PREFIX = 'enc.v1:';

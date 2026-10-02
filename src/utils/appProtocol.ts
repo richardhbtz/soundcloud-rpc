@@ -4,14 +4,9 @@ import { join, extname } from 'path';
 import { resolveAssetPath } from './assetPath';
 
 /**
- * Privileged views (settings, notifications, the homepage-confirm dialog) used to load
- * as `data:text/html,...`. A data: URL has an opaque origin and no way to reference an
- * external file, which forced every script inline and made a Content-Security-Policy
- * pointless -- the pages ran with no CSP at all, in renderers holding the app's most
- * privileged preloads.
- *
- * Serving them over an app-owned scheme instead gives each view a real origin, lets its
- * script live in a separate file, and makes a strict CSP enforceable.
+ * The app's own views (settings, toasts, downloads, the homepage-confirm dialog) are served
+ * over this scheme rather than as data: URLs. That gives each one a real origin, so its
+ * script can live in a separate file and a strict CSP can be enforced.
  */
 export const APP_SCHEME = 'scrpc';
 
@@ -22,10 +17,8 @@ const documentProviders = new Map<string, DocumentProvider>();
 /**
  * Must run before `app.whenReady()`.
  *
- * Deliberately does NOT set `supportFetchAPI`. A custom scheme registered with fetch
- * support but without `corsEnabled` allows cross-origin reads
- * (GHSA-v3j7-r9gq-3gjw); these pages have no need to fetch, and the CSP below blocks
- * `connect-src` anyway.
+ * `supportFetchAPI` stays off: with it on and `corsEnabled` off, a custom scheme allows
+ * cross-origin reads (GHSA-v3j7-r9gq-3gjw), and these pages have nothing to fetch.
  */
 export function registerAppScheme(): void {
     protocol.registerSchemesAsPrivileged([
@@ -54,16 +47,12 @@ export function appUrl(host: string, path = '/'): string {
 }
 
 /**
- * The policy every app-owned page is served with.
+ * The policy every app-owned page is served with. Scripts come only from this scheme, never
+ * inline, so a value that slips past escaping still cannot run; `connect-src 'none'` leaves
+ * anything that did run with nowhere to send what it read.
  *
- * `default-src 'none'` means anything not named below is refused. Scripts come only from
- * this scheme -- never inline, so a value that escapes its escaping still cannot execute.
- * `connect-src 'none'` is the important one for containment: even if something did run,
- * it has nowhere to send what it read.
- *
- * Styles keep 'unsafe-inline' because each view ships one inline <style> block. That is a
- * far weaker concession than inline script, and custom theme CSS is applied through
- * webContents.insertCSS(), which is not subject to page CSP.
+ * Styles keep 'unsafe-inline' because each view ships one inline <style> block. Custom theme
+ * CSS goes through webContents.insertCSS(), which page CSP does not apply to.
  */
 const CONTENT_SECURITY_POLICY = [
     "default-src 'none'",

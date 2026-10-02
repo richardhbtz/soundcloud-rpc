@@ -37,7 +37,6 @@ function signPackage(appOutDir) {
         process.exit(1);
     }
 
-    // resolve full path to packaged app dir
     const packageDir = path.resolve(appOutDir);
 
     if (!fs.existsSync(packageDir)) {
@@ -51,17 +50,12 @@ function signPackage(appOutDir) {
     console.log(`VMP Signing Application at ${packageDir}`);
 
     try {
-        // sign package using EVS via safe binary spawning
-        // for win: sign after code signing (if any) -> afterSign hook
-        // for mac: sign before code signing -> afterPack hook
         const subprocess = runEvs(['-m', 'castlabs_evs.vmp', 'sign-pkg', packageDir]);
 
-        // check if subprocess threw internal operational system error
         if (subprocess.error) {
             throw subprocess.error;
         }
 
-        // if python returned a non-zero exit code, manually throw it to trigger catch safety block
         if (subprocess.status !== 0) {
             const customError = new Error(`Process exited with code ${subprocess.status}`);
             customError.stdout = subprocess.stdout;
@@ -73,8 +67,8 @@ function signPackage(appOutDir) {
         console.log(`EVS signing output (${subprocess.interpreter}):`, subprocess.stdout);
         console.log('VMP signing completed successfully');
     } catch (error) {
-        // this catch covers every failure mode, not just a missing module: bad or absent
-        // EVS credentials, an expired account, and network errors all land here
+        // every failure lands here: no module, bad or missing EVS credentials, an expired
+        // account, network errors
         console.warn('\n' + '='.repeat(72));
         console.warn('WARNING: VMP signing did not complete. The build is NOT signed.');
         console.warn('');
@@ -95,15 +89,12 @@ function signPackage(appOutDir) {
         if (error.stdout) console.error('stdout:', error.stdout);
         if (error.stderr) console.error('stderr:', error.stderr);
 
-        // ENFORCE: only crash build if strictly requested by env vars
         if (process.env.STRICT_VMP_SIGNING === 'true') {
             console.error('STRICT_VMP_SIGNING is enabled. Aborting build.');
             process.exit(1);
         }
 
-        // FALLBACK: if strict mode off, log it and exit w 0
         console.log('Continuing build without VMP signing...\n');
-        return;
     }
 }
 
@@ -117,10 +108,7 @@ function signPackage(appOutDir) {
 // afterPack also runs before electron-builder flips fuses: if `electronFuses` is ever
 // configured, the mac VMP signing has to move after that step.
 module.exports.afterPack = function (context) {
-    // vmp signing isn't a thing on linux, widevine works without it there
-    if (context.electronPlatformName === 'linux') {
-        console.log('linux build, skipping VMP signing');
-    }
+    // Linux needs no VMP signature: Widevine works without one there
     if (context.electronPlatformName === 'darwin') {
         signPackage(context.appOutDir);
     }
@@ -132,7 +120,7 @@ module.exports.afterSign = function (context) {
     }
 };
 
-// if called directly w a path argument (for manual signing)
+// manual signing: node scripts/sign-vmp.js <path-to-packaged-app>
 if (require.main === module) {
     const appOutDir = process.argv[2];
     if (!appOutDir) {

@@ -1,5 +1,5 @@
-// Toast behaviour. Extracted from an inline <script> so the page can be served under a
-// CSP that refuses inline script -- see src/utils/appProtocol.ts.
+// Toast behaviour. A separate file because the page is served under a CSP that refuses
+// inline script -- see src/utils/appProtocol.ts.
 
 setTimeout(() => {
     document.body.style.opacity = '1';
