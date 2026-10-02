@@ -267,15 +267,6 @@ document.getElementById('webhookTriggerPercentage')?.addEventListener('input', (
     ipcRenderer.send('setting-changed', { key: 'webhookTriggerPercentage', value: value });
 });
 
-document.getElementById('webhookExampleToggle')?.addEventListener('click', (e) => {
-    const toggle = e.currentTarget;
-    const content = document.getElementById('webhookExampleContent');
-    const expand = content.style.display !== 'block';
-
-    content.style.display = expand ? 'block' : 'none';
-    toggle.classList.toggle('expanded', expand);
-});
-
 document.getElementById('darkMode')?.addEventListener('change', (e) => {
     const isDark = e.target.checked;
     ipcRenderer.send('setting-changed', { key: 'theme', value: isDark ? 'dark' : 'light' });
@@ -350,13 +341,7 @@ function createPlayingPreview(trackInfo, options) {
     fragment.appendChild(createTextElement('activity-header-preview', 'Listening to SoundCloud'));
 
     const row = document.createElement('div');
-    if (options.inlineRow) {
-        row.style.display = 'flex';
-        row.style.alignItems = 'flex-start';
-        row.style.gap = '12px';
-    } else {
-        row.className = 'activity-row-preview';
-    }
+    row.className = 'activity-row-preview';
 
     const imageWrap = document.createElement('div');
     imageWrap.className = 'activity-image-preview';
@@ -416,14 +401,11 @@ function createPlayingPreview(trackInfo, options) {
 
     const trackUrl = safeRemoteUrl(trackInfo.url);
     if (options.displayButtons && trackUrl) {
-        const buttons = document.createElement('div');
-        buttons.className = 'activity-buttons-preview';
         const button = document.createElement('button');
         button.className = 'activity-button-preview';
         button.textContent = 'Listen on SoundCloud';
         button.addEventListener('click', () => shell.openExternal(trackUrl));
-        buttons.appendChild(button);
-        details.appendChild(buttons);
+        details.appendChild(button);
     }
 
     row.appendChild(imageWrap);
@@ -432,18 +414,12 @@ function createPlayingPreview(trackInfo, options) {
     return fragment;
 }
 
-function createPausedPreview(options) {
+function createPausedPreview() {
     const fragment = document.createDocumentFragment();
     fragment.appendChild(createTextElement('activity-header-preview', 'Using SoundCloud'));
 
     const row = document.createElement('div');
-    if (options.inlineRow) {
-        row.style.display = 'flex';
-        row.style.alignItems = 'flex-start';
-        row.style.gap = '12px';
-    } else {
-        row.className = 'activity-row-preview';
-    }
+    row.className = 'activity-row-preview';
 
     const imageWrap = document.createElement('div');
     imageWrap.className = 'activity-image-preview';
@@ -481,16 +457,10 @@ function updatePreview(trackInfo) {
     activityContent.className = 'activity-content-preview';
 
     if (trackInfo.isPlaying) {
-        activityContent.appendChild(
-            createPlayingPreview(trackInfo, {
-                displaySCSmallIcon,
-                displayButtons,
-                inlineRow: true,
-            }),
-        );
+        activityContent.appendChild(createPlayingPreview(trackInfo, { displaySCSmallIcon, displayButtons }));
         startProgressUpdate(trackInfo);
     } else if (displayWhenIdling) {
-        activityContent.appendChild(createPausedPreview({ inlineRow: false }));
+        activityContent.appendChild(createPausedPreview());
     }
 
     if (activitySection) activitySection.appendChild(activityContent);
@@ -535,15 +505,7 @@ ipcRenderer.on('update-translations', () => {
     ipcRenderer.invoke('get-translations').then((translations) => {
         document.querySelectorAll('[data-i18n]').forEach((element) => {
             const key = element.getAttribute('data-i18n');
-            if (key && translations[key]) {
-                if (element.tagName === 'H2' && element.querySelector('svg')) {
-                    const svg = element.querySelector('svg');
-                    element.textContent = translations[key];
-                    if (svg) element.appendChild(svg);
-                } else {
-                    element.textContent = translations[key];
-                }
-            }
+            if (key && translations[key]) element.textContent = translations[key];
         });
 
         document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
@@ -562,23 +524,9 @@ ipcRenderer.on('update-translations', () => {
     });
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.classList.remove('visible');
-});
-
-// let the slide-out animation finish before the panel is hidden
-document.getElementById('close-settings').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.body.classList.remove('visible');
-    setTimeout(() => {
-        ipcRenderer.send('toggle-settings');
-    }, 300);
-});
-
-// The preload exposes no channel for this, so the panel reports that it has finished hiding
-// through the console, which SettingsManager listens to.
-window.addEventListener('message', (event) => {
-    if (event.data === 'hidePanel') {
-        console.log('hidePanel');
-    }
+// SettingsManager plays the slide-out and then takes the view away
+const closePanel = () => ipcRenderer.send('toggle-settings');
+document.getElementById('close-settings').addEventListener('click', closePanel);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePanel();
 });

@@ -10,7 +10,7 @@ const translations = {
 
 type Lang = keyof typeof translations;
 
-type TranslationKeys = keyof typeof en;
+export type TranslationKeys = keyof typeof en;
 
 export class TranslationService {
     private currentLang: Lang = 'en';
