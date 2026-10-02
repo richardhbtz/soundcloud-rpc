@@ -8,14 +8,8 @@ interface ProxyData {
 }
 
 export class ProxyService {
-    /**
-     * Resolved lazily rather than captured at construction. The proxy has to be set on
-     * the session that actually loads soundcloud.com -- the content view's -- and that
-     * view is built after this service, then rebuilt with a different partition
-     * (`persist:sc_<accountId>`) whenever the user switches account. Binding to
-     * mainWindow's session instead, as this previously did, left the proxy applied to a
-     * session nothing loads through on any non-default account.
-     */
+    // Looked up on each use: the proxy belongs on the session soundcloud.com loads through,
+    // and each account has its own (`persist:sc_<accountId>`).
     private resolveSession: () => Session | null;
     private store: ElectronStore;
     private onNotification: (message: string) => void;
@@ -49,7 +43,7 @@ export class ProxyService {
         }
     }
 
-    handleAuth(_: Electron.AuthInfo): { username: string; password: string } {
+    handleAuth(): { username: string; password: string } {
         if (!this.store.get('proxyEnabled')) {
             return { username: '', password: '' };
         }

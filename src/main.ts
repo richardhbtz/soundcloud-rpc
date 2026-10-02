@@ -63,7 +63,6 @@ export const RESOURCES_PATH = app.isPackaged
     : path.join(__dirname, '../assets');
 console.log(`Resources path: ${RESOURCES_PATH}`);
 
-// Store configuration
 const store = new Store({
     defaults: {
         adBlocker: false,
@@ -111,7 +110,6 @@ installStoreReadCache(store);
 
 let isDarkTheme = store.get('theme') !== 'light';
 
-// Global variables
 let mainWindow: BrowserWindow;
 let notificationManager: NotificationManager;
 let settingsManager: SettingsManager;
@@ -127,7 +125,6 @@ let shortcutService: ShortcutService;
 let pluginService: PluginService;
 let tray: Tray | null = null;
 let isQuitting = false;
-let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
 
@@ -159,41 +156,17 @@ applyMacMemoryOptimizations();
 
 // privileged schemes have to be declared before the app is ready
 registerAppScheme();
-// header height for header BrowserView
 const HEADER_HEIGHT = 32;
-// macOS check
-const isMas = process.mas === true;
 
-// add missing property to app
-declare global {
-    namespace NodeJS {
-        interface Global {
-            app: any;
-        }
-    }
+// the Mac App Store sandbox already enforces a single instance
+if (!process.mas && !app.requestSingleInstanceLock()) {
+    app.quit();
+    process.exit(0);
 }
 
-// multiple startup check
-if (!isMas) {
-    const gotTheLock = app.requestSingleInstanceLock();
-    if (!gotTheLock) {
-        app.quit();
-        process.exit(0);
-    }
-}
-
-// extend app w custom property
-Object.defineProperty(app, 'isQuitting', {
-    value: false,
-    writable: true,
-    configurable: true,
-});
-
-// display settings
 let displayWhenIdling = store.get('displayWhenIdling') as boolean;
 let displaySCSmallIcon = store.get('displaySCSmallIcon') as boolean;
 
-// Update handling
 function setupUpdater() {
     if (!store.get('autoUpdaterEnabled', true)) {
         console.log('Auto-updater disabled by user setting');
@@ -294,39 +267,29 @@ function installDesktopFile() {
     }
 }
 
-// tray setup
+function showMainWindow(): void {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+}
+
 function setupTray() {
     if (tray) {
         tray.destroy();
         tray = null;
     }
 
-    // create tray icon
     const iconPath = path.join(
         RESOURCES_PATH,
         'icons',
         process.platform === 'win32' ? 'soundcloud-win.ico' : 'soundcloud.png',
     );
-    const icon = nativeImage.createFromPath(iconPath);
+    tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }));
+    tray.setToolTip('SoundCloud');
 
-    // resize icon
-    const trayIcon = icon.resize({ width: 16, height: 16 });
-
-    tray = new Tray(trayIcon);
-    tray.setToolTip('SoundCloud RPC');
-
-    // create tray menu
     const contextMenu = Menu.buildFromTemplate([
-        {
-            label: 'SoundCloud',
-            click: () => {
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    if (!mainWindow.isVisible()) mainWindow.show();
-                    if (mainWindow.isMinimized()) mainWindow.restore();
-                    mainWindow.focus();
-                }
-            },
-        },
+        { label: 'SoundCloud', click: showMainWindow },
         {
             label: 'Settings',
             click: () => {
@@ -336,64 +299,37 @@ function setupTray() {
             },
         },
         { type: 'separator' },
-        {
-            label: 'Quit',
-            click: () => {
-                app.quit();
-            },
-        },
+        { label: 'Quit', click: () => app.quit() },
     ]);
 
     tray.setContextMenu(contextMenu);
 
-    // prevent rendering engine deadlocks when waking hidden/minimized windows from tray
     tray.on('click', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            const isMinimized = mainWindow.isMinimized();
-            const isVisible = mainWindow.isVisible();
-
-            if (isMinimized) {
-                mainWindow.restore();
-            }
-
-            if (!isVisible) {
-                mainWindow.show();
-            }
-
-            mainWindow.focus();
-
-            adjustContentViews();
-        }
+        showMainWindow();
+        // the views kept the bounds they had when the window was hidden
+        adjustContentViews();
     });
 }
 
-// update language when retrieved from web page
+// the app follows whichever language soundcloud.com is being shown in
 async function getLanguage() {
     if (!contentView) return;
-    const langInfo = await contentView.webContents.executeJavaScript(`
-        const langEl = document.querySelector('html');
-        new Promise(resolve => {
-            resolve({
-                lang: langEl ? langEl.getAttribute('lang') : 'en',
-            });
-        })
-    `);
-
-    translationService.setLanguage(langInfo.lang);
+    const lang = await contentView.webContents.executeJavaScript(`document.documentElement.lang || 'en'`);
+    translationService.setLanguage(lang);
 }
 
-// browser window config
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createBrowserWindow(windowState: any): BrowserWindow {
-    const window = new BrowserWindow({
+    return new BrowserWindow({
         width: windowState.width,
         height: windowState.height,
         x: windowState.x,
         y: windowState.y,
         title: 'SoundCloud',
         icon: path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'),
-        frame: process.platform === 'darwin',
-        titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
-        trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 10 } : undefined,
+        frame: isMac,
+        titleBarStyle: isMac ? 'hidden' : undefined,
+        trafficLightPosition: isMac ? { x: 10, y: 10 } : undefined,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -409,11 +345,8 @@ function createBrowserWindow(windowState: any): BrowserWindow {
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
     });
-
-    return window;
 }
 
-// Track info polling
 let lastTrackInfo: TrackInfo = {
     title: '',
     author: '',
@@ -476,14 +409,9 @@ function isValidSettingValue(value: unknown, depth = 0): boolean {
     return entries.every(([key, entry]) => SETTING_KEY_PATTERN.test(key) && isValidSettingValue(entry, depth + 1));
 }
 
-/**
- * `setting-changed` writes straight into the config store, so an unchecked payload can
- * set arbitrary keys -- including proxy and credential entries. Keys are restricted to a
- * plain identifier shape, which also rules out dot-prop path traversal and
- * `__proto__`-style names.
- */
-// `value` stays loosely typed: it is validated at runtime above, and the handler
-// dispatches on `key` to decide how to read it.
+// `setting-changed` writes straight into the config store, so keys are held to a plain identifier
+// shape: no dot-prop paths, no `__proto__`. `value` stays loosely typed because the handler reads
+// it differently per key.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isValidSettingPayload(data: unknown): data is { key: string; value: any } {
     if (typeof data !== 'object' || data === null) return false;
@@ -512,22 +440,13 @@ function applyThemeChange(isDark: boolean): void {
 
     pluginService?.notifyThemeChange(isDarkTheme);
 
-    if (headerView && !headerView.webContents.isDestroyed()) {
-        headerView.webContents.send('theme-changed', isDarkTheme);
-    }
+    headerContents()?.send('theme-changed', isDarkTheme);
     settingsManager?.getView()?.webContents.send('theme-changed', isDarkTheme);
 
     applyThemeToContent(isDarkTheme);
 }
 
-// the header used to poll is-maximized every 100ms to notice this; push it instead
-function sendMaximizedState(maximized: boolean): void {
-    if (headerView && !headerView.webContents.isDestroyed()) {
-        headerView.webContents.send('window-maximized-changed', maximized);
-    }
-}
-
-// defer bounds adjustments if window frame cannot process rendering dimensions
+// a hidden or minimized window reports bounds the views can't be laid out against
 function adjustContentViews() {
     if (!mainWindow || !contentView || !headerView) return;
     if (!mainWindow.isVisible() || mainWindow.isMinimized()) return;
@@ -558,65 +477,40 @@ function navigateHistory(direction: 'back' | 'forward') {
     else if (direction === 'forward' && history.canGoForward()) history.goForward();
 }
 
+function reloadContent(): void {
+    if (!contentView) return;
+    headerContents()?.send('refresh-state-changed', true);
+    contentView.webContents.reload();
+}
+
 function setupWindowControls() {
     if (!mainWindow) return;
 
     ipcMain.on('minimize-window', () => {
-        if (!mainWindow) return;
-        const minimizeToTray = store.get('minimizeToTray', true);
-        if (minimizeToTray) {
-            mainWindow.hide();
-        } else {
-            mainWindow.minimize();
-        }
+        if (store.get('minimizeToTray', true)) mainWindow.hide();
+        else mainWindow.minimize();
     });
 
-    ipcMain.on('maximize-window', () => {
-        if (mainWindow) {
-            if (mainWindow.isMaximized()) {
-                mainWindow.unmaximize();
-            } else {
-                mainWindow.maximize();
-            }
-        }
-    });
+    const toggleMaximize = () => {
+        if (mainWindow.isMaximized()) mainWindow.unmaximize();
+        else mainWindow.maximize();
+    };
+    ipcMain.on('maximize-window', toggleMaximize);
+    ipcMain.on('title-bar-double-click', toggleMaximize);
 
-    ipcMain.on('title-bar-double-click', () => {
-        if (mainWindow) {
-            if (mainWindow.isMaximized()) {
-                mainWindow.unmaximize();
-            } else {
-                mainWindow.maximize();
-            }
-        }
-    });
-
-    mainWindow.on('maximize', () => {
+    const onMaximizeChange = (maximized: boolean) => () => {
         adjustContentViews();
-        sendMaximizedState(true);
-    });
+        headerContents()?.send('window-maximized-changed', maximized);
+    };
+    mainWindow.on('maximize', onMaximizeChange(true));
+    mainWindow.on('unmaximize', onMaximizeChange(false));
 
-    mainWindow.on('unmaximize', () => {
-        adjustContentViews();
-        sendMaximizedState(false);
-    });
-
-    // 'resize' fires continuously while a window edge is dragged, and each call
-    // repositions two BrowserViews. Coalescing to one pass per frame keeps the views
-    // in step with the frame the compositor actually presents, instead of racing it.
-    mainWindow.on('resize', () => {
-        scheduleContentViewAdjust();
-    });
+    // fires continuously while an edge is dragged; one layout pass per tick is enough
+    mainWindow.on('resize', scheduleContentViewAdjust);
 
     ipcMain.on('close-window', () => {
-        if (mainWindow) {
-            const minimizeToTray = store.get('minimizeToTray', true);
-            if (minimizeToTray) {
-                mainWindow.hide();
-            } else {
-                mainWindow.close();
-            }
-        }
+        if (store.get('minimizeToTray', true)) mainWindow.hide();
+        else mainWindow.close();
     });
 
     // nav handlers (header buttons, and two-finger swipes forwarded by preload.ts)
@@ -632,28 +526,15 @@ function setupWindowControls() {
         else if (direction === 'right') navigateHistory('forward');
     });
 
-    ipcMain.on('refresh-page', () => {
-        if (contentView) {
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('refresh-state-changed', true);
-            }
-            console.log('Manual refresh triggered - reloading page');
-            contentView.webContents.reload();
-        }
-    });
+    ipcMain.on('refresh-page', reloadContent);
 
     ipcMain.on('cancel-refresh', () => {
-        if (contentView) {
-            contentView.webContents.stop();
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('refresh-state-changed', false);
-            }
-        }
+        if (!contentView) return;
+        contentView.webContents.stop();
+        headerContents()?.send('refresh-state-changed', false);
     });
 
-    ipcMain.on('toggle-theme', () => {
-        applyThemeChange(!isDarkTheme);
-    });
+    ipcMain.on('toggle-theme', () => applyThemeChange(!isDarkTheme));
 
     ipcMain.on(
         'tab-new',
@@ -685,25 +566,10 @@ function setupWindowControls() {
         trustedOn((_event, input: unknown) => navigateActiveTab(input), 'navigate-url'),
     );
     ipcMain.handle('get-tab-state', () => tabState());
-
-    // Handle is-maximized requests
-    ipcMain.handle('is-maximized', () => {
-        return mainWindow ? mainWindow.isMaximized() : false;
-    });
-
-    // Handle minimize to tray setting
-    ipcMain.handle('get-minimize-to-tray', () => {
-        return store.get('minimizeToTray', true);
-    });
-
-    // handle nav controls enabled setting
-    ipcMain.handle('get-navigation-controls-enabled', () => {
-        return store.get('navigationControlsEnabled', false);
-    });
-
-    ipcMain.handle('get-download-button-enabled', () => {
-        return store.get('downloadButtonEnabled', true);
-    });
+    ipcMain.handle('is-maximized', () => mainWindow.isMaximized());
+    ipcMain.handle('get-minimize-to-tray', () => store.get('minimizeToTray', true));
+    ipcMain.handle('get-navigation-controls-enabled', () => store.get('navigationControlsEnabled', false));
+    ipcMain.handle('get-download-button-enabled', () => store.get('downloadButtonEnabled', true));
 
     adjustContentViews();
 }
@@ -714,6 +580,11 @@ let headerView: BrowserView | null;
 let contentView: BrowserView;
 
 const HOME_URL = 'https://soundcloud.com/discover';
+
+interface Account {
+    id: string;
+    name: string;
+}
 
 interface Tab {
     id: number;
@@ -777,7 +648,7 @@ function updateNavigationState(): void {
 }
 
 function createTab(): Tab {
-    // get selected account and define partition
+    // each extra account gets its own persistent session
     const currentAccountId = store.get('currentAccountId', 'default');
     const sessionPartition = currentAccountId === 'default' ? undefined : `persist:sc_${currentAccountId}`;
 
@@ -786,9 +657,7 @@ function createTab(): Tab {
             ...(sessionPartition ? { partition: sessionPartition } : {}),
             nodeIntegration: false,
             contextIsolation: true,
-            // this view loads soundcloud.com plus third-party ad/embed iframes, so it is
-            // the one that most needs the Chromium sandbox. preload.js only uses
-            // contextBridge/ipcRenderer, both of which work fine in a sandboxed preload.
+            // loads soundcloud.com plus third-party ad and embed iframes
             sandbox: true,
             webSecurity: true,
             allowRunningInsecureContent: false,
@@ -925,7 +794,6 @@ function wireTab(tab: Tab): void {
         if (isActive()) void refreshCurrentAccountName();
     });
 
-    // Listen for page load events to manage refresh state
     webContents.on('did-start-loading', () => sendLoading(true));
     webContents.on('did-stop-loading', () => {
         sendLoading(false);
@@ -969,60 +837,41 @@ function wireTab(tab: Tab): void {
         if (isActive()) {
             await lastFmService.authenticate();
 
-            // Get the current language from the page FIRST
+            // before the hint and the settings panel, which are both translated
             await getLanguage();
 
-            // Show notification only on first load
             if (!startupHintShown) {
                 startupHintShown = true;
                 notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
             }
 
-            // Update the language in the settings manager
             settingsManager.updateTranslations(translationService);
-
-            // Update navigation state after page load
             updateNavigationState();
-
-            // Initialize navigation controls visibility
-            const navigationEnabled = store.get('navigationControlsEnabled', false);
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('navigation-controls-toggle', navigationEnabled);
-            }
+            headerContents()?.send('navigation-controls-toggle', store.get('navigationControlsEnabled', false));
 
             void refreshCurrentAccountName();
         }
 
-        // Reinitialize after page load/refresh
+        // a load wipes everything injected into the page
         try {
             if (!isSoundCloudUrl(webContents.getURL())) return;
 
-            // Inject audio monitoring script
             await webContents.executeJavaScript(audioMonitorScript);
-
-            // Re-inject all enabled plugin content scripts
             pluginService?.injectAllContentScripts(tab.view);
-
-            if (presenceService) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await presenceService.updatePresence(lastTrackInfo as any);
-            }
+            await presenceService?.updatePresence(lastTrackInfo);
         } catch (error) {
             console.error('Failed to reinitialize after page load:', error);
         }
     });
 }
 
-// Main initialization
 async function init() {
     // serves the settings, notification and confirm documents; must be in place before
     // any of those views loads
     handleAppScheme();
 
-    // The Widevine CDM must be installed and provisioned BEFORE any window that will
-    // play protected media is created -- this is a castlabs requirement, not just
-    // startup bookkeeping. Deferring it breaks SoundCloud Go+ playback, so this await
-    // stays even though it delays first paint.
+    // castlabs requires the Widevine CDM to be ready before any window that plays protected
+    // media exists. Deferring this breaks Go+ playback, so it stays despite delaying first paint.
     try {
         await components.whenReady();
         console.log('Components ready:', components.status());
@@ -1030,8 +879,7 @@ async function init() {
         console.error('Failed to initialize components:', error);
     }
 
-    // move any plaintext credentials written by an earlier build into the OS keystore.
-    // must run after app ready, since safeStorage is not available before that.
+    // safeStorage is not available before app ready
     migrateSecrets(store);
 
     setupUpdater();
@@ -1040,7 +888,7 @@ async function init() {
         setupTray();
     }
 
-    if (process.platform === 'darwin') setupDarwinMenu(() => contentView?.webContents.reload());
+    if (isMac) setupDarwinMenu(() => contentView?.webContents.reload());
     else Menu.setApplicationMenu(null);
 
     const windowState = windowStateManager({ defaultWidth: 1280, defaultHeight: 800 });
@@ -1048,24 +896,18 @@ async function init() {
 
     windowState.manage(mainWindow);
 
-    // handle window close event for minimize to tray
+    // macOS keeps the app alive with its window hidden; elsewhere that needs the tray
     mainWindow.on('close', (event) => {
         if (isQuitting) return;
 
-        const minimizeToTray = store.get('minimizeToTray', true);
-
-        if (minimizeToTray || isMac) {
+        if (isMac || store.get('minimizeToTray', true)) {
             event.preventDefault();
             mainWindow.hide();
         }
     });
 
-    // Handle window minimize event
     mainWindow.on('minimize', () => {
-        const minimizeToTray = store.get('minimizeToTray', true);
-        if (minimizeToTray) {
-            mainWindow.hide();
-        }
+        if (store.get('minimizeToTray', true)) mainWindow.hide();
     });
 
     headerView = new BrowserView({
@@ -1084,7 +926,7 @@ async function init() {
     });
 
     mainWindow.addBrowserView(headerView);
-    headerView.setBounds({ x: 0, y: 0, width: mainWindow.getBounds().width, height: 32 });
+    headerView.setBounds({ x: 0, y: 0, width: mainWindow.getBounds().width, height: HEADER_HEIGHT });
     headerView.setAutoResize({ width: true, height: false });
     applyNavigationPolicy(headerView.webContents);
     markTrustedSender(headerView.webContents);
@@ -1097,23 +939,18 @@ async function init() {
     const firstTab = createTab();
     activateTab(firstTab);
 
-    // Initialize services
     translationService = new TranslationService();
     void offerInstallerCleanup();
     themeService = new ThemeService(store);
     pluginService = new PluginService(store);
     pluginService.setContentView(contentView);
-    // hot reload custom theme CSS when files change
-    themeService.onCustomThemeUpdated(() => {
-        applyThemeToContent(isDarkTheme);
-    });
+    // fires when a theme file changes on disk
+    themeService.onCustomThemeUpdated(() => applyThemeToContent(isDarkTheme));
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
     downloadManager = new DownloadManager(mainWindow, store, (active) => {
         if (!isQuitting) headerContents()?.send('downloads-active', active);
     });
-    // resolved on each use: the proxy belongs on whichever session the content view is
-    // currently loading through, which changes when the user switches account
     proxyService = new ProxyService(() => contentView?.webContents.session ?? null, store, queueToastNotification);
     presenceService = new PresenceService(store, translationService);
     lastFmService = new LastFmService(() => contentView, store);
@@ -1122,7 +959,6 @@ async function init() {
 
     setupMemoryPressureHandler();
 
-    // Add settings toggle handler
     ipcMain.on(
         'toggle-settings',
         trustedOn(() => {
@@ -1200,12 +1036,9 @@ async function init() {
     setupTranslationHandlers();
     setupAudioHandler();
 
-    // Provide current track info to settings preview on demand
-    ipcMain.handle('get-current-track', () => {
-        return lastTrackInfo;
-    });
+    // for the rich presence preview in settings
+    ipcMain.handle('get-current-track', () => lastTrackInfo);
 
-    // Apply initial settings
     await proxyService.apply();
 
     await setupAdBlocker();
@@ -1239,7 +1072,6 @@ async function init() {
         downloadManager.start(url.toString(), cookie?.value);
     });
 
-    // Register settings related events
     ipcMain.on('setting-changed', async (event, data) => {
         // settings include the yt-dlp path, which gets executed: only the app's own views may write them
         if (!isTrustedSender(event)) return;
@@ -1258,8 +1090,6 @@ async function init() {
             store.set(key, data.value);
         }
 
-        console.log(key);
-
         if (key === 'displayWhenIdling') {
             displayWhenIdling = data.value;
             presenceService.updateDisplaySettings(displayWhenIdling, displaySCSmallIcon);
@@ -1271,13 +1101,10 @@ async function init() {
         } else if (key === 'statusDisplayType') {
             presenceService.setStatusDisplayType(data.value as number);
         } else if (key === 'minimizeToTray') {
-            // Update tray behavior when setting changes
             if (data.value === false && tray) {
-                // If minimize to tray is disabled, destroy the tray
                 tray.destroy();
                 tray = null;
             } else if (data.value === true && !tray) {
-                // If minimize to tray is enabled, create the tray
                 setupTray();
             }
         } else if (key === 'theme') {
@@ -1289,31 +1116,23 @@ async function init() {
         } else if (key === 'webhookTriggerPercentage') {
             webhookService.setTriggerPercentage(data.value);
         } else if (key === 'navigationControlsEnabled') {
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('navigation-controls-toggle', data.value);
-            }
+            headerContents()?.send('navigation-controls-toggle', data.value);
         } else if (key === 'downloadButtonEnabled') {
             headerContents()?.send('download-button-toggle', data.value);
         } else if (key === 'autoUpdaterEnabled') {
-            if (data.value) {
-                setupUpdater();
-            } else {
-                console.log('Auto-updater disabled by user');
-            }
+            if (data.value) setupUpdater();
         } else if (key === 'customTheme') {
             if (data.value === 'none') {
                 themeService.removeCustomTheme();
             } else {
                 themeService.applyCustomTheme(data.value);
             }
-            // Re-apply the theme to all content
             applyThemeToContent(isDarkTheme);
         } else if (key === 'hidePromotions' || key === 'hideEventsNearYou' || key === 'hideArtistUpsells') {
             applyThemeToContent(isDarkTheme);
         }
     });
 
-    // handle account switching
     ipcMain.handle('get-accounts', () => {
         return {
             accounts: store.get('accounts', [{ id: 'default', name: 'Main Account' }]),
@@ -1348,29 +1167,26 @@ async function init() {
         trustedOn(async () => {
             const currentId = store.get('currentAccountId', 'default');
 
-            if (contentView) {
-                // log out of session
-                await contentView.webContents.session.clearStorageData();
-            }
+            await contentView?.webContents.session.clearStorageData();
 
-            // if not default account, remove from list
+            // an extra account is removed outright; the main one just ends up signed out
             if (currentId !== 'default') {
-                const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
-                const filteredAccounts = accounts.filter((a: any) => a.id !== currentId);
+                const accounts: Account[] = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
 
-                store.set('accounts', filteredAccounts);
-                store.set('currentAccountId', 'default'); // Switch back to main
+                store.set(
+                    'accounts',
+                    accounts.filter((account) => account.id !== currentId),
+                );
+                store.set('currentAccountId', 'default');
 
                 app.relaunch();
                 app.quit();
             } else {
-                // if default account, reload page logged out
                 for (const tab of tabs) tab.view.webContents.reload();
             }
         }),
     );
 
-    // handle applying all changes
     ipcMain.on(
         'apply-changes',
         trustedOn(async () => {
@@ -1387,8 +1203,7 @@ async function init() {
             }
 
             if (store.get('discordRichPresence')) {
-                // Refresh presence using the current track info instead of reconnecting
-                await presenceService.updatePresence(lastTrackInfo as any);
+                await presenceService.updatePresence(lastTrackInfo);
             } else {
                 presenceService.clearActivity();
             }
@@ -1425,14 +1240,12 @@ async function refreshCurrentAccountName(): Promise<void> {
 
         if (!username || typeof username !== 'string' || username.trim() === '') return;
 
-        const accounts = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
+        const accounts: Account[] = store.get('accounts', [{ id: 'default', name: 'Main Account' }]);
         const currentId = store.get('currentAccountId', 'default');
-        const accountIndex = accounts.findIndex((a: any) => a.id === currentId);
+        const account = accounts.find((entry) => entry.id === currentId);
 
-        if (accountIndex !== -1 && accounts[accountIndex].name !== username) {
-            console.log(`[Account Manager] Found new username: ${username}. Updating database...`);
-
-            accounts[accountIndex].name = username;
+        if (account && account.name !== username) {
+            account.name = username;
             store.set('accounts', [...accounts]);
 
             settingsManager?.getView()?.webContents.send('accounts-updated');
@@ -1463,20 +1276,16 @@ async function setupAdBlocker(): Promise<void> {
 }
 
 function setupMemoryPressureHandler() {
-    if (memoryPressureHandlerRegistered) return;
     if (!isMac) return;
-    memoryPressureHandlerRegistered = true;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     app.on('memory-pressure' as any, async (_event: unknown, details: unknown) => {
         const level = typeof details === 'string' ? details : 'unknown';
         console.warn(`Memory pressure detected (${level}). Clearing caches and history.`);
 
-        if (contentView) {
-            contentView.webContents.clearHistory();
-        }
-
-        const session = contentView?.webContents.session;
-        if (!session) return;
+        if (!contentView) return;
+        contentView.webContents.clearHistory();
+        const session = contentView.webContents.session;
 
         try {
             await session.clearCache();
@@ -1493,16 +1302,8 @@ function setupMemoryPressureHandler() {
 }
 
 function setupThemeHandlers() {
-    // load initial theme from store
-    isDarkTheme = store.get('theme', 'dark') === 'dark';
-
-    // send initial theme to all views
-    if (headerView && headerView.webContents) {
-        headerView.webContents.send('theme-changed', isDarkTheme);
-    }
-    if (settingsManager) {
-        settingsManager.getView()?.webContents.send('theme-changed', isDarkTheme);
-    }
+    headerContents()?.send('theme-changed', isDarkTheme);
+    settingsManager?.getView()?.webContents.send('theme-changed', isDarkTheme);
     applyThemeToContent(isDarkTheme);
 }
 
@@ -1541,19 +1342,11 @@ function applyThemeToContent(isDark: boolean, only?: BrowserView) {
     const customThemeCSS = themeService.getCurrentCustomThemeCSS();
     const themeColors = themeService.getCurrentThemeColors();
 
-    // Update theme colors for all UI components
-    if (notificationManager) {
-        notificationManager.setThemeColors(themeColors);
-    }
-    if (settingsManager) {
-        settingsManager.setThemeColors(themeColors);
-    }
+    notificationManager?.setThemeColors(themeColors);
+    settingsManager?.setThemeColors(themeColors);
     downloadManager?.setThemeColors(themeColors);
-    if (headerView && headerView.webContents) {
-        headerView.webContents.send('theme-colors-changed', themeColors);
-    }
+    headerContents()?.send('theme-colors-changed', themeColors);
 
-    // fetch settings for component toggles
     const hidePromotions = store.get('hidePromotions', true);
     const hideEventsNearYou = store.get('hideEventsNearYou', true);
     const hideArtistUpsells = store.get('hideArtistUpsells', true);
@@ -1574,10 +1367,8 @@ function applyThemeToContent(isDark: boolean, only?: BrowserView) {
             const body = block.replace(/^[\s\S]*?\*\//, '').trim();
             res[target] += (res[target] ? '\n' : '') + body;
         }
-        if (!any) {
-            // no markers: treat entire CSS as content
-            res.content = css;
-        }
+        // a theme without markers is all for the content view
+        if (!any) res.content = css;
         return res;
     })(customThemeCSS);
 
@@ -1656,49 +1447,36 @@ function applyThemeToContent(isDark: boolean, only?: BrowserView) {
                     existingStyle.remove();
                 }
                 document.head.appendChild(style);
-				
-				// Handle iframe-based artist upsells
-                // this ran once a second for the life of the process regardless of the
-                // setting, walking iframes and touching their documents. only run it
-                // when there is actually something to hide.
+
+                // upsells inside same-origin iframes are out of reach of the stylesheet above
                 if (window._artistUpsellInterval) {
                     clearInterval(window._artistUpsellInterval);
                     window._artistUpsellInterval = null;
                 }
                 if (${hideArtistUpsells}) window._artistUpsellInterval = setInterval(() => {
-                    // Grab both Artist tools AND Sidebar modules iframes
                     document.querySelectorAll('iframe[title="Artist tools"], iframe[title="Sidebar modules"]').forEach(iframe => {
                         try {
                             const doc = iframe.contentDocument || iframe.contentWindow?.document;
                             const container = iframe.closest('.webiEmbeddedModuleContainer');
                             
                             if (container && doc) {
-                                // inject CSS directly INSIDE iframe to hide waitlist card
+                                // the fan-support waitlist card
                                 if (!doc.getElementById('custom-iframe-style')) {
                                     const iframeStyle = doc.createElement('style');
                                     iframeStyle.id = 'custom-iframe-style';
-                                    // notice single quotes so  evaluates to valid JS string
-                                    iframeStyle.textContent = '${hideArtistUpsells ? '.MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }' : ''}';
+                                    iframeStyle.textContent = '.MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }';
                                     doc.head.appendChild(iframeStyle);
                                 }
 
-                                // 2. If we find a paywall lock, hide the entire parent wrapper
-                                if (${hideArtistUpsells} && doc.querySelector('svg[aria-label="Paywalled feature"]')) {
-                                    container.style.display = 'none';
-                                } else {
-                                    container.style.display = '';
-                                }
+                                // a module that is nothing but a paywall goes entirely
+                                const paywalled = doc.querySelector('svg[aria-label="Paywalled feature"]');
+                                container.style.display = paywalled ? 'none' : '';
                             }
                         } catch(e) {
-                            // silently fail if iframe not fully loaded yet
+                            // iframe not loaded yet; the next pass retries
                         }
                     });
                 }, 1000);
-
-                // custom theme CSS is applied separately via insertCSS -- see
-                // applyCustomThemeCss below. drop any stylesheet left by an older build.
-                const legacyCustomStyle = document.getElementById('custom-theme-style');
-                if (legacyCustomStyle) legacyCustomStyle.remove();
 
                 // Opt out of every optional OneTrust cookie category (targeting, functional,
                 // performance), which default to on. OneTrust loads late, hence the wait, and
@@ -1762,38 +1540,13 @@ function initializeShortcuts() {
         if (contentView) contentView.webContents.setZoomLevel(0);
     });
 
-    shortcutService.register('goBack', 'CommandOrControl+B', 'Go Back', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
-            contentView.webContents.navigationHistory.goBack();
-        }
-    });
-
-    shortcutService.register('goBackAlt', 'CommandOrControl+P', 'Go Back (Alternative)', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoBack()) {
-            contentView.webContents.navigationHistory.goBack();
-        }
-    });
-
-    shortcutService.register('goForward', 'CommandOrControl+F', 'Go Forward', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
-            contentView.webContents.navigationHistory.goForward();
-        }
-    });
-
-    shortcutService.register('goForwardAlt', 'CommandOrControl+N', 'Go Forward (Alternative)', () => {
-        if (contentView && contentView.webContents.navigationHistory.canGoForward()) {
-            contentView.webContents.navigationHistory.goForward();
-        }
-    });
-
-    shortcutService.register('refresh', 'CommandOrControl+R', 'Refresh Page', () => {
-        if (contentView) {
-            if (headerView && headerView.webContents) {
-                headerView.webContents.send('refresh-state-changed', true);
-            }
-            contentView.webContents.reload();
-        }
-    });
+    const back = () => navigateHistory('back');
+    const forward = () => navigateHistory('forward');
+    shortcutService.register('goBack', 'CommandOrControl+B', 'Go Back', back);
+    shortcutService.register('goBackAlt', 'CommandOrControl+P', 'Go Back (Alternative)', back);
+    shortcutService.register('goForward', 'CommandOrControl+F', 'Go Forward', forward);
+    shortcutService.register('goForwardAlt', 'CommandOrControl+N', 'Go Forward (Alternative)', forward);
+    shortcutService.register('refresh', 'CommandOrControl+R', 'Refresh Page', reloadContent);
 
     shortcutService.register('newTab', 'CommandOrControl+T', 'New Tab', () => void openTab());
     shortcutService.register('closeTab', 'CommandOrControl+W', 'Close Tab', () => {
@@ -1810,68 +1563,34 @@ function initializeShortcuts() {
     console.log(`Initialized ${shortcutService.count} keyboard shortcuts`);
 }
 
-// app lifecycle handlers
 app.on('ready', init);
 
-app.on('window-all-closed', function () {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+app.on('window-all-closed', () => {
+    if (!isMac) app.quit();
 });
 
-// Dock icon clicked. The window is only ever hidden on macOS, never destroyed
-// mid-session, so this just needs to surface it.
-app.on('activate', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    if (!mainWindow.isVisible()) mainWindow.show();
-    mainWindow.focus();
-});
+// Dock icon clicked. On macOS the window is only ever hidden, never destroyed mid-session.
+app.on('activate', showMainWindow);
 
 app.on('before-quit', () => {
     isQuitting = true;
     downloadManager?.cancelAll();
-    if (shortcutService) {
-        shortcutService.destroy();
-    }
-    if (tray) {
-        tray.destroy();
-        tray = null;
-    }
-});
-
-app.on('will-quit', () => {
-    if (tray) {
-        tray.destroy();
-        tray = null;
-    }
+    shortcutService?.destroy();
+    tray?.destroy();
+    tray = null;
 });
 
 app.on('login', (event, _webContents, _details, authInfo, callback) => {
     if (!authInfo.isProxy) return;
 
-    const { username, password } = proxyService?.handleAuth(authInfo) ?? { username: '', password: '' };
+    const { username, password } = proxyService?.handleAuth() ?? { username: '', password: '' };
     if (!username && !password) return;
 
     event.preventDefault();
     callback(username, password);
 });
 
-app.on('second-instance', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-        return;
-    }
-
-    // when minimize to tray active, window is hidden
-    if (!mainWindow.isVisible()) {
-        mainWindow.show();
-    }
-    if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-    }
-
-    mainWindow.focus();
-});
+app.on('second-instance', showMainWindow);
 
 export function queueToastNotification(message: string) {
     if (mainWindow && notificationManager) {
@@ -1949,7 +1668,6 @@ function setupTranslationHandlers() {
     });
 }
 
-// setup audio event handler for track updates
 function setupAudioHandler() {
     ipcMain.on('soundcloud:track-update', async (event, payload: unknown) => {
         if (!isTrustedSoundCloudSender(event)) {
@@ -1970,17 +1688,11 @@ function setupAudioHandler() {
         if (result.isPlaying) audioTabId = senderTab?.id;
         else if (audioTabId !== undefined && audioTabId !== senderTab?.id) return;
 
-        if (devMode) {
-            console.debug(`Track update received: ${reason}`);
-        }
+        if (devMode) console.debug(`Track update received: ${reason}`);
 
         lastTrackInfo = result;
+        pluginService?.notifyTrackChange(result as unknown as Record<string, unknown>);
 
-        if (pluginService) {
-            pluginService.notifyTrackChange(result as unknown as Record<string, unknown>);
-        }
-
-        // update services on track update
         if (result.title && result.author && result.duration) {
             await Promise.all([
                 lastFmService.updateTrackInfo(
@@ -2013,13 +1725,11 @@ function setupAudioHandler() {
             settingsManager.getView()?.webContents.send('presence-preview-update', result);
         }
 
-        if (thumbarService) {
-            thumbarService.updateThumbarButtons(
-                mainWindow,
-                result.isPlaying,
-                result.isLiked,
-                senderTab?.view ?? contentView,
-            );
-        }
+        thumbarService?.updateThumbarButtons(
+            mainWindow,
+            result.isPlaying,
+            result.isLiked,
+            senderTab?.view ?? contentView,
+        );
     });
 }
