@@ -1,4 +1,4 @@
-import { Menu } from 'electron';
+import { Menu, shell } from 'electron';
 
 let reloadContent: () => void = () => {};
 
@@ -30,9 +30,7 @@ const template: Electron.MenuItemConstructorOptions[] = [
         submenu: [
             {
                 label: 'Learn More',
-                click() {
-                    require('electron').shell.openExternal('https://github.com/richardhbtz/soundcloud-rpc');
-                },
+                click: () => void shell.openExternal('https://github.com/elricfd/sc-desktop'),
             },
         ],
     },

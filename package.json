@@ -21,7 +21,7 @@
         "build-linux-appimage": "tsc && npm run copy-header && electron-builder -l appimage"
     },
     "main": "./tsc/main.js",
-    "repository": "https://github.com/richardhbtz/soundcloud-rpc",
+    "repository": "https://github.com/elricfd/sc-desktop",
     "build": {
         "appId": "com.richardhbtz.soundcloud-rpc",
         "productName": "SoundCloud",
