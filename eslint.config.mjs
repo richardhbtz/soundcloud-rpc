@@ -35,7 +35,13 @@ export default defineConfig([
         // Renderer-side scripts. These run in a BrowserView, not in Node, so they need
         // browser globals -- and they are plain JavaScript, so the TypeScript parser and
         // its type-aware rules do not apply.
-        files: ['src/header/**/*.js', 'src/settings/*.js', 'src/notification/*.js', 'src/confirm/*.js'],
+        files: [
+            'src/header/**/*.js',
+            'src/settings/*.js',
+            'src/notification/*.js',
+            'src/confirm/*.js',
+            'src/downloads/*.js',
+        ],
         languageOptions: {
             parser: undefined,
             sourceType: 'script',

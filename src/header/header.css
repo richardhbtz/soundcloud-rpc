@@ -303,6 +303,24 @@ body.platform-darwin .navigation-controls {
     -webkit-app-region: no-drag;
 }
 
+#downloads-btn {
+    flex: none;
+    -webkit-app-region: no-drag;
+}
+
+#downloads-btn.hidden {
+    display: none;
+}
+
+/* something is downloading */
+#downloads-btn.active {
+    opacity: 1;
+}
+
+#downloads-btn.active svg {
+    color: var(--header-accent);
+}
+
 .window-controls {
     display: flex;
     -webkit-app-region: no-drag;

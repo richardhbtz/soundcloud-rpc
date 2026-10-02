@@ -18,6 +18,8 @@ const html = new FakeScroller();
 const body = new FakeScroller();
 const composedPath = vi.fn();
 let onWheel: (e: object) => void;
+let onCopy: (e: object) => void;
+let selection = '';
 let now = 0;
 const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform') as PropertyDescriptor;
 
@@ -45,7 +47,14 @@ const pause = () => {
 beforeAll(async () => {
     Object.defineProperty(process, 'platform', { value: 'darwin' });
     vi.stubGlobal('Element', FakeScroller);
-    vi.stubGlobal('document', { documentElement: html, body });
+    vi.stubGlobal('document', {
+        documentElement: html,
+        body,
+        addEventListener: (_type: string, listener: (e: object) => void) => {
+            onCopy = listener;
+        },
+    });
+    vi.stubGlobal('getSelection', () => selection);
     vi.stubGlobal('getComputedStyle', (el: FakeScroller) => ({ overflowX: el.overflowX }));
     vi.stubGlobal('window', {
         addEventListener: (_type: string, listener: (e: object) => void) => {
@@ -149,5 +158,36 @@ describe('two-finger swipe navigation', () => {
         Object.assign(html, { scrollWidth: 960, clientWidth: 792 });
         swipe(200, { path: [body, html] });
         expect(send.mock.calls).toEqual([['navigate-forward']]);
+    });
+});
+
+describe('copying links', () => {
+    function copy(text: string) {
+        selection = text;
+        const event = { clipboardData: { setData: vi.fn() }, preventDefault: vi.fn() };
+        onCopy(event);
+        return event;
+    }
+
+    it('drops the share id and utm parameters from a SoundCloud link', () => {
+        const event = copy(
+            'https://soundcloud.com/a/sets/b?si=c8637d5b&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing',
+        );
+        expect(event.clipboardData.setData).toHaveBeenCalledWith('text/plain', 'https://soundcloud.com/a/sets/b');
+        expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('keeps other parameters and the timestamp', () => {
+        const event = copy('https://soundcloud.com/a/b?in=a/sets/c&si=1#t=0:30');
+        expect(event.clipboardData.setData).toHaveBeenCalledWith(
+            'text/plain',
+            'https://soundcloud.com/a/b?in=a/sets/c#t=0:30',
+        );
+    });
+
+    it('leaves everything else to the default copy', () => {
+        for (const text of ['just some text', 'https://example.com/?utm_source=x', 'https://soundcloud.com/a/b']) {
+            expect(copy(text).preventDefault).not.toHaveBeenCalled();
+        }
     });
 });

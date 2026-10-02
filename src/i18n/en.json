@@ -60,5 +60,18 @@
     "richPresencePreviewTitle": "Rich Presence Preview",
     "hidePromotions": "Hide Promotions",
     "hideEventsNearYou": "Hide Events Near You",
-    "hideArtistUpsells": "Hide Artist Pro Upsells"
+    "hideArtistUpsells": "Hide Artist Pro Upsells",
+    "downloads": "Downloads",
+    "showDownloadButton": "Show download button in the title bar",
+    "downloadUseAccount": "Download as my SoundCloud account (Go+ and original files)",
+    "downloadFolder": "Download folder",
+    "chooseFolder": "Choose…",
+    "openFolder": "Open",
+    "downloadTemplate": "File name",
+    "ytDlpPath": "yt-dlp path (leave empty to find it automatically)",
+    "downloadsDescription": "Downloads use yt-dlp, which must be installed, and keep the audio in the format SoundCloud serves it in. Downloading as your account passes your SoundCloud session to yt-dlp so it gets what your account can play; DRM-protected tracks cannot be downloaded. The file name is a yt-dlp output template, e.g. %(playlist_title)s/%(title)s.%(ext)s puts each playlist in its own folder.",
+    "installerCleanupTitle": "Clean up the installer?",
+    "installerCleanupDetail": "The installer disk is still mounted. Eject it and move {file} to the Trash?",
+    "installerCleanupConfirm": "Eject and Move to Trash",
+    "installerCleanupKeep": "Keep"
 }

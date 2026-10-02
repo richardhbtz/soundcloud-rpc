@@ -60,5 +60,18 @@
     "richPresencePreviewTitle": "Vista Previa de Rich Presence",
     "hidePromotions": "Ocultar Promociones",
     "hideEventsNearYou": "Ocultar Eventos Cercanos",
-    "hideArtistUpsells": "Ocultar Promociones de Artist Pro"
+    "hideArtistUpsells": "Ocultar Promociones de Artist Pro",
+    "downloads": "Descargas",
+    "showDownloadButton": "Mostrar el botón de descargas en la barra de título",
+    "downloadUseAccount": "Descargar con mi cuenta de SoundCloud (Go+ y archivos originales)",
+    "downloadFolder": "Carpeta de descargas",
+    "chooseFolder": "Elegir…",
+    "openFolder": "Abrir",
+    "downloadTemplate": "Nombre de archivo",
+    "ytDlpPath": "Ruta de yt-dlp (vacío para buscarlo automáticamente)",
+    "downloadsDescription": "Las descargas usan yt-dlp, que debe estar instalado, y conservan el audio en el formato en que SoundCloud lo sirve. Descargar con tu cuenta pasa tu sesión de SoundCloud a yt-dlp para que obtenga lo que tu cuenta puede reproducir; las pistas protegidas con DRM no se pueden descargar. El nombre de archivo es una plantilla de salida de yt-dlp; por ejemplo, %(playlist_title)s/%(title)s.%(ext)s guarda cada playlist en su propia carpeta.",
+    "installerCleanupTitle": "¿Limpiar el instalador?",
+    "installerCleanupDetail": "El disco del instalador sigue montado. ¿Expulsarlo y mover {file} a la Papelera?",
+    "installerCleanupConfirm": "Expulsar y mover a la Papelera",
+    "installerCleanupKeep": "Conservar"
 }

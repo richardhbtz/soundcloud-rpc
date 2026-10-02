@@ -345,6 +345,12 @@ document.getElementById('new-tab-btn')?.addEventListener('click', () => {
     ipcRenderer.send('tab-new');
 });
 
+// Downloads: opens the progress popup, and lights up while something is downloading
+const downloadsBtn = document.getElementById('downloads-btn');
+downloadsBtn?.addEventListener('click', () => ipcRenderer.send('toggle-downloads'));
+ipcRenderer.on('download-button-toggle', (_, enabled) => downloadsBtn?.classList.toggle('hidden', !enabled));
+ipcRenderer.on('downloads-active', (_, active) => downloadsBtn?.classList.toggle('active', active > 0));
+
 ipcRenderer.on('tabs-changed', (_, state) => renderTabs(state));
 ipcRenderer.on('focus-url-bar', () => editUrl());
 
@@ -415,6 +421,10 @@ document.addEventListener('DOMContentLoaded', () => {
             navControls.classList.add('visible');
             navControls.classList.remove('hidden');
         }
+    });
+
+    ipcRenderer.invoke('get-download-button-enabled').then((enabled) => {
+        downloadsBtn?.classList.toggle('hidden', !enabled);
     });
 
     // tabs opened before this page finished loading

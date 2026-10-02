@@ -242,6 +242,28 @@ document.getElementById('hideArtistUpsells')?.addEventListener('change', (e) => 
     ipcRenderer.send('setting-changed', { key: 'hideArtistUpsells', value: e.target.checked });
 });
 
+// downloads
+for (const key of ['downloadButtonEnabled', 'downloadUseAccount']) {
+    document.getElementById(key)?.addEventListener('change', (e) => {
+        ipcRenderer.send('setting-changed', { key, value: e.target.checked });
+    });
+}
+
+for (const key of ['downloadTemplate', 'ytDlpPath']) {
+    document.getElementById(key)?.addEventListener('change', (e) => {
+        ipcRenderer.send('setting-changed', { key, value: e.target.value });
+    });
+}
+
+document.getElementById('chooseDownloadFolder')?.addEventListener('click', async () => {
+    // main shows the native folder picker and stores the choice; this only displays it
+    document.getElementById('downloadFolderPath').textContent = await ipcRenderer.invoke('choose-download-folder');
+});
+
+document.getElementById('openDownloadFolder')?.addEventListener('click', () => {
+    ipcRenderer.send('downloads-open-folder');
+});
+
 document.getElementById('proxyEnabled')?.addEventListener('change', (e) => {
     const isEnabled = e.target.checked;
     document.getElementById('proxyFields').style.display = isEnabled ? 'block' : 'none';

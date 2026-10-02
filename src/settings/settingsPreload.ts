@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 const SEND_CHANNELS = new Set([
     'apply-changes',
+    'downloads-open-folder',
     'setting-changed',
     'show-plugin-homepage-dialog',
     'toggle-settings',
@@ -12,6 +13,7 @@ const SEND_CHANNELS = new Set([
 
 const INVOKE_CHANNELS = new Set([
     'apply-custom-theme',
+    'choose-download-folder',
     'get-current-custom-theme',
     'get-custom-themes',
     'get-plugins',
