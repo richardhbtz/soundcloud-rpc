@@ -177,11 +177,176 @@ document.getElementById('close-btn')?.addEventListener('click', () => {
 });
 
 // Double click on title bar to maximize/restore
-document.querySelector('.title-bar')?.addEventListener('dblclick', () => {
-    ipcRenderer.send('title-bar-double-click');
-    isMaximized = !isMaximized;
-    updateWindowControls();
+document.querySelectorAll('.title-bar').forEach((spacer) =>
+    spacer.addEventListener('dblclick', () => {
+        ipcRenderer.send('title-bar-double-click');
+        isMaximized = !isMaximized;
+        updateWindowControls();
+    }),
+);
+
+// Tabs. The selected tab is also the URL bar: it shows the address without https://soundcloud.com/,
+// and the full address only while it is being edited.
+const tabGroup = document.getElementById('tab-group');
+let tabState = { tabs: [], activeId: null, url: '', display: '', fallbackIcon: '' };
+let renderedTabState = '';
+// a state update that arrived mid-edit or mid-drag; rebuilding the tabs then would drop the input or the drag
+let pendingTabState = null;
+
+function renderTabs(state) {
+    if (tabGroup.querySelector('.tab.editing, .tab.dragging')) {
+        pendingTabState = state;
+        return;
+    }
+    pendingTabState = null;
+
+    const serialized = JSON.stringify(state);
+    if (serialized === renderedTabState) return;
+    renderedTabState = serialized;
+    tabState = state;
+
+    tabGroup.classList.toggle('single', state.tabs.length === 1);
+    tabGroup.replaceChildren(...state.tabs.map(buildTab));
+}
+
+function buildTab(tab) {
+    const active = tab.id === tabState.activeId;
+    const el = document.createElement('div');
+    el.className = active ? 'tab active' : 'tab';
+    el.dataset.id = tab.id;
+    el.draggable = true;
+    el.title = tab.title;
+
+    const icon = document.createElement('img');
+    icon.className = 'tab-icon';
+    icon.draggable = false;
+    icon.onerror = () => {
+        icon.onerror = null;
+        icon.src = tabState.fallbackIcon;
+    };
+    icon.src = tab.icon || tabState.fallbackIcon;
+
+    const title = document.createElement('span');
+    title.className = 'tab-title';
+    title.textContent = tab.title;
+    el.append(icon, title);
+
+    if (active) {
+        const path = document.createElement('span');
+        path.className = 'tab-path';
+        path.textContent = tabState.display;
+
+        const input = document.createElement('input');
+        input.className = 'tab-url';
+        input.spellcheck = false;
+        input.setAttribute('aria-label', 'Address');
+        el.append(path, input);
+    }
+
+    const close = document.createElement('button');
+    close.className = 'tab-close';
+    close.type = 'button';
+    close.title = 'Close Tab';
+    close.textContent = '\u00d7';
+    el.append(close);
+
+    return el;
+}
+
+function applyPendingTabState() {
+    if (pendingTabState) renderTabs(pendingTabState);
+}
+
+function editUrl() {
+    const tab = tabGroup.querySelector('.tab.active');
+    const input = tab?.querySelector('.tab-url');
+    if (!input || tab.classList.contains('editing')) return;
+
+    tab.classList.add('editing');
+    tab.draggable = false;
+    input.value = tabState.url;
+    input.focus();
+    input.select();
+}
+
+const tabId = (el) => Number(el?.closest('.tab')?.dataset.id);
+
+tabGroup.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+
+    if (e.target.closest('.tab-close')) ipcRenderer.send('tab-close', tabId(tab));
+    else if (tab.classList.contains('active')) editUrl();
+    else ipcRenderer.send('tab-select', tabId(tab));
 });
+
+// middle click closes, as in a browser
+tabGroup.addEventListener('auxclick', (e) => {
+    if (e.button === 1 && e.target.closest('.tab') && tabState.tabs.length > 1) {
+        ipcRenderer.send('tab-close', tabId(e.target));
+    }
+});
+
+function stopEditingUrl() {
+    const tab = tabGroup.querySelector('.tab.editing');
+    if (!tab) return;
+    tab.classList.remove('editing');
+    tab.draggable = true;
+    applyPendingTabState();
+}
+
+tabGroup.addEventListener('keydown', (e) => {
+    if (!e.target.matches('.tab-url')) return;
+    if (e.key === 'Enter') ipcRenderer.send('navigate-url', e.target.value);
+    if (e.key === 'Enter' || e.key === 'Escape') {
+        // not left to focusout alone: that event does not fire while the window is in the background
+        stopEditingUrl();
+        e.target.blur();
+    }
+});
+
+tabGroup.addEventListener('focusout', (e) => {
+    if (e.target.matches('.tab-url')) stopEditingUrl();
+});
+
+// drag a tab onto another to take its place
+tabGroup.addEventListener('dragstart', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    tab.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tab.dataset.id);
+});
+
+tabGroup.addEventListener('dragover', (e) => {
+    const target = e.target.closest('.tab');
+    if (!target || !tabGroup.querySelector('.tab.dragging')) return;
+    e.preventDefault();
+    tabGroup.querySelector('.tab.drop-target')?.classList.remove('drop-target');
+    if (!target.classList.contains('dragging')) target.classList.add('drop-target');
+});
+
+tabGroup.addEventListener('drop', (e) => {
+    const dragged = tabGroup.querySelector('.tab.dragging');
+    const target = e.target.closest('.tab');
+    if (!dragged || !target || dragged === target) return;
+    e.preventDefault();
+    ipcRenderer.send('tab-move', tabId(dragged), [...tabGroup.children].indexOf(target));
+});
+
+tabGroup.addEventListener('dragend', () => {
+    tabGroup
+        .querySelectorAll('.dragging, .drop-target')
+        .forEach((el) => el.classList.remove('dragging', 'drop-target'));
+    applyPendingTabState();
+});
+
+document.getElementById('new-tab-btn')?.addEventListener('click', () => {
+    ipcRenderer.send('tab-new');
+});
+
+ipcRenderer.on('tabs-changed', (_, state) => renderTabs(state));
+ipcRenderer.on('focus-url-bar', () => editUrl());
 
 // Listen for theme changes
 ipcRenderer.on('theme-changed', (_, isDark) => {
@@ -251,6 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
             navControls.classList.remove('hidden');
         }
     });
+
+    // tabs opened before this page finished loading
+    ipcRenderer.invoke('get-tab-state').then(renderTabs);
 
     // Request initial theme colors
     ipcRenderer.invoke('get-theme-colors').then((colors) => {

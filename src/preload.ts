@@ -10,6 +10,38 @@ contextBridge.exposeInMainWorld('soundcloudAPI', {
     },
 });
 
+// Tab titles come from what the page shows (track, playlist or profile name) rather than
+// document.title, which is localized SEO text, and tab icons from its cover or profile picture.
+// Selectors are SoundCloud's hero and profile headers.
+// ponytail: polled because SoundCloud swaps pages without a load event, so a title can trail a
+// navigation by up to 500ms. Watch the hero with a MutationObserver if that lag ever matters.
+let lastPageInfo = '';
+setInterval(() => {
+    const text = (selector: string) => document.querySelector<HTMLElement>(selector)?.innerText.trim() ?? '';
+    const ownProfile = document.querySelector<HTMLAnchorElement>(
+        '.header__userNav [data-menu-name="profile"], .header__userNavUsernameButton',
+    );
+    // covers and profile pictures are a background image on a span, or on some pages a plain <img>
+    const artwork = document.querySelector<HTMLElement>(
+        '.fullHero__artwork span.sc-artwork, .fullHero__artwork img, .profileHeaderInfo__avatar span.sc-artwork',
+    );
+    const info = {
+        title: text('.fullHero__title .soundTitle__title'),
+        user: text('.fullHero__title .soundTitle__username'),
+        profile: text('.profileHeaderInfo__userName'),
+        ownProfilePath: ownProfile?.pathname ?? '',
+        artwork:
+            artwork instanceof HTMLImageElement
+                ? artwork.src
+                : (/url\("?([^")]+)"?\)/.exec(artwork?.style.backgroundImage ?? '')?.[1] ?? ''),
+    };
+
+    const key = JSON.stringify(info);
+    if (key === lastPageInfo) return;
+    lastPageInfo = key;
+    ipcRenderer.send('soundcloud:page-info', info);
+}, 500);
+
 // Two-finger trackpad swipes reach the page as horizontal wheel events and Electron has no history
 // swiper of its own, so turn them into back/forward. The 3-finger `swipe` event is handled in main.ts.
 // Sandboxed preloads can't require local modules, which is why this lives here rather than in utils/.

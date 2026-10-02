@@ -6,6 +6,11 @@ interface NavigationPolicyOptions {
      * so the content view allows popups. Every other view denies them outright.
      */
     allowPopups?: boolean;
+    /**
+     * Called instead of opening a window when the user opens a soundcloud.com link in a new tab
+     * (cmd/ctrl/middle click, or a target="_blank" link).
+     */
+    onNewTab?: (url: string, background: boolean) => void;
 }
 
 /**
@@ -19,10 +24,16 @@ interface NavigationPolicyOptions {
  * it.
  */
 export function applyNavigationPolicy(webContents: WebContents, options: NavigationPolicyOptions = {}): void {
-    const { allowPopups = false } = options;
+    const { allowPopups = false, onNewTab } = options;
 
-    webContents.setWindowOpenHandler(({ url }) => {
+    webContents.setWindowOpenHandler(({ url, disposition }) => {
         const isHttps = /^https:\/\//i.test(url);
+        const wantsTab = disposition === 'foreground-tab' || disposition === 'background-tab';
+
+        if (onNewTab && wantsTab && /^https:\/\/soundcloud\.com(\/|$)/i.test(url)) {
+            onNewTab(url, disposition === 'background-tab');
+            return { action: 'deny' };
+        }
 
         if (allowPopups && isHttps) {
             return {

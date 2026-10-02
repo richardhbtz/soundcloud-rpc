@@ -7,16 +7,28 @@ const SEND_CHANNELS = new Set([
     'minimize-window',
     'navigate-back',
     'navigate-forward',
+    'navigate-url',
     'refresh-page',
+    'tab-close',
+    'tab-move',
+    'tab-new',
+    'tab-select',
     'title-bar-double-click',
 ]);
 
-const INVOKE_CHANNELS = new Set(['get-navigation-controls-enabled', 'get-theme-colors', 'is-maximized']);
+const INVOKE_CHANNELS = new Set([
+    'get-navigation-controls-enabled',
+    'get-tab-state',
+    'get-theme-colors',
+    'is-maximized',
+]);
 
 const ON_CHANNELS = new Set([
+    'focus-url-bar',
     'navigation-controls-toggle',
     'navigation-state-changed',
     'refresh-state-changed',
+    'tabs-changed',
     'theme-changed',
     'theme-colors-changed',
     'window-maximized-changed',

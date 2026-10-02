@@ -57,15 +57,20 @@ function generateApiSignature(params: Record<string, string>, secret: string): s
 
 export class LastFmService {
     private isAuthenticating: boolean = false;
-    private readonly window: BrowserView;
+    private readonly getView: () => BrowserView;
     private readonly store: ElectronStore;
     private currentScrobbleState: ScrobbleState | null = null;
     private pauseStartTime: number = 0;
     private loopWatchdog: NodeJS.Timeout | null = null;
 
-    constructor(window: BrowserView, store: ElectronStore) {
-        this.window = window;
+    constructor(getView: () => BrowserView, store: ElectronStore) {
+        this.getView = getView;
         this.store = store;
+    }
+
+    // the active tab; tabs come and go, so this is looked up on each use
+    private get window(): BrowserView {
+        return this.getView();
     }
 
     /* API dispatcher eliminates duplicate fetch headers &&& signing logic */
