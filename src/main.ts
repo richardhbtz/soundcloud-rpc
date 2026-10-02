@@ -596,7 +596,6 @@ const tabs: Tab[] = [];
 let nextTabId = 1;
 // the tab whose player is driving presence, scrobbling and the thumbar
 let audioTabId: number | undefined;
-let startupHintShown = false;
 
 function tabOfSender(event: IpcMainEvent): Tab | undefined {
     return tabs.find((tab) => tab.view.webContents.id === event.sender.id);
@@ -837,14 +836,7 @@ function wireTab(tab: Tab): void {
         if (isActive()) {
             await lastFmService.authenticate();
 
-            // before the hint and the settings panel, which are both translated
             await getLanguage();
-
-            if (!startupHintShown) {
-                startupHintShown = true;
-                notificationManager.show(translationService.translate('pressF1ToOpenSettings'));
-            }
-
             settingsManager.updateTranslations(translationService);
             updateNavigationState();
             headerContents()?.send('navigation-controls-toggle', store.get('navigationControlsEnabled', false));

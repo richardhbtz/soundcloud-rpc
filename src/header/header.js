@@ -347,6 +347,8 @@ downloadsBtn?.addEventListener('click', () => ipcRenderer.send('toggle-downloads
 ipcRenderer.on('download-button-toggle', (_, enabled) => downloadsBtn?.classList.toggle('hidden', !enabled));
 ipcRenderer.on('downloads-active', (_, active) => downloadsBtn?.classList.toggle('active', active > 0));
 
+document.getElementById('menu-btn')?.addEventListener('click', () => ipcRenderer.send('toggle-settings'));
+
 ipcRenderer.on('tabs-changed', (_, state) => renderTabs(state));
 ipcRenderer.on('focus-url-bar', () => editUrl());
 
