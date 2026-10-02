@@ -20,8 +20,6 @@ export class SettingsManager {
     private store: ElectronStore;
     private translationService: TranslationService;
     private devMode = process.argv.includes('--dev');
-    // macOS additionally tears the view down again on close
-    private useMacOptimizations = process.platform === 'darwin';
     // key returned by insertCSS for the current theme-colour stylesheet
     private themeColorCssKey: string | null = null;
 
@@ -30,15 +28,10 @@ export class SettingsManager {
         this.store = store;
         this.translationService = translationService;
 
-        // add resize listener
+        // the view itself is only built on first open
         this.parentWindow.on('resize', () => {
-            if (this.isVisible) {
-                this.updateBounds();
-            }
+            if (this.isVisible) this.updateBounds();
         });
-        // The view is built on first open on every platform. It was previously created
-        // eagerly off macOS, which meant a renderer process and the full settings
-        // document were paid for at startup by users who never open settings.
     }
 
     public toggle(): void {
@@ -74,16 +67,15 @@ export class SettingsManager {
         this.parentWindow.addBrowserView(this.view);
         this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });
 
-        // served over the app scheme rather than a data: URL, so the page has a real
-        // origin, its script can live in a file, and a CSP is enforceable
         provideDocument('settings', () => this.getHtml());
         this.view.webContents.loadURL(appUrl('settings'));
 
-        // listen for hide message from panel
+        // settingsPanel.js logs this once hide()'s slide-out animation has finished
         this.view.webContents.on('console-message', (_, __, message) => {
             if (message === 'hidePanel') {
                 this.isVisible = false;
-                if (this.useMacOptimizations) {
+                // macOS additionally gives the renderer back
+                if (isMac) {
                     this.teardownView();
                 } else if (this.view) {
                     this.view.setBounds({ x: 0, y: -10000, width: 0, height: 0 });

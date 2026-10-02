@@ -1,11 +1,5 @@
-// Settings panel behaviour.
-//
-// This used to be interpolated into the page as an inline <script>. It lives in a real
-// file so the panel can be served under a Content-Security-Policy that refuses inline
-// script -- see src/utils/appProtocol.ts.
-//
-// Loaded as a classic script, so everything here runs in the page's global scope exactly
-// as it did before.
+// Settings panel behaviour. A separate file because the page is served under a CSP that
+// refuses inline script -- see src/utils/appProtocol.ts.
 
 const ipcRenderer = {
     send: (channel, ...args) => window.settingsAPI.send(channel, ...args),
@@ -17,7 +11,6 @@ const shell = {
     openPath: (targetPath) => window.settingsAPI.openPath(targetPath),
 };
 
-// data loading functions
 async function loadCustomThemes() {
     try {
         const themes = await ipcRenderer.invoke('get-custom-themes');
@@ -141,38 +134,20 @@ async function loadAccounts() {
     }
 }
 
-// initilization
 document.addEventListener('DOMContentLoaded', () => {
     loadCustomThemes();
     loadPlugins();
     loadAccounts();
 });
 
-// account manager event listeners
 ipcRenderer.on('accounts-updated', loadAccounts);
 
-const accSelector = document.getElementById('accountSelector');
-if (accSelector) {
-    accSelector.addEventListener('change', (e) => {
-        ipcRenderer.send('switch-account', e.target.value);
-    });
-}
+document.getElementById('accountSelector')?.addEventListener('change', (e) => {
+    ipcRenderer.send('switch-account', e.target.value);
+});
+document.getElementById('addAccountBtn')?.addEventListener('click', () => ipcRenderer.send('add-account'));
+document.getElementById('logoutBtn')?.addEventListener('click', () => ipcRenderer.send('logout-account'));
 
-const addBtn = document.getElementById('addAccountBtn');
-if (addBtn) {
-    addBtn.addEventListener('click', () => {
-        ipcRenderer.send('add-account');
-    });
-}
-
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        ipcRenderer.send('logout-account');
-    });
-}
-
-// standard UI event listeners
 document.getElementById('customThemeSelector')?.addEventListener('change', async (e) => {
     const themeName = e.target.value;
     try {
@@ -201,16 +176,6 @@ document.getElementById('refreshThemes')?.addEventListener('click', async () => 
     }
 });
 
-function escapeHtml(str) {
-    if (typeof str !== 'string') return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;');
-}
-
 document.getElementById('openPluginsFolder')?.addEventListener('click', async () => {
     try {
         const pluginsPath = await ipcRenderer.invoke('get-plugins-folder-path');
@@ -229,27 +194,31 @@ document.getElementById('refreshPlugins')?.addEventListener('click', async () =>
     }
 });
 
-// UI customization toggles
-document.getElementById('hidePromotions')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'hidePromotions', value: e.target.checked });
-});
+// Settings whose control id is the setting key and which need nothing beyond being stored.
+// prettier-ignore
+const CHECKBOX_SETTINGS = [
+    'hidePromotions', 'hideEventsNearYou', 'hideArtistUpsells', 'downloadButtonEnabled',
+    'downloadUseAccount', 'minimizeToTray', 'navigationControlsEnabled', 'trackParserEnabled',
+    'autoUpdaterEnabled', 'displayWhenIdling', 'displaySCSmallIcon', 'adBlocker',
+    'discordRichPresence', 'displayButtons',
+];
+const TEXT_SETTINGS = [
+    'downloadTemplate',
+    'ytDlpPath',
+    'proxyHost',
+    'proxyPort',
+    'lastFmApiKey',
+    'lastFmSecret',
+    'webhookUrl',
+];
 
-document.getElementById('hideEventsNearYou')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'hideEventsNearYou', value: e.target.checked });
-});
-
-document.getElementById('hideArtistUpsells')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'hideArtistUpsells', value: e.target.checked });
-});
-
-// downloads
-for (const key of ['downloadButtonEnabled', 'downloadUseAccount']) {
+for (const key of CHECKBOX_SETTINGS) {
     document.getElementById(key)?.addEventListener('change', (e) => {
         ipcRenderer.send('setting-changed', { key, value: e.target.checked });
     });
 }
 
-for (const key of ['downloadTemplate', 'ytDlpPath']) {
+for (const key of TEXT_SETTINGS) {
     document.getElementById(key)?.addEventListener('change', (e) => {
         ipcRenderer.send('setting-changed', { key, value: e.target.value });
     });
@@ -270,26 +239,10 @@ document.getElementById('proxyEnabled')?.addEventListener('change', (e) => {
     ipcRenderer.send('setting-changed', { key: 'proxyEnabled', value: isEnabled });
 });
 
-document.getElementById('proxyHost')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'proxyHost', value: e.target.value });
-});
-
-document.getElementById('proxyPort')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'proxyPort', value: e.target.value });
-});
-
 document.getElementById('lastFmEnabled')?.addEventListener('change', (e) => {
     const isEnabled = e.target.checked;
     document.getElementById('lastFmFields').style.display = isEnabled ? 'block' : 'none';
     ipcRenderer.send('setting-changed', { key: 'lastFmEnabled', value: isEnabled });
-});
-
-document.getElementById('lastFmApiKey')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'lastFmApiKey', value: e.target.value });
-});
-
-document.getElementById('lastFmSecret')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'lastFmSecret', value: e.target.value });
 });
 
 document.getElementById('createLastFmApiKey')?.addEventListener('click', (e) => {
@@ -302,10 +255,6 @@ document.getElementById('webhookEnabled')?.addEventListener('change', (e) => {
     document.getElementById('webhookFields').style.display = isEnabled ? 'block' : 'none';
     document.getElementById('webhookFields2').style.display = isEnabled ? 'block' : 'none';
     ipcRenderer.send('setting-changed', { key: 'webhookEnabled', value: isEnabled });
-});
-
-document.getElementById('webhookUrl')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'webhookUrl', value: e.target.value });
 });
 
 document.getElementById('webhookTriggerPercentage')?.addEventListener('input', (e) => {
@@ -321,15 +270,10 @@ document.getElementById('webhookTriggerPercentage')?.addEventListener('input', (
 document.getElementById('webhookExampleToggle')?.addEventListener('click', (e) => {
     const toggle = e.currentTarget;
     const content = document.getElementById('webhookExampleContent');
-    const isExpanded = content.style.display === 'block';
+    const expand = content.style.display !== 'block';
 
-    if (isExpanded) {
-        content.style.display = 'none';
-        toggle.classList.remove('expanded');
-    } else {
-        content.style.display = 'block';
-        toggle.classList.add('expanded');
-    }
+    content.style.display = expand ? 'block' : 'none';
+    toggle.classList.toggle('expanded', expand);
 });
 
 document.getElementById('darkMode')?.addEventListener('change', (e) => {
@@ -337,22 +281,6 @@ document.getElementById('darkMode')?.addEventListener('change', (e) => {
     ipcRenderer.send('setting-changed', { key: 'theme', value: isDark ? 'dark' : 'light' });
     document.documentElement.classList.toggle('theme-light', !isDark);
     document.documentElement.classList.toggle('theme-dark', isDark);
-});
-
-document.getElementById('minimizeToTray')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'minimizeToTray', value: e.target.checked });
-});
-
-document.getElementById('navigationControlsEnabled')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'navigationControlsEnabled', value: e.target.checked });
-});
-
-document.getElementById('trackParserEnabled')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'trackParserEnabled', value: e.target.checked });
-});
-
-document.getElementById('autoUpdaterEnabled')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'autoUpdaterEnabled', value: e.target.checked });
 });
 
 document.getElementById('richPresencePreviewEnabled')?.addEventListener('change', (e) => {
@@ -364,26 +292,6 @@ document.getElementById('richPresencePreviewEnabled')?.addEventListener('change'
     ipcRenderer.send('setting-changed', { key: 'richPresencePreviewEnabled', value: isEnabled });
 });
 
-document.getElementById('displayWhenIdling')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'displayWhenIdling', value: e.target.checked });
-});
-
-document.getElementById('displaySCSmallIcon')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'displaySCSmallIcon', value: e.target.checked });
-});
-
-document.getElementById('adBlocker')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'adBlocker', value: e.target.checked });
-});
-
-document.getElementById('discordRichPresence')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'discordRichPresence', value: e.target.checked });
-});
-
-document.getElementById('displayButtons')?.addEventListener('change', (e) => {
-    ipcRenderer.send('setting-changed', { key: 'displayButtons', value: e.target.checked });
-});
-
 document.getElementById('useArtistInStatusLineToggle')?.addEventListener('change', (e) => {
     const useState = e.target.checked;
     ipcRenderer.send('setting-changed', { key: 'statusDisplayType', value: useState ? 1 : 0 });
@@ -393,8 +301,7 @@ document.getElementById('applyChanges')?.addEventListener('click', () => {
     ipcRenderer.send('apply-changes');
 });
 
-// rich presence preview logic
-let currentTrack = null;
+// rich presence preview
 let progressInterval = null;
 
 function parseTimeToMs(time) {
@@ -550,7 +457,6 @@ function createPausedPreview(options) {
 }
 
 function updatePreview(trackInfo) {
-    currentTrack = trackInfo;
     const activitySection = document.getElementById('activitySectionPreview');
     const noActivity = document.getElementById('noActivityPreview');
 
@@ -617,10 +523,7 @@ function startProgressUpdate(trackInfo) {
     progressInterval = setInterval(updateProgress, 1000);
 }
 
-// external event triggers
-ipcRenderer.on('presence-preview-update', (_, trackInfo) => {
-    updatePreview(trackInfo);
-});
+ipcRenderer.on('presence-preview-update', (_, trackInfo) => updatePreview(trackInfo));
 
 ipcRenderer.on('theme-changed', (_, isDark) => {
     const dm = document.getElementById('darkMode');
@@ -659,12 +562,11 @@ ipcRenderer.on('update-translations', () => {
     });
 });
 
-// animation handling
 document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.remove('visible');
 });
 
-// handle close button animation
+// let the slide-out animation finish before the panel is hidden
 document.getElementById('close-settings').addEventListener('click', (e) => {
     e.preventDefault();
     document.body.classList.remove('visible');
@@ -673,7 +575,8 @@ document.getElementById('close-settings').addEventListener('click', (e) => {
     }, 300);
 });
 
-// listen for messages
+// The preload exposes no channel for this, so the panel reports that it has finished hiding
+// through the console, which SettingsManager listens to.
 window.addEventListener('message', (event) => {
     if (event.data === 'hidePanel') {
         console.log('hidePanel');

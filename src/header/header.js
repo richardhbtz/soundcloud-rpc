@@ -1,4 +1,3 @@
-/* eslint-disable */
 const ipcRenderer = {
     send: (channel, ...args) => window.headerAPI.send(channel, ...args),
     invoke: (channel, ...args) => window.headerAPI.invoke(channel, ...args),
@@ -7,7 +6,6 @@ const ipcRenderer = {
 const platform = window.headerAPI.platform;
 
 let isMaximized = false;
-let isDarkTheme = true;
 let canGoBack = false;
 let canGoForward = false;
 let isRefreshing = false;
@@ -29,31 +27,35 @@ const forcedColorsQuery = window.matchMedia ? window.matchMedia('(forced-colors:
 function applyThemeColors(colors) {
     themeColors = colors;
     if (!colors) {
-        // Reset to default - remove custom properties so CSS theme classes take effect
+        // no custom theme: drop the overrides so the stylesheet's theme classes apply again
         document.documentElement.style.removeProperty('--header-bg');
         document.documentElement.style.removeProperty('--header-text');
         document.documentElement.style.removeProperty('--header-accent');
-
-        // Also reset inline styles so CSS variables work
-        const header = document.querySelector('.custom-header');
-        if (header) {
-            header.style.removeProperty('background-color');
-            header.style.removeProperty('color');
-        }
+        resetHeaderColors();
         return;
     }
 
-    // Apply custom theme colors
     document.documentElement.style.setProperty('--header-bg', colors.primary || colors.background);
     document.documentElement.style.setProperty('--header-text', colors.text);
     document.documentElement.style.setProperty('--header-accent', colors.accent || colors.primary);
 
-    // Update the header background
     const header = document.querySelector('.custom-header');
     if (header) {
         header.style.backgroundColor = colors.surface || colors.background;
         header.style.color = colors.text;
     }
+}
+
+function resetHeaderColors() {
+    const header = document.querySelector('.custom-header');
+    header?.style.removeProperty('background-color');
+    header?.style.removeProperty('color');
+}
+
+function setNavigationControlsVisible(visible) {
+    const navControls = document.querySelector('.navigation-controls');
+    navControls?.classList.toggle('visible', visible);
+    navControls?.classList.toggle('hidden', !visible);
 }
 
 function updateNavigationState(state = {}) {
@@ -80,7 +82,7 @@ function updateNavigationState(state = {}) {
     if (navButtons.forward) navButtons.forward.classList.toggle('disabled', !canGoForward);
 }
 
-// Helper function to update window controls
+// only Windows draws its own caption buttons
 function updateWindowControls() {
     if (platform === 'win32') {
         if (!maximizeGlyphEl) {
@@ -90,9 +92,9 @@ function updateWindowControls() {
 
         setIconGlyph(maximizeGlyphEl, isMaximized ? SEGOE_GLYPHS.restore : SEGOE_GLYPHS.maximize);
 
-        // Update the button title
-        document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
-        document.getElementById('maximize-btn').setAttribute('aria-label', isMaximized ? 'Restore' : 'Maximize');
+        const label = isMaximized ? 'Restore' : 'Maximize';
+        document.getElementById('maximize-btn').title = label;
+        document.getElementById('maximize-btn').setAttribute('aria-label', label);
     }
 }
 
@@ -101,10 +103,8 @@ function setIconGlyph(element, glyph) {
     element.textContent = glyph;
 }
 
-// Initialize icons
 function initializeIcons() {
     try {
-        // Only initialize SVG icons if we're on Windows
         if (platform === 'win32') {
             minimizeGlyphEl = document.querySelector('#minimize-btn .icon-glyph');
             maximizeGlyphEl = document.querySelector('#maximize-btn .icon-glyph');
@@ -135,10 +135,8 @@ function handleForcedColorsChange() {
     }
 }
 
-// Set platform class on body
 document.body.classList.add(`platform-${platform}`);
 
-// Navigation event delegation
 document.querySelector('.navigation-controls')?.addEventListener('click', (e) => {
     const { id } = e.target.closest('.nav-button') || {};
 
@@ -161,7 +159,6 @@ document.querySelector('.navigation-controls')?.addEventListener('click', (e) =>
     }
 });
 
-// Window control event listeners for Windows
 document.getElementById('minimize-btn')?.addEventListener('click', () => {
     ipcRenderer.send('minimize-window');
 });
@@ -176,7 +173,6 @@ document.getElementById('close-btn')?.addEventListener('click', () => {
     ipcRenderer.send('close-window');
 });
 
-// Double click on title bar to maximize/restore
 document.querySelectorAll('.title-bar').forEach((spacer) =>
     spacer.addEventListener('dblclick', () => {
         ipcRenderer.send('title-bar-double-click');
@@ -354,73 +350,29 @@ ipcRenderer.on('downloads-active', (_, active) => downloadsBtn?.classList.toggle
 ipcRenderer.on('tabs-changed', (_, state) => renderTabs(state));
 ipcRenderer.on('focus-url-bar', () => editUrl());
 
-// Listen for theme changes
 ipcRenderer.on('theme-changed', (_, isDark) => {
-    isDarkTheme = isDark;
-    if (isDark) {
-        document.documentElement.classList.remove('theme-light');
-    } else {
-        document.documentElement.classList.add('theme-light');
-    }
-
-    // If no custom theme colors are applied, reset inline styles to use CSS variables
-    if (!themeColors) {
-        const header = document.querySelector('.custom-header');
-        if (header) {
-            header.style.removeProperty('background-color');
-            header.style.removeProperty('color');
-        }
-    }
+    document.documentElement.classList.toggle('theme-light', !isDark);
+    if (!themeColors) resetHeaderColors();
 });
 
-// Listen for theme color updates
-ipcRenderer.on('theme-colors-changed', (_, colors) => {
-    applyThemeColors(colors);
-});
+ipcRenderer.on('theme-colors-changed', (_, colors) => applyThemeColors(colors));
 
-// Listen for navigation state changes
 ipcRenderer.on('window-maximized-changed', (_, maximized) => {
     if (isMaximized === maximized) return;
     isMaximized = maximized;
     updateWindowControls();
 });
 
-ipcRenderer.on('navigation-state-changed', (_, state) => {
-    updateNavigationState(state);
-});
+ipcRenderer.on('navigation-state-changed', (_, state) => updateNavigationState(state));
+ipcRenderer.on('refresh-state-changed', (_, refreshing) => updateNavigationState({ refreshing }));
+ipcRenderer.on('navigation-controls-toggle', (_, enabled) => setNavigationControlsVisible(enabled));
 
-// Listen for refresh state changes
-ipcRenderer.on('refresh-state-changed', (_, refreshing) => {
-    updateNavigationState({ refreshing });
-});
-
-// Listen for navigation controls toggle
-ipcRenderer.on('navigation-controls-toggle', (_, enabled) => {
-    const navControls = document.querySelector('.navigation-controls');
-    if (navControls) {
-        if (enabled) {
-            navControls.classList.add('visible');
-            navControls.classList.remove('hidden');
-        } else {
-            navControls.classList.remove('visible');
-            navControls.classList.add('hidden');
-            navButtons = null;
-        }
-    }
-});
-
-// Initialize icons and navigation state when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initializeIcons();
     updateNavigationState();
 
-    // Request initial navigation controls state
     ipcRenderer.invoke('get-navigation-controls-enabled').then((enabled) => {
-        const navControls = document.querySelector('.navigation-controls');
-        if (navControls && enabled) {
-            navControls.classList.add('visible');
-            navControls.classList.remove('hidden');
-        }
+        if (enabled) setNavigationControlsVisible(true);
     });
 
     ipcRenderer.invoke('get-download-button-enabled').then((enabled) => {
@@ -430,11 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // tabs opened before this page finished loading
     ipcRenderer.invoke('get-tab-state').then(renderTabs);
 
-    // Request initial theme colors
     ipcRenderer.invoke('get-theme-colors').then((colors) => {
-        if (colors) {
-            applyThemeColors(colors);
-        }
+        if (colors) applyThemeColors(colors);
     });
 
     // seed once; further changes arrive on 'window-maximized-changed'
