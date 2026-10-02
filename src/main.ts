@@ -5,6 +5,7 @@ import {
     ipcMain,
     BrowserView,
     Tray,
+    dialog,
     nativeImage,
     shell,
     components,
@@ -17,6 +18,7 @@ import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
 import { SettingsManager } from './settings/settingsManager';
+import { DownloadManager } from './downloads/downloadManager';
 import { ProxyService } from './services/proxyService';
 import { PresenceService } from './services/presenceService';
 import { LastFmService } from './services/lastFmService';
@@ -33,9 +35,11 @@ import { validateTrackUpdatePayload } from './validation';
 import { isSecretKey, migrateSecrets, writeSecret } from './utils/secretStore';
 import { applyNavigationPolicy } from './utils/navigationPolicy';
 import { handleAppScheme, registerAppScheme } from './utils/appProtocol';
-import { markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
+import { isTrustedSender, markTrustedSender, trustedHandle, trustedOn } from './utils/ipcGuard';
 import { installStoreReadCache } from './utils/storeCache';
 import { deriveBrowserUserAgent } from './utils/userAgent';
+import { ejectDmg, findInstallerDmg } from './utils/installerDmg';
+import { DEFAULT_TEMPLATE } from './utils/ytdlp';
 import { presentAsChrome } from './utils/chromeIdentity';
 import {
     EMPTY_PAGE_INFO,
@@ -88,6 +92,13 @@ const store = new Store({
         hidePromotions: true,
         hideEventsNearYou: true,
         hideArtistUpsells: true,
+        downloadButtonEnabled: true,
+        downloadUseAccount: true,
+        // empty means the system Downloads folder
+        downloadFolder: '',
+        downloadTemplate: DEFAULT_TEMPLATE,
+        // empty means look it up on PATH
+        ytDlpPath: '',
         accounts: [{ id: 'default', name: 'Main Account' }],
         currentAccountId: 'default',
     },
@@ -104,6 +115,7 @@ let isDarkTheme = store.get('theme') !== 'light';
 let mainWindow: BrowserWindow;
 let notificationManager: NotificationManager;
 let settingsManager: SettingsManager;
+let downloadManager: DownloadManager;
 let proxyService: ProxyService;
 let presenceService: PresenceService;
 let lastFmService: LastFmService;
@@ -206,6 +218,40 @@ function setupUpdater() {
     });
 
     autoUpdater.checkForUpdates();
+}
+
+// after a drag-install the dmg stays mounted and the file sits in Downloads; offer to tidy both
+async function offerInstallerCleanup() {
+    if (process.platform !== 'darwin' || !app.isPackaged) return;
+
+    try {
+        const installer = await findInstallerDmg(process.execPath);
+        // asked once per image: "Keep" shouldn't nag on every launch until the next reboot
+        if (!installer || store.get('installerDmgKept') === installer.imagePath) return;
+
+        const { response } = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            message: translationService.translate('installerCleanupTitle'),
+            detail: translationService
+                .translate('installerCleanupDetail')
+                .replace('{file}', path.basename(installer.imagePath)),
+            buttons: [
+                translationService.translate('installerCleanupConfirm'),
+                translationService.translate('installerCleanupKeep'),
+            ],
+            defaultId: 0,
+            cancelId: 1,
+        });
+        if (response !== 0) {
+            store.set('installerDmgKept', installer.imagePath);
+            return;
+        }
+
+        await ejectDmg(installer.mountPoint);
+        await shell.trashItem(installer.imagePath);
+    } catch (error) {
+        console.error('Installer cleanup failed:', error);
+    }
 }
 
 // appimages don't install a desktop file, so wayland compositors can't match the window
@@ -655,6 +701,10 @@ function setupWindowControls() {
         return store.get('navigationControlsEnabled', false);
     });
 
+    ipcMain.handle('get-download-button-enabled', () => {
+        return store.get('downloadButtonEnabled', true);
+    });
+
     adjustContentViews();
 }
 
@@ -1049,6 +1099,7 @@ async function init() {
 
     // Initialize services
     translationService = new TranslationService();
+    void offerInstallerCleanup();
     themeService = new ThemeService(store);
     pluginService = new PluginService(store);
     pluginService.setContentView(contentView);
@@ -1058,6 +1109,9 @@ async function init() {
     });
     notificationManager = new NotificationManager(mainWindow);
     settingsManager = new SettingsManager(mainWindow, store, translationService);
+    downloadManager = new DownloadManager(mainWindow, store, (active) => {
+        if (!isQuitting) headerContents()?.send('downloads-active', active);
+    });
     // resolved on each use: the proxy belongs on whichever session the content view is
     // currently loading through, which changes when the user switches account
     proxyService = new ProxyService(() => contentView?.webContents.session ?? null, store, queueToastNotification);
@@ -1167,8 +1221,29 @@ async function init() {
         sendTabState();
     });
 
+    // sent by the download button preload.ts adds under each track, album and playlist
+    ipcMain.on('soundcloud:download', async (event, rawUrl: unknown) => {
+        if (!isTrustedSoundCloudSender(event) || typeof rawUrl !== 'string' || !isSoundCloudUrl(rawUrl)) return;
+
+        const url = new URL(rawUrl);
+        // "?in=<playlist>" only records where the track was opened from
+        url.searchParams.delete('in');
+
+        // Downloading as the logged-in account is what gets Go+ streams and original files. The token
+        // is the one soundcloud.com itself keeps in this session; signed out, there is none.
+        const [cookie] = store.get('downloadUseAccount', true)
+            ? await event.sender.session.cookies
+                  .get({ url: 'https://soundcloud.com', name: 'oauth_token' })
+                  .catch(() => [])
+            : [];
+        downloadManager.start(url.toString(), cookie?.value);
+    });
+
     // Register settings related events
-    ipcMain.on('setting-changed', async (_event, data) => {
+    ipcMain.on('setting-changed', async (event, data) => {
+        // settings include the yt-dlp path, which gets executed: only the app's own views may write them
+        if (!isTrustedSender(event)) return;
+
         if (!isValidSettingPayload(data)) {
             console.warn('Rejected invalid setting-changed payload');
             return;
@@ -1217,6 +1292,8 @@ async function init() {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('navigation-controls-toggle', data.value);
             }
+        } else if (key === 'downloadButtonEnabled') {
+            headerContents()?.send('download-button-toggle', data.value);
         } else if (key === 'autoUpdaterEnabled') {
             if (data.value) {
                 setupUpdater();
@@ -1471,6 +1548,7 @@ function applyThemeToContent(isDark: boolean, only?: BrowserView) {
     if (settingsManager) {
         settingsManager.setThemeColors(themeColors);
     }
+    downloadManager?.setThemeColors(themeColors);
     if (headerView && headerView.webContents) {
         headerView.webContents.send('theme-colors-changed', themeColors);
     }
@@ -1570,7 +1648,7 @@ function applyThemeToContent(isDark: boolean, only?: BrowserView) {
                     
                     ${hideEventsNearYou ? '.velvetCakeModule { display: none !important; }' : ''}
                     
-					${hideArtistUpsells ? '.creatorSubscriptionsButton.header__creatorUpsell, .artistConnectItem.m-upsellNextPro, .dropdownMenu [href*="checkout.soundcloud.com"], .dropdownMenu *:has(> svg.profileMenu__icon path[fill="#F50"]), .spotlight:has(.spotlight__upsellBanner), .spotlight__upsellBanner, .spotlight__upsellCTA, .sidebarContent:has(.velvetCakeIframe), .artistConnectContainer .tileGallery__sliderPeekForward, .artistConnectContainer .tileGallery__sliderPeekBackward, .MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }' : ''}
+					${hideArtistUpsells ? '.header__upsellWrapper, .creatorSubscriptionsButton.header__creatorUpsell, .artistConnectItem.m-upsellNextPro, .dropdownMenu [href*="checkout.soundcloud.com"], .dropdownMenu *:has(> svg.profileMenu__icon path[fill="#F50"]), .spotlight:has(.spotlight__upsellBanner), .spotlight__upsellBanner, .spotlight__upsellCTA, .sidebarContent:has(.velvetCakeIframe), .artistConnectContainer .tileGallery__sliderPeekForward, .artistConnectContainer .tileGallery__sliderPeekBackward, .MuiBox-root:has(a[href*="getstarted/fan-support"]) { display: none !important; }' : ''}
                 \`;
                 
                 const existingStyle = document.getElementById('custom-scrollbar-style');
@@ -1752,6 +1830,7 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
     isQuitting = true;
+    downloadManager?.cancelAll();
     if (shortcutService) {
         shortcutService.destroy();
     }
@@ -1857,6 +1936,15 @@ function setupTranslationHandlers() {
             hidePromotions: translationService.translate('hidePromotions'),
             hideEventsNearYou: translationService.translate('hideEventsNearYou'),
             hideArtistUpsells: translationService.translate('hideArtistUpsells'),
+            downloads: translationService.translate('downloads'),
+            showDownloadButton: translationService.translate('showDownloadButton'),
+            downloadUseAccount: translationService.translate('downloadUseAccount'),
+            downloadFolder: translationService.translate('downloadFolder'),
+            chooseFolder: translationService.translate('chooseFolder'),
+            openFolder: translationService.translate('openFolder'),
+            downloadTemplate: translationService.translate('downloadTemplate'),
+            ytDlpPath: translationService.translate('ytDlpPath'),
+            downloadsDescription: translationService.translate('downloadsDescription'),
         };
     });
 }

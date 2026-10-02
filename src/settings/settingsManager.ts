@@ -7,6 +7,8 @@ import { appUrl, cspMetaTag, provideDocument } from '../utils/appProtocol';
 import { markTrustedSender } from '../utils/ipcGuard';
 import { escapeHtml } from '../utils/escapeHtml';
 import { readSecret } from '../utils/secretStore';
+import { DEFAULT_TEMPLATE } from '../utils/ytdlp';
+import { downloadFolder } from '../downloads/downloadManager';
 import { join } from 'path';
 
 const isMac = process.platform === 'darwin';
@@ -903,6 +905,51 @@ export class SettingsManager {
                         <span class="slider"></span>
                     </label>
                 </div>
+            </div>
+
+            <div class="setting-group">
+                <h2 data-i18n="downloads">
+                    ${this.translationService.translate('downloads')}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                </h2>
+                <div class="setting-item">
+                    <span data-i18n="showDownloadButton">${this.translationService.translate('showDownloadButton')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="downloadButtonEnabled" ${this.store.get('downloadButtonEnabled', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="downloadUseAccount">${this.translationService.translate('downloadUseAccount')}</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="downloadUseAccount" ${this.store.get('downloadUseAccount', true) ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="downloadTemplate">${this.translationService.translate('downloadTemplate')}</span>
+                    <input type="text" class="textInput" id="downloadTemplate" style="width: 60%;" spellcheck="false" value="${escapeHtml(
+                        this.store.get('downloadTemplate', DEFAULT_TEMPLATE),
+                    )}">
+                </div>
+                <div class="setting-item">
+                    <span data-i18n="downloadFolder">${this.translationService.translate('downloadFolder')}</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="chooseDownloadFolder" class="theme-button" data-i18n="chooseFolder">${this.translationService.translate('chooseFolder')}</button>
+                        <button id="openDownloadFolder" class="theme-button" data-i18n="openFolder">${this.translationService.translate('openFolder')}</button>
+                    </div>
+                </div>
+                <div class="description" id="downloadFolderPath" style="margin-top: 0; word-break: break-all;">${escapeHtml(
+                    downloadFolder(this.store),
+                )}</div>
+                <div class="input-group">
+                    <input type="text" class="textInput" id="ytDlpPath" spellcheck="false" placeholder="${this.translationService.translate('ytDlpPath')}" data-i18n-placeholder="ytDlpPath" value="${escapeHtml(
+                        this.store.get('ytDlpPath', ''),
+                    )}">
+                </div>
+                <div class="description" data-i18n="downloadsDescription">${this.translationService.translate('downloadsDescription')}</div>
             </div>
 			
 			<div class="setting-group">

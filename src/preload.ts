@@ -10,6 +10,90 @@ contextBridge.exposeInMainWorld('soundcloudAPI', {
     },
 });
 
+// A download button at the end of every action row (like, repost, share...), which SoundCloud renders
+// under each track in a stream or profile, on each row of an album or playlist, and under the player
+// of a track, album or playlist page. Added from here rather than from the page's own world so that
+// only this script, and not anything soundcloud.com loads, can start a download.
+const DOWNLOAD_ICON =
+    '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 2.5v8m0 0L4.75 7.25M8 10.5l3.25-3.25M3 13.25h10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function addDownloadButtons(): void {
+    for (const actions of document.querySelectorAll('.soundActions:not(:has(.scrpc-download))')) {
+        const size = actions.classList.contains('soundActions__small') ? 'small' : 'medium';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `scrpc-download sc-button-secondary sc-button sc-button-${size} sc-button-icon sc-button-responsive`;
+        button.title = 'Download';
+        button.setAttribute('aria-label', 'Download');
+        button.innerHTML = `<div>${DOWNLOAD_ICON}</div>`;
+
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!e.isTrusted) return; // a click the page synthesized
+
+            // the row or stream item this button sits in, else the page itself when it is the player's own row
+            const link = button
+                .closest('.trackItem, .sound, .soundBadge')
+                ?.querySelector<HTMLAnchorElement>('a.trackItem__trackTitle, a.soundTitle__title');
+            const url = link?.href ?? (button.closest('.listenEngagement') ? location.href : '');
+            if (url) ipcRenderer.send('soundcloud:download', url);
+        });
+
+        (actions.querySelector('.sc-button-group') ?? actions).append(button);
+    }
+}
+
+// SoundCloud tags every link it hands out with who shared it (`si`) and where (`utm_*`).
+function stripTracking(link: string): string {
+    let url: URL;
+    try {
+        url = new URL(link);
+    } catch {
+        return link;
+    }
+    if (!/(^|\.)soundcloud\.com$/.test(url.hostname)) return link;
+
+    // filtered as text: searchParams.delete would re-encode the parameters that stay
+    const query = url.search.slice(1);
+    const kept = query
+        .split('&')
+        .filter((param) => !/^(si|utm_\w+)(=|$)/.test(param))
+        .join('&');
+    if (kept === query) return link;
+    url.search = kept;
+    return url.href;
+}
+
+// "Copy Link" and the share dialog's field both copy through a selection, so one listener covers them
+document.addEventListener(
+    'copy',
+    (e) => {
+        const text = String(getSelection()).trim();
+        const clean = stripTracking(text);
+        if (clean === text) return;
+        e.clipboardData?.setData('text/plain', clean);
+        e.preventDefault();
+    },
+    true,
+);
+
+// The share dialog's social buttons carry the same link percent-encoded inside their own URL.
+// ponytail: assumes every parameter on the nested link is tracking, which holds today; decode and
+// reuse stripTracking if SoundCloud ever puts a real one after them.
+const ENCODED_TRACKING = /(%3F|%26)(si|utm_[a-z]+)%3D[\w.~-]*/gi;
+
+function cleanShareDialog(): void {
+    const field = document.querySelector<HTMLInputElement>('input.shareLink__field');
+    // only on change, writing the value back would drop the user's selection
+    if (field && stripTracking(field.value) !== field.value) field.value = stripTracking(field.value);
+
+    for (const button of document.querySelectorAll<HTMLAnchorElement>('a.shareButton')) {
+        const href = button.getAttribute('href') ?? '';
+        const clean = href.replace(ENCODED_TRACKING, '');
+        if (clean !== href) button.setAttribute('href', clean);
+    }
+}
+
 // Tab titles come from what the page shows (track, playlist or profile name) rather than
 // document.title, which is localized SEO text, and tab icons from its cover or profile picture.
 // Selectors are SoundCloud's hero and profile headers.
@@ -17,6 +101,9 @@ contextBridge.exposeInMainWorld('soundcloudAPI', {
 // navigation by up to 500ms. Watch the hero with a MutationObserver if that lag ever matters.
 let lastPageInfo = '';
 setInterval(() => {
+    addDownloadButtons();
+    cleanShareDialog();
+
     const text = (selector: string) => document.querySelector<HTMLElement>(selector)?.innerText.trim() ?? '';
     const ownProfile = document.querySelector<HTMLAnchorElement>(
         '.header__userNav [data-menu-name="profile"], .header__userNavUsernameButton',

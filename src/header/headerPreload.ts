@@ -14,9 +14,11 @@ const SEND_CHANNELS = new Set([
     'tab-new',
     'tab-select',
     'title-bar-double-click',
+    'toggle-downloads',
 ]);
 
 const INVOKE_CHANNELS = new Set([
+    'get-download-button-enabled',
     'get-navigation-controls-enabled',
     'get-tab-state',
     'get-theme-colors',
@@ -24,6 +26,8 @@ const INVOKE_CHANNELS = new Set([
 ]);
 
 const ON_CHANNELS = new Set([
+    'download-button-toggle',
+    'downloads-active',
     'focus-url-bar',
     'navigation-controls-toggle',
     'navigation-state-changed',
