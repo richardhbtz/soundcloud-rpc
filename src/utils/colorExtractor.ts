@@ -12,37 +12,20 @@ export interface ThemeColors {
     accent: string;
 }
 
-/**
- * Extract color values from CSS content
- * Looks for common CSS variable patterns used in themes
- */
-/**
- * Extraction runs a dozen regexes over the whole stylesheet, and the result is requested
- * on every theme application -- which happens on each content-view load. Themes change
- * rarely, so results are memoized against the stylesheet text.
- */
-const extractionCache = new Map<string, ThemeColors | null>();
-const EXTRACTION_CACHE_LIMIT = 16;
+// Called on every theme application, i.e. every page load, with a stylesheet that only changes
+// when the user picks another theme, so the last result is kept.
+let lastCss = '';
+let lastColors: ThemeColors | null = null;
 
+/** Reads the palette out of a theme's CSS custom properties. */
 export function extractThemeColors(cssContent: string): ThemeColors | null {
-    if (!cssContent || cssContent.trim() === '') {
-        return null;
+    if (!cssContent || cssContent.trim() === '') return null;
+
+    if (cssContent !== lastCss) {
+        lastColors = extractThemeColorsUncached(cssContent);
+        lastCss = cssContent;
     }
-
-    const cached = extractionCache.get(cssContent);
-    if (cached !== undefined) return cached;
-
-    const result = extractThemeColorsUncached(cssContent);
-
-    // themes are swapped by hand, so this never grows meaningfully; the bound just stops
-    // a pathological case from pinning every stylesheet ever loaded
-    if (extractionCache.size >= EXTRACTION_CACHE_LIMIT) {
-        const oldest = extractionCache.keys().next().value;
-        if (oldest !== undefined) extractionCache.delete(oldest);
-    }
-    extractionCache.set(cssContent, result);
-
-    return result;
+    return lastColors;
 }
 
 function extractThemeColorsUncached(cssContent: string): ThemeColors | null {

@@ -15,6 +15,7 @@ const SEND_CHANNELS = new Set([
     'tab-select',
     'title-bar-double-click',
     'toggle-downloads',
+    'toggle-settings',
 ]);
 
 const INVOKE_CHANNELS = new Set([

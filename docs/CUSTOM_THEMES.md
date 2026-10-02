@@ -5,8 +5,8 @@ CSS theme files.
 
 ## How to Use Custom Themes
 
-1. **Open the Settings Panel**: Press `F1` or click the settings button in the application
-2. **Navigate to Custom Themes**: Find the "Custom Themes" section in the settings
+1. **Open the Settings Panel**: Click the menu button at the top right, or press `F1`
+2. **Navigate to Appearance**: The theme picker is in the "Appearance" section
 3. **Open Themes Folder**: Click the "Open Themes Folder" button to open your themes directory
 4. **Add Theme Files**: Place your `.css` theme files in the opened folder
 5. **Refresh Themes**: Click "Refresh Themes" in the settings to load new theme files

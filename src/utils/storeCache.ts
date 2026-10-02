@@ -1,15 +1,11 @@
 /**
- * electron-store (conf) re-reads and re-parses the config file on every get(), and this
- * app opens the store with an `encryptionKey`, so each read also runs a decrypt. Settings
- * are read on hot paths -- per track update, per theme application, per window resize --
- * where the same handful of keys is fetched repeatedly.
+ * electron-store re-reads, re-parses and (with an `encryptionKey`) re-decrypts the config
+ * file on every get(), and settings are read on hot paths: per track update, per theme
+ * application, per window resize.
  *
- * This caches the parsed config in memory and drops the cache on any write through the
- * same instance.
- *
- * Deliberately conservative: anything other than a plain top-level string key is handed
- * straight to the original implementation, so dot-paths, symbol access and the rest keep
- * electron-store's exact semantics.
+ * This keeps the parsed config in memory and drops it on any write through the same
+ * instance. Only plain top-level string keys are served from the cache; dot-paths and
+ * anything else go to the original implementation.
  */
 
 interface CacheableStore {
@@ -33,8 +29,6 @@ export function installStoreReadCache<T extends CacheableStore>(store: T): T {
     };
 
     const readAll = (): Record<string, unknown> => {
-        // `store` is conf's own getter: one file read plus one decrypt, then reused
-        // until the next write
         if (cache === null) cache = { ...store.store };
         return cache;
     };

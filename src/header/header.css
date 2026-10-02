@@ -47,7 +47,8 @@ html.theme-light {
 }
 
 .custom-header {
-    /* nav | tabs | window controls. Equal outer columns keep the tabs in the middle of the window. */
+    /* back/forward/reload | tabs | downloads, menu, window controls. Equal outer columns keep the
+       tabs in the middle of the window. */
     display: grid;
     grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
     align-items: center;
@@ -65,7 +66,6 @@ html.theme-light {
     display: none; /* Hidden by default, shown when enabled */
     align-items: center;
     padding-left: 4px;
-    padding-top: 2px;
     -webkit-app-region: no-drag;
 }
 
@@ -303,7 +303,8 @@ body.platform-darwin .navigation-controls {
     -webkit-app-region: no-drag;
 }
 
-#downloads-btn {
+#downloads-btn,
+#menu-btn {
     flex: none;
     -webkit-app-region: no-drag;
 }

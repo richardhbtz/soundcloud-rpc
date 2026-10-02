@@ -1,6 +1,6 @@
-import * as en from '../i18n/en.json';
-import * as pt_BR from '../i18n/pt-BR.json';
-import * as es from '../i18n/es.json';
+import en from '../i18n/en.json';
+import pt_BR from '../i18n/pt-BR.json';
+import es from '../i18n/es.json';
 
 const translations = {
     en,
@@ -10,7 +10,7 @@ const translations = {
 
 type Lang = keyof typeof translations;
 
-type TranslationKeys = keyof typeof en;
+export type TranslationKeys = keyof typeof en;
 
 export class TranslationService {
     private currentLang: Lang = 'en';
@@ -27,8 +27,12 @@ export class TranslationService {
         return this.currentLang;
     }
 
+    /** Every string in the current language, with English filling any gaps. */
+    all(): Record<string, string> {
+        return { ...en, ...translations[this.currentLang] };
+    }
+
     translate(key: TranslationKeys): string {
-        const dict = translations[this.currentLang] as Record<string, string>;
-        return dict[key as string] ?? (en as Record<string, string>)[key as string] ?? (key as string);
+        return (translations[this.currentLang] as Record<string, string>)[key] ?? en[key] ?? key;
     }
 }

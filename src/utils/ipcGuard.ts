@@ -1,13 +1,10 @@
 import type { IpcMainEvent, IpcMainInvokeEvent, WebContents } from 'electron';
 
 /**
- * ipcMain listens on a single bus shared by every renderer, so a handler with no sender
- * check will act on a message from any view -- including the one showing soundcloud.com
- * and its third-party ad frames.
- *
- * Privileged handlers (opening paths, enabling plugins, writing settings, switching
- * accounts) therefore check that the message came from a view the app itself built and
- * loaded. Views register here as they are created; the content view never does.
+ * ipcMain is one bus shared by every renderer, including the tabs showing soundcloud.com and
+ * its ad frames. Privileged handlers (opening paths, enabling plugins, writing settings,
+ * switching accounts) only act on messages from views the app built itself, which register
+ * here as they are created. Tabs never do.
  */
 const trustedSenderIds = new Set<number>();
 
@@ -24,9 +21,7 @@ export function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boole
     return trustedSenderIds.has(event.sender.id);
 }
 
-/**
- * Wrap an `ipcMain.on` listener so it drops messages from untrusted renderers.
- */
+/** Wrap an `ipcMain.on` listener so it drops messages from untrusted renderers. */
 export function trustedOn<T extends unknown[]>(
     handler: (event: IpcMainEvent, ...args: T) => void,
     channel = 'ipc',
@@ -40,10 +35,7 @@ export function trustedOn<T extends unknown[]>(
     };
 }
 
-/**
- * Wrap an `ipcMain.handle` handler so untrusted renderers get a rejection rather than a
- * result.
- */
+/** Wrap an `ipcMain.handle` handler so untrusted renderers get a rejection, not a result. */
 export function trustedHandle<T extends unknown[], R>(
     handler: (event: IpcMainInvokeEvent, ...args: T) => R,
     channel = 'ipc',

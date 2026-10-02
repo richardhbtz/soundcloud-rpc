@@ -44,10 +44,9 @@ export class NotificationManager {
         try {
             this.parentWindow.removeBrowserView(view);
         } catch {}
-        // Destroyed on every platform, not just macOS. A toast lives for ~4.5s; keeping
-        // its renderer resident afterwards costs a process for the rest of the session
-        // on Windows and Linux too. ensureView() rebuilds it on the next toast.
+        // a toast lives ~4.5s; its renderer is not worth keeping for the rest of the session
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (view.webContents as any).destroy();
         } catch {}
         this.view = null;

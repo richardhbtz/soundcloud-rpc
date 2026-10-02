@@ -283,10 +283,8 @@ export const audioMonitorScript = `
     // Start monitoring elapsed time for loop detection
     monitorElapsedTime();
     
-    // Re-monitor elements if they get replaced/recreated.
-    // This watches document.body with subtree:true on a page that mutates constantly,
-    // so the callback fired far more often than there was work to do. Coalesce to one
-    // pass per frame -- the queries below are cheap individually but not at that rate.
+    // Re-monitor elements that get replaced. The page mutates constantly, so this is
+    // coalesced to one pass per frame.
     let rescanQueued = false;
     const bodyObserver = new MutationObserver(() => {
       if (rescanQueued) return;

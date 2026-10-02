@@ -74,6 +74,7 @@ export class LastFmService {
     }
 
     /* API dispatcher eliminates duplicate fetch headers &&& signing logic */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async sendLastFmRequest(method: string, params: Record<string, string>): Promise<any> {
         const sessionKey = readSecret(this.store, 'lastFmSessionKey', '');
         const apiKey = readSecret(this.store, 'lastFmApiKey', '');
@@ -140,9 +141,8 @@ export class LastFmService {
         const timers: { approval?: ReturnType<typeof setTimeout> } = {};
         let settled = false;
 
-        // Every exit path runs through here. The lock was previously only cleared by
-        // disconnect(), so any failed or abandoned attempt left it set for the rest of
-        // the session and the user could never retry without disconnecting the account.
+        // every exit path runs through here, or a failed or abandoned attempt would hold the
+        // lock for the rest of the session
         const finish = () => {
             if (settled) return;
             settled = true;
@@ -177,13 +177,11 @@ export class LastFmService {
             webContents.loadURL('https://soundcloud.com/discover');
         };
 
-        // the listener has to be attached before the navigation starts -- attaching it
-        // after `await loadURL` missed any redirect that happened during the load
+        // attached before the navigation starts, so a redirect during the load is not missed
         webContents.on('will-redirect', onRedirect);
         webContents.once('destroyed', finish);
 
-        // the user may simply never approve; without this the listener and the lock
-        // would both persist for the life of the process
+        // the user may simply never approve
         timers.approval = setTimeout(finish, AUTH_TIMEOUT_MS);
 
         try {
