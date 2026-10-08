@@ -39,6 +39,8 @@
     "applyChanges": "Apply Changes",
     "minimizeToTray": "Enable Minimize to Tray",
     "enableNavigationControls": "Enable Navigation Controls",
+    "uiScale": "UI Scale",
+    "uiScaleDescription": "Adjust the zoom level of the app content",
     "enableTrackParser": "Enable Track Parser",
     "trackParserDescription": "Parse track titles to extract artist and track names automatically",
     "enableAutoUpdater": "Enable Auto Updater",

@@ -854,6 +854,9 @@ async function init() {
             // Reapply theme to content after page reload
             applyThemeToContent(isDarkTheme);
 
+            // Reapply saved UI scale after page reload
+            contentView.webContents.setZoomFactor(store.get('uiScale', 1) as number);
+
             // Inject audio monitoring script
             await contentView.webContents.executeJavaScript(audioMonitorScript);
 
@@ -907,6 +910,8 @@ async function init() {
             if (headerView && headerView.webContents) {
                 headerView.webContents.send('navigation-controls-toggle', data.value);
             }
+        } else if (key === 'uiScale') {
+            if (contentView) contentView.webContents.setZoomFactor(data.value);
         } else if (key === 'autoUpdaterEnabled') {
             if (data.value) {
                 setupUpdater();

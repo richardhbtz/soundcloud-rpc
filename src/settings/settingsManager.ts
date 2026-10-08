@@ -846,6 +846,16 @@ export class SettingsManager {
                     </label>
                 </div>
                 <div class="setting-item">
+                    <span data-i18n="uiScale">${this.translationService.translate('uiScale')}</span>
+                    <div class="input-with-unit">
+                        <input type="range" id="uiScale" min="0.5" max="2" step="0.05" value="${
+                            this.store.get('uiScale', 1) as number
+                        }">
+                        <span class="unit-symbol" id="uiScaleValue">${Math.round((this.store.get('uiScale', 1) as number) * 100)}%</span>
+                    </div>
+                </div>
+                <div class="description" data-i18n="uiScaleDescription">${this.translationService.translate('uiScaleDescription')}</div>
+                <div class="setting-item">
                     <span data-i18n="enableAutoUpdater">${this.translationService.translate('enableAutoUpdater')}</span>
                     <label class="toggle">
                         <input type="checkbox" id="autoUpdaterEnabled" ${this.store.get('autoUpdaterEnabled', true) ? 'checked' : ''}>
@@ -1494,6 +1504,12 @@ export class SettingsManager {
 
             document.getElementById('navigationControlsEnabled')?.addEventListener('change', (e) => {
                 ipcRenderer.send('setting-changed', { key: 'navigationControlsEnabled', value: e.target.checked });
+            });
+
+            document.getElementById('uiScale')?.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('uiScaleValue').textContent = Math.round(value * 100) + '%';
+                ipcRenderer.send('setting-changed', { key: 'uiScale', value: value });
             });
 
             document.getElementById('trackParserEnabled')?.addEventListener('change', (e) => {
