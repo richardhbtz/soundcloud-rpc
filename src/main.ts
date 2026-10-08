@@ -10,9 +10,7 @@ import {
     components,
     type IpcMainEvent,
 } from 'electron';
-import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
-import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
 import { NotificationManager } from './notifications/notificationManager';
 import { SettingsManager } from './settings/settingsManager';
@@ -94,36 +92,8 @@ let shortcutService: ShortcutService;
 let pluginService: PluginService;
 let tray: Tray | null = null;
 let isQuitting = false;
-let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
-const globalUserAgent = isMac
-    ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const globalPlatformHint = isMac ? '"macOS"' : '"Windows"';
-
-app.userAgentFallback = globalUserAgent;
-
-function applyMacMemoryOptimizations(): void {
-    if (!isMac) return;
-
-    const existingDisableFeatures = app.commandLine.getSwitchValue('disable-features');
-    const features = new Set(
-        existingDisableFeatures
-            .split(',')
-            .map((feature) => feature.trim())
-            .filter(Boolean),
-    );
-    features.add('BackForwardCache');
-
-    app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
-    app.commandLine.appendSwitch('renderer-process-limit', '1');
-    app.commandLine.appendSwitch('disk-cache-size', '1');
-    app.commandLine.appendSwitch('media-cache-size', '1');
-    app.commandLine.appendSwitch('enable-low-end-device-mode');
-}
-
-applyMacMemoryOptimizations();
 // header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -339,38 +309,6 @@ function createBrowserWindow(windowState: any): BrowserWindow {
             ...(isMac ? { spellcheck: false } : {}),
         },
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
-    });
-
-    window.webContents.setUserAgent(globalUserAgent);
-
-    const session = window.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
     });
 
     return window;
@@ -611,7 +549,7 @@ async function init() {
             ...(sessionPartition ? { partition: sessionPartition } : {}),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false,
+            sandbox: true,
             webSecurity: true,
             allowRunningInsecureContent: false,
             nodeIntegrationInSubFrames: false,
@@ -631,8 +569,6 @@ async function init() {
     });
     contentView.setAutoResize({ width: true, height: true });
 
-    contentView.webContents.setUserAgent(globalUserAgent);
-
     // Initialize services
     translationService = new TranslationService();
     themeService = new ThemeService(store);
@@ -651,8 +587,6 @@ async function init() {
     shortcutService = new ShortcutService(mainWindow);
     shortcutService.attachToWebContents(contentView.webContents);
     if (platform() === 'win32') thumbarService = new ThumbarService(translationService);
-
-    setupMemoryPressureHandler();
 
     // Add settings toggle handler
     ipcMain.on('toggle-settings', () => {
@@ -722,36 +656,6 @@ async function init() {
         return lastTrackInfo;
     });
 
-    // Configure session
-    const session = contentView.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use the same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
-    });
-
     // Apply initial settings
     await proxyService.apply();
     contentView.webContents.loadURL('https://soundcloud.com/discover');
@@ -796,25 +700,6 @@ async function init() {
         }
         updateNavigationState();
     });
-
-    // Initialize adblocker once
-    if (store.get('adBlocker')) {
-        try {
-            const blocker = await ElectronBlocker.fromLists(
-                fetch,
-                fullLists,
-                { enableCompression: true },
-                {
-                    path: 'engine.bin',
-                    read: async (...args) => readFileSync(...args),
-                    write: async (...args) => writeFileSync(...args),
-                },
-            );
-            blocker.enableBlockingInSession(contentView.webContents.session);
-        } catch (error) {
-            console.error('Failed to initialize adblocker:', error);
-        }
-    }
 
     // Track if this is initial load
     let isInitialLoad = true;
@@ -989,10 +874,6 @@ async function init() {
             await lastFmService.authenticate();
         }
 
-        if (store.get('adBlocker')) {
-            mainWindow.webContents.reload();
-        }
-
         if (store.get('discordRichPresence')) {
             // Refresh presence using the current track info instead of reconnecting
             await presenceService.updatePresence(lastTrackInfo as any);
@@ -1050,36 +931,6 @@ async function init() {
             // silently ignore if page navigating
         }
     }, 5000);
-}
-
-function setupMemoryPressureHandler() {
-    if (memoryPressureHandlerRegistered) return;
-    if (!isMac) return;
-    memoryPressureHandlerRegistered = true;
-
-    app.on('memory-pressure' as any, async (_event: unknown, details: unknown) => {
-        const level = typeof details === 'string' ? details : 'unknown';
-        console.warn(`Memory pressure detected (${level}). Clearing caches and history.`);
-
-        if (contentView) {
-            contentView.webContents.clearHistory();
-        }
-
-        const session = contentView?.webContents.session;
-        if (!session) return;
-
-        try {
-            await session.clearCache();
-        } catch (error) {
-            console.warn('Failed to clear HTTP cache:', error);
-        }
-
-        try {
-            await session.clearStorageData({ storages: ['cachestorage'] });
-        } catch (error) {
-            console.warn('Failed to clear Cache Storage:', error);
-        }
-    });
 }
 
 function setupThemeHandlers() {
