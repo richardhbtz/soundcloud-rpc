@@ -14,6 +14,8 @@ import { ElectronBlocker, fullLists } from '@ghostery/adblocker-electron';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
 import fetch from 'cross-fetch';
 import { setupDarwinMenu } from './macos/menu';
+import { buildDesktopEntry } from './linux/desktopEntry';
+import { isSandboxUsable, systemSandboxProbe } from './linux/sandbox';
 import { NotificationManager } from './notifications/notificationManager';
 import { SettingsManager } from './settings/settingsManager';
 import { ProxyService } from './services/proxyService';
@@ -29,6 +31,7 @@ import { audioMonitorScript } from './services/audioMonitorService';
 import { showHomepageConfirmDialog, updateDialogBounds } from './settings/confirmPopup';
 import type { TrackInfo } from './types';
 import { validateTrackUpdatePayload } from './validation';
+import { stripAppTokensFromUserAgent } from './utils/userAgent';
 import path = require('path');
 import { platform } from 'os';
 
@@ -97,33 +100,56 @@ let isQuitting = false;
 let memoryPressureHandlerRegistered = false;
 const devMode = process.argv.includes('--dev');
 const isMac = process.platform === 'darwin';
-const globalUserAgent = isMac
-    ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const globalPlatformHint = isMac ? '"macOS"' : '"Windows"';
+const isLinux = process.platform === 'linux';
+const globalUserAgent = stripAppTokensFromUserAgent(app.userAgentFallback, app.getName());
 
 app.userAgentFallback = globalUserAgent;
 
-function applyMacMemoryOptimizations(): void {
-    if (!isMac) return;
-
-    const existingDisableFeatures = app.commandLine.getSwitchValue('disable-features');
+function appendCommandLineFeatures(switchName: string, featuresToAdd: string[]): void {
     const features = new Set(
-        existingDisableFeatures
+        app.commandLine
+            .getSwitchValue(switchName)
             .split(',')
             .map((feature) => feature.trim())
             .filter(Boolean),
     );
-    features.add('BackForwardCache');
+    for (const feature of featuresToAdd) features.add(feature);
 
-    app.commandLine.appendSwitch('disable-features', Array.from(features).join(','));
+    app.commandLine.appendSwitch(switchName, Array.from(features).join(','));
+}
+
+function applyMacMemoryOptimizations(): void {
+    if (!isMac) return;
+
+    appendCommandLineFeatures('disable-features', ['BackForwardCache']);
     app.commandLine.appendSwitch('renderer-process-limit', '1');
     app.commandLine.appendSwitch('disk-cache-size', '1');
     app.commandLine.appendSwitch('media-cache-size', '1');
     app.commandLine.appendSwitch('enable-low-end-device-mode');
 }
 
+function applyLinuxIntegration(): void {
+    if (!isLinux) return;
+
+    // the desktop's "now playing" widget and the media keys both drive the MPRIS
+    // interface, which chromium only publishes while the media session service runs
+    appendCommandLineFeatures('enable-features', ['MediaSessionService', 'HardwareMediaKeyHandling']);
+
+    // draw through wayland on a wayland session instead of upscaling through xwayland
+    if (!app.commandLine.hasSwitch('ozone-platform-hint')) {
+        app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+    }
+
+    // chromium aborts at startup when it can't sandbox, so trade the sandbox away
+    // rather than refuse to launch. the linux notes in the README cover getting it back
+    if (!app.commandLine.hasSwitch('no-sandbox') && !isSandboxUsable(systemSandboxProbe)) {
+        console.warn('No usable Chromium sandbox found on this system, starting with --no-sandbox');
+        app.commandLine.appendSwitch('no-sandbox');
+    }
+}
+
 applyMacMemoryOptimizations();
+applyLinuxIntegration();
 // header height for header BrowserView
 const HEADER_HEIGHT = 32;
 // macOS check
@@ -166,7 +192,7 @@ function setupUpdater() {
     }
 
     // updater only works from the appimage on linux
-    if (process.platform === 'linux' && !process.env.APPIMAGE) {
+    if (isLinux && !process.env.APPIMAGE) {
         console.log('Not running from AppImage, skipping auto-updater');
         return;
     }
@@ -188,7 +214,7 @@ function setupUpdater() {
 // appimages don't install a desktop file, so wayland compositors can't match the window
 // to an icon and you get the generic cog. write one to ~/.local/share on first run
 function installDesktopFile() {
-    if (process.platform !== 'linux' || !process.env.APPIMAGE) return;
+    if (!isLinux || !process.env.APPIMAGE) return;
 
     try {
         const dataHome = process.env.XDG_DATA_HOME || path.join(app.getPath('home'), '.local', 'share');
@@ -200,18 +226,11 @@ function installDesktopFile() {
             copyFileSync(path.join(RESOURCES_PATH, 'icons', 'soundcloud.png'), iconFilePath);
         }
 
-        const entry = [
-            '[Desktop Entry]',
-            'Name=SoundCloud',
-            'Comment=SoundCloud client with Discord Rich Presence',
-            `Exec="${process.env.APPIMAGE}" %U`,
-            'Icon=soundcloud-rpc',
-            'Type=Application',
-            'Categories=AudioVideo;Audio;Music;',
-            'StartupWMClass=soundcloud-rpc',
-            'Terminal=false',
-            '',
-        ].join('\n');
+        const entry = buildDesktopEntry({
+            execPath: process.env.APPIMAGE,
+            iconName: 'soundcloud-rpc',
+            wmClass: 'soundcloud-rpc',
+        });
 
         // rewrite if missing or the appimage moved
         const existing = existsSync(desktopFilePath) ? readFileSync(desktopFilePath, 'utf8') : '';
@@ -342,36 +361,6 @@ function createBrowserWindow(windowState: any): BrowserWindow {
     });
 
     window.webContents.setUserAgent(globalUserAgent);
-
-    const session = window.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
-    });
 
     return window;
 }
@@ -720,36 +709,6 @@ async function init() {
     // Provide current track info to settings preview on demand
     ipcMain.handle('get-current-track', () => {
         return lastTrackInfo;
-    });
-
-    // Configure session
-    const session = contentView.webContents.session;
-    session.webRequest.onBeforeSendHeaders((details, callback) => {
-        // bypass header tampering for google &&& apple &&& cobalt endpoints
-        if (
-            details.url.includes('google') ||
-            details.url.includes('icloud') ||
-            details.url.includes('apple') ||
-            details.url.includes('cobalt')
-        ) {
-            callback({ requestHeaders: details.requestHeaders });
-            return;
-        }
-        const headers = {
-            ...details.requestHeaders,
-            'Accept-Language': 'en-US,en;q=0.9',
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': globalPlatformHint, // dynamically set platform hint based on OS
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': globalUserAgent, // ensure all requests use the same user agent
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-        };
-        callback({ requestHeaders: headers });
     });
 
     // Apply initial settings

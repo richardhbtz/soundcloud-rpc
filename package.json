@@ -17,8 +17,10 @@
         "build-win": "tsc && npm run copy-header && electron-builder -w nsis",
         "build-win-ptb": "tsc && npm run copy-header && electron-builder -w portable",
         "build-mac": "tsc && npm run copy-header && electron-builder -m dmg",
+        "build-linux": "tsc && npm run copy-header && electron-builder -l",
         "build-linux-deb": "tsc && npm run copy-header && electron-builder -l deb",
-        "build-linux-appimage": "tsc && npm run copy-header && electron-builder -l appimage"
+        "build-linux-appimage": "tsc && npm run copy-header && electron-builder -l appimage",
+        "build-linux-tar": "tsc && npm run copy-header && electron-builder -l tar.gz"
     },
     "main": "./tsc/main.js",
     "repository": "https://github.com/richardhbtz/soundcloud-rpc",
@@ -67,9 +69,11 @@
         "linux": {
             "target": [
                 "AppImage",
-                "deb"
+                "deb",
+                "tar.gz"
             ],
             "icon": "assets/icons/soundcloud.png",
+            "maintainer": "Richard Habitzreuter <richardhabitzreuter@icloud.com>",
             "category": "AudioVideo",
             "executableName": "soundcloud-rpc",
             "synopsis": "SoundCloud client with Discord Rich Presence",

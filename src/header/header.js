@@ -93,7 +93,18 @@ function updateWindowControls() {
         // Update the button title
         document.getElementById('maximize-btn').title = isMaximized ? 'Restore' : 'Maximize';
         document.getElementById('maximize-btn').setAttribute('aria-label', isMaximized ? 'Restore' : 'Maximize');
+        return;
     }
+
+    if (platform !== 'linux') return;
+
+    // Linux swaps between the two drawn icons instead of re-pointing a single glyph
+    const maximizeBtn = document.getElementById('maximize-btn');
+    if (!maximizeBtn) return;
+
+    maximizeBtn.classList.toggle('is-maximized', isMaximized);
+    maximizeBtn.title = isMaximized ? 'Restore' : 'Maximize';
+    maximizeBtn.setAttribute('aria-label', isMaximized ? 'Restore' : 'Maximize');
 }
 
 function setIconGlyph(element, glyph) {
