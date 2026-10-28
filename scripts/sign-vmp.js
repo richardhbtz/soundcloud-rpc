@@ -65,18 +65,20 @@ function signPackage(appOutDir) {
     }
 }
 
-// Export function for electron-builder afterSign hook
-// electron-builder passes context object with: appOutDir, packager
-module.exports = function (context) {
-    const { appOutDir } = context;
-
-    // vmp signing isn't a thing on linux, widevine works without it there
-    if (context.electronPlatformName === 'linux') {
-        console.log('linux build, skipping VMP signing');
-        return;
+// electron-builder resolves the named export matching each configured hook.
+exports.afterPack = function (context) {
+    // EVS changes Electron Framework.sig inside the bundle. Apple code signing
+    // must seal that file AFTER VMP signing, or Gatekeeper reports a damaged app.
+    if (context.electronPlatformName === 'darwin') {
+        signPackage(context.appOutDir);
     }
+};
 
-    signPackage(appOutDir);
+exports.afterSign = function (context) {
+    // Windows VMP signatures must cover the code-signed executable.
+    if (context.electronPlatformName === 'win32') {
+        signPackage(context.appOutDir);
+    }
 };
 
 // if called directly w a path argument (for manual signing)
