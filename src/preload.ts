@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld('soundcloudAPI', {
             reason,
         });
     },
+    captchaRequired: (url: string) => {
+        ipcRenderer.send('soundcloud:captcha', url);
+    },
 });

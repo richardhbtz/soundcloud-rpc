@@ -16,6 +16,14 @@ export const audioMonitorScript = `
   let isCurrentTrackLiked = false;
   let elapsedObserver = null;
   
+  // SoundCloud has renamed player selectors before; keep a fallback chain so a
+  // redesign degrades to a logged miss instead of a dead like button.
+  function getLikeButton() {
+    return document.querySelector('.playbackSoundBadge__like') ||
+           document.querySelector('.playbackSoundBadge .sc-button-like') ||
+           document.querySelector('.sc-button-like');
+  }
+  
   function getTrackInfo() {
     const playButton = document.querySelector('.playControls__play');
     const isPlaying = playButton ? playButton.classList.contains('playing') : false;
@@ -25,7 +33,7 @@ export const audioMonitorScript = `
     const elapsedEl = document.querySelector('.playbackTimeline__timePassed span:last-child');
     const durationEl = document.querySelector('.playbackTimeline__duration span:last-child');
     const urlEl = document.querySelector('.playbackSoundBadge__titleLink');
-    const likeButtonEl = document.querySelector('.playbackSoundBadge__like');
+    const likeButtonEl = getLikeButton();
     
     return {
       title: artworkEl ? artworkEl.getAttribute('aria-label') : '',
@@ -123,17 +131,34 @@ export const audioMonitorScript = `
     }
 
     // Monitor like button interaction to instantly trigger UI mirror
-    const likeButton = document.querySelector('.playbackSoundBadge__like');
-    if (likeButton && !likeButton.__monitored) {
-      likeButton.__monitored = true;
-      likeButton.addEventListener('click', () => {
-        console.debug('Like button clicked');
-        setTimeout(notifyPlaybackStateChange, 50);
-      });
-    }
+    monitorLikeButton();
 
     monitorTimelineSeeking();
     monitorWaveformSeeking();
+  }
+
+  // The like class flips when SoundCloud's API confirms the change, so watch the
+  // class instead of guessing a delay: works while paused, and survives slow or
+  // failed API responses (the revert also fires the observer).
+  function monitorLikeButton() {
+    const likeButton = getLikeButton();
+    if (!likeButton) return false;
+    if (likeButton.__likeMonitored) return true;
+    likeButton.__likeMonitored = true;
+
+    likeButton.addEventListener('click', () => {
+      console.debug('Like button clicked');
+      // Fallbacks for builds where the class lags behind the API response.
+      setTimeout(notifyPlaybackStateChange, 300);
+      setTimeout(notifyPlaybackStateChange, 1000);
+    });
+
+    new MutationObserver(() => {
+      console.debug('Like state changed');
+      notifyPlaybackStateChange();
+    }).observe(likeButton, { attributes: true, attributeFilter: ['class'] });
+
+    return true;
   }
 
   function monitorWaveformSeeking() {
@@ -311,9 +336,9 @@ export const audioMonitorScript = `
         monitorPlaybackControls();
       }
 
-      const likeButton = document.querySelector('.playbackSoundBadge__like');
-      if (likeButton && !likeButton.__monitored) {
-        monitorPlaybackControls();
+      const likeButton = getLikeButton();
+      if (likeButton && !likeButton.__likeMonitored) {
+        monitorLikeButton();
       }
     });
     
@@ -323,6 +348,61 @@ export const audioMonitorScript = `
     });
   }
   
+  // DataDome answers a like with 403 + a captcha URL. Hand that URL to the main
+  // process so the user can solve it in the app's own session; the cookie it
+  // sets is what unblocks the next like.
+  function watchLikeCaptcha() {
+    if (window.__likeCaptchaWatch) return;
+    window.__likeCaptchaWatch = true;
+
+    function send(url) {
+      try {
+        window.soundcloudAPI.captchaRequired(url);
+      } catch (e) {
+        console.warn('captcha bridge missing', e);
+      }
+    }
+
+    function extract(text) {
+      try {
+        const body = JSON.parse(text);
+        if (body && typeof body.url === 'string' && body.url.indexOf('captcha-delivery.com') !== -1) return body.url;
+      } catch (e) {
+        /* not JSON, not a captcha */
+      }
+      return null;
+    }
+
+    const originalSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function (...args) {
+      this.addEventListener('loadend', function () {
+        if (this.status !== 403 || String(this.responseURL).indexOf('/track_likes/') === -1) return;
+        const url = extract(this.responseText);
+        if (url) send(url);
+      });
+      return originalSend.apply(this, args);
+    };
+
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+      return originalFetch.apply(this, args).then((res) => {
+        if (res.status === 403) {
+          const target = String((args[0] && args[0].url) || args[0]);
+          if (target.indexOf('/track_likes/') !== -1) {
+            res.clone()
+              .text()
+              .then((text) => {
+                const url = extract(text);
+                if (url) send(url);
+              })
+              .catch(() => {});
+          }
+        }
+        return res;
+      });
+    };
+  }
+
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
     if (elapsedObserver) {
@@ -332,6 +412,7 @@ export const audioMonitorScript = `
   });
   
   // Start monitoring
+  watchLikeCaptcha();
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initialize();
   } else {

@@ -34,11 +34,24 @@ export class ThumbarService {
                         .executeJavaScript(
                             `
                         (() => {
-                            document.querySelector('.playbackSoundBadge__like')?.click();
+                            const button =
+                                document.querySelector('.playbackSoundBadge__like') ||
+                                document.querySelector('.playbackSoundBadge .sc-button-like') ||
+                                document.querySelector('.sc-button-like');
+                            if (!button) return false;
+                            button.click();
+                            return true;
                         })();
                     `,
                         )
-                        .catch(() => {});
+                        .then((clicked: boolean) => {
+                            if (!clicked) {
+                                console.warn('Thumbar like click: like button not found in player');
+                            }
+                        })
+                        .catch((error: unknown) => {
+                            console.error('Thumbar like click failed:', error);
+                        });
                 },
             },
             {
@@ -60,7 +73,7 @@ export class ThumbarService {
                     mainWindow.webContents.executeJavaScript(`
                         document.querySelector('.playControl')?.click();
                     `);
-                    buttons[1].tooltip = isPlaying
+                    buttons[2].tooltip = isPlaying
                         ? this.translationService.translate('pause')
                         : this.translationService.translate('play');
                 },
